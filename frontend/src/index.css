@@ -85,6 +85,41 @@ h3,
   box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.3);
 }
 
+/* Select dropdown styling */
+select.glass-input {
+  background-color: #1a1a1a;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+  color: #ffffff;
+}
+
+select.glass-input::-webkit-scrollbar {
+  width: 10px;
+}
+
+select.glass-input::-webkit-scrollbar-thumb {
+  background: #ff6b00;
+  border-radius: 5px;
+}
+
+select.glass-input::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+select.glass-input option {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  padding: 8px;
+}
+
+select.glass-input option:hover {
+  background-color: #ff6b00;
+  color: #000000;
+}
+
 /* Buttons */
 .btn-basketball {
   background: var(--primary-orange);

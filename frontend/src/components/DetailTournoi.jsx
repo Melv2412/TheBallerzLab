@@ -1124,14 +1124,14 @@ function DetailTournoi() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                     <div>
                       <label className="block text-[10px] font-black text-primary-orange mb-2 uppercase tracking-widest text-center">Domicile</label>
-                      <select required value={matchForm.equipe_domicile} onChange={(e) => setMatchForm({...matchForm, equipe_domicile: e.target.value})} className="w-full px-4 py-4 glass-input rounded-xl focus:outline-none text-center appearance-none">
+                      <select required value={matchForm.equipe_domicile} onChange={(e) => setMatchForm({...matchForm, equipe_domicile: e.target.value})} className="w-full px-4 py-4 glass-input rounded-xl focus:outline-none text-center font-black text-black appearance-none">
                         <option value="">Sélectionner</option>
                         {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.nom}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-primary-orange mb-2 uppercase tracking-widest text-center">Extérieur</label>
-                      <select required value={matchForm.equipe_exterieur} onChange={(e) => setMatchForm({...matchForm, equipe_exterieur: e.target.value})} className="w-full px-4 py-4 glass-input rounded-xl focus:outline-none text-center appearance-none">
+                      <select required value={matchForm.equipe_exterieur} onChange={(e) => setMatchForm({...matchForm, equipe_exterieur: e.target.value})} className="w-full px-4 py-4 glass-input rounded-xl focus:outline-none text-center font-black text-black appearance-none">
                         <option value="">Sélectionner</option>
                         {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.nom}</option>)}
                       </select>
