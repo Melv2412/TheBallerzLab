@@ -4,9 +4,9 @@ Application web complète pour gérer des tournois de basket-ball, avec suivi en
 
 ## Stack Technique
 
-- **Backend**: Django 4.2 + Django REST Framework
+- **Backend**: Django 5.2 LTS + Django REST Framework
 - **Frontend**: React 18 + Vite + Tailwind CSS
-- **Base de données**: SQLite (par défaut)
+- **Base de données**: SQLite en local, PostgreSQL (Supabase) en prod
 
 ## Installation
 
@@ -131,16 +131,40 @@ python manage.py test tournois
 
 ## Configuration (production)
 
-Les réglages sensibles se lisent dans des variables d'environnement (ou un fichier `.env`) :
+Le même code tourne en local et en prod : tout se règle par variables d'environnement (ou un fichier `.env`, jamais commité). Sans aucune variable, on obtient la configuration locale (SQLite, médias dans `/media`, DEBUG).
 
-| Variable | Défaut (dev) |
+La liste complète est dans [.env.example](.env.example). En résumé :
+
+| Variable | Rôle |
 |---|---|
-| `DJANGO_SECRET_KEY` | clé de dev non sécurisée |
-| `DJANGO_DEBUG` | `True` |
-| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` |
+| `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS` | Sécurité Django |
+| `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` | URLs du frontend / de l'API |
+| `DATABASE_URL` | PostgreSQL (Supabase). Absente → SQLite |
+| `STORAGE_*` | Supabase Storage pour les logos et photos. Absentes → dossier `/media` |
 
 Côté frontend, `VITE_API_URL` et `VITE_MEDIA_URL` permettent de pointer vers un autre backend (par défaut, le proxy Vite redirige `/api` et `/media` vers `localhost:8000`).
+
+### Déploiement
+
+- **Backend → Railway** : [railway.json](railway.json) lance les migrations avant chaque déploiement, puis `collectstatic` et gunicorn. Définir les variables de [.env.example](.env.example) dans Railway. Sans les variables `STORAGE_*`, les images envoyées seraient perdues à chaque redéploiement.
+- **Frontend → Vercel** : Root Directory = `frontend`, définir `VITE_API_URL` (voir [frontend/.env.example](frontend/.env.example)). [frontend/vercel.json](frontend/vercel.json) renvoie toutes les routes vers `index.html` (sinon 404 au rechargement d'une page).
+- Mettre l'URL Vercel dans `CORS_ALLOWED_ORIGINS` côté Railway.
+- Créer un compte admin : `python manage.py createsuperuser` (via `railway run` ou en local avec `DATABASE_URL` pointant sur Supabase).
+
+Protections actives en prod (`DJANGO_DEBUG=False`) : HTTPS obligatoire, cookies sécurisés, HSTS, connexion limitée à 10 tentatives/min et inscription à 20/heure par IP, images limitées à 2 Mo.
+
+### Migrer les données locales vers Supabase
+
+```bash
+# 1. Exporter depuis SQLite (sans variable DATABASE_URL)
+python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.permission -e admin.logentry -e sessions --indent 2 -o donnees.json
+
+# 2. Créer les tables puis importer dans Supabase (avec DATABASE_URL définie)
+python manage.py migrate
+python manage.py loaddata donnees.json
+```
+
+Les images déjà présentes dans `/media` sont à copier dans le bucket Supabase en gardant les mêmes chemins (`equipes/logos/…`, `joueurs/photos/…`).
 
 ## Notes
 

@@ -2,6 +2,7 @@ from rest_framework import viewsets, mixins, status, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from django.db.models import F
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
@@ -78,6 +79,8 @@ class UserViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'inscription'
 
 
 class TournoiViewSet(viewsets.ModelViewSet):
