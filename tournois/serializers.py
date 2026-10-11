@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from .models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
 
 
@@ -9,6 +10,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'password']
         extra_kwargs = {'password': {'write_only': True}}
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -95,6 +100,13 @@ class StatistiqueJoueurSerializer(serializers.ModelSerializer):
     def get_joueur_nom(self, obj):
         return f"{obj.joueur.prenom} {obj.joueur.nom}"
 
+    def validate(self, attrs):
+        joueur = attrs.get('joueur', getattr(self.instance, 'joueur', None))
+        match = attrs.get('match', getattr(self.instance, 'match', None))
+        if joueur and match and joueur.equipe_id not in (match.equipe_domicile_id, match.equipe_exterieur_id):
+            raise serializers.ValidationError("Ce joueur n'appartient à aucune des deux équipes du match.")
+        return attrs
+
 
 class MatchSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle Match."""
@@ -152,6 +164,17 @@ class MatchSerializer(serializers.ModelSerializer):
         
         return best_player if max_eval > 0 else None
     
+    def validate(self, attrs):
+        tournoi = attrs.get('tournoi', getattr(self.instance, 'tournoi', None))
+        domicile = attrs.get('equipe_domicile', getattr(self.instance, 'equipe_domicile', None))
+        exterieur = attrs.get('equipe_exterieur', getattr(self.instance, 'equipe_exterieur', None))
+        if domicile and exterieur and domicile.pk == exterieur.pk:
+            raise serializers.ValidationError("Une équipe ne peut pas jouer contre elle-même.")
+        for equipe in (domicile, exterieur):
+            if equipe and tournoi and equipe.tournoi_id != tournoi.pk:
+                raise serializers.ValidationError(f"L'équipe {equipe.nom} ne fait pas partie de ce tournoi.")
+        return attrs
+
     def get_fautes_domicile(self, obj):
         """Retourne le total des fautes de l'équipe domicile."""
         return obj.get_fautes_domicile()
@@ -180,11 +203,13 @@ class MatchListSerializer(serializers.ModelSerializer):
 
 class UpdateStatistiqueSerializer(serializers.Serializer):
     """Serializer pour mettre à jour une statistique spécifique."""
-    action = serializers.ChoiceField(choices=['increment', 'decrement'])
-    valeur = serializers.IntegerField(default=1)
+    CHAMPS = ['points', 'passes', 'rebonds', 'contres', 'fautes']
 
-    def validate(self, attrs):
-        # Pour les points, on peut avoir 1, 2 ou 3
-        # Pour les autres stats, on utilise généralement 1
-        return attrs
+    champ = serializers.ChoiceField(
+        choices=CHAMPS,
+        error_messages={'invalid_choice': 'Champ invalide. Utilisez: points, passes, rebonds, contres, fautes'},
+    )
+    action = serializers.ChoiceField(choices=['increment', 'decrement'])
+    # Toujours positif : le sens est donné par `action`
+    valeur = serializers.IntegerField(default=1, min_value=1, max_value=200)
 

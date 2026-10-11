@@ -1,14 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getMatch, updateMatch, updateStatistique } from "../api";
+import { getMatch, updateMatch, updateStatistique, getImageUrl } from "../api";
 import { useAuth } from "../AuthContext";
 
-const API_BASE_URL = "http://localhost:8000";
+// Calcule l'état du chrono après `secondes` écoulées (chrono en marche)
+const avancerChrono = (m, secondes) => {
+  if (m.temps_restant_secondes === 0) {
+    // Fin de période : on passe à la suivante, chrono arrêté
+    return {
+      chrono_en_cours: false,
+      periode_actuelle: m.periode_actuelle + 1,
+      temps_restant_secondes: m.duree_periode_secondes,
+      shot_clock_secondes: 24,
+    };
+  }
 
-const getImageUrl = (path) => {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  return `${API_BASE_URL}${path}`;
+  const updates = {
+    temps_restant_secondes: Math.max(0, m.temps_restant_secondes - secondes),
+  };
+  if (m.shot_clock_secondes > 0) {
+    updates.shot_clock_secondes = Math.max(0, m.shot_clock_secondes - secondes);
+    if (updates.shot_clock_secondes === 0) {
+      updates.chrono_en_cours = false; // Violation des 24 secondes
+    }
+  }
+  return updates;
 };
 
 function MatchLive() {
@@ -42,58 +58,71 @@ function MatchLive() {
 
   const isOwner = user && match && match.organisateur_nom === user.username;
 
+  // Seul l'organisateur fait avancer le chrono ; les autres le lisent via le polling
+  const chronoPilote = Boolean(isOwner && match?.chrono_en_cours);
+  const chronoPiloteRef = useRef(false);
+  chronoPiloteRef.current = chronoPilote;
+  const matchRef = useRef(null);
+  matchRef.current = match;
+  // File d'envoi : les PATCH partent dans l'ordre, un tick ne peut pas écraser une action plus récente
+  const fileEnvoiRef = useRef(Promise.resolve());
+
+  const envoyerMatch = (updates) => {
+    const envoi = fileEnvoiRef.current.then(() => updateMatch(id, updates));
+    fileEnvoiRef.current = envoi.catch(() => {});
+    return envoi;
+  };
+
+  // Modifie le match et met l'écran à jour avec la réponse du serveur
+  const patchMatch = async (updates) => {
+    const response = await envoyerMatch(updates);
+    matchRef.current = response.data;
+    setMatch(response.data);
+  };
+
   useEffect(() => {
     loadMatch();
-    const interval = setInterval(loadMatch, 2000);
+    const interval = setInterval(() => {
+      // Pendant que l'organisateur pilote le chrono, son état local fait foi
+      if (!chronoPiloteRef.current) loadMatch();
+    }, 2000);
     return () => clearInterval(interval);
   }, [id]);
 
   useEffect(() => {
-    if (!match || !match.chrono_en_cours) return;
+    if (!chronoPilote) return;
 
-    const interval = setInterval(async () => {
-      const updates = {};
+    // On se base sur le temps réellement écoulé : pas de dérive si le navigateur ralentit les timers
+    let dernierTop = Date.now();
+    const interval = setInterval(() => {
+      const secondes = Math.floor((Date.now() - dernierTop) / 1000);
+      if (secondes < 1) return;
+      dernierTop += secondes * 1000;
 
-      // Chrono principal
-      if (match.temps_restant_secondes > 0) {
-        updates.temps_restant_secondes = match.temps_restant_secondes - 1;
-      } else {
-        updates.chrono_en_cours = false;
-      }
-
-      // Shot Clock
-      if (match.shot_clock_secondes > 0 && match.temps_restant_secondes > 0) {
-        updates.shot_clock_secondes = match.shot_clock_secondes - 1;
-        if (updates.shot_clock_secondes === 0) {
-          updates.chrono_en_cours = false;
-        }
-      }
-
-      // Passage automatique à la période suivante si le temps est écoulé
-      if (match.temps_restant_secondes === 0 && match.chrono_en_cours) {
-        updates.chrono_en_cours = false;
-        updates.periode_actuelle = match.periode_actuelle + 1;
-        updates.temps_restant_secondes = match.duree_periode_secondes;
-        updates.shot_clock_secondes = 24; // Reset shot clock too
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await updateMatch(id, updates);
-      }
-    }, 1000);
+      const updates = avancerChrono(matchRef.current, secondes);
+      const suivant = { ...matchRef.current, ...updates };
+      matchRef.current = suivant;
+      setMatch(suivant);
+      envoyerMatch(updates).catch(() => {});
+    }, 250);
 
     return () => clearInterval(interval);
-  }, [
-    match?.chrono_en_cours,
-    match?.temps_restant_secondes,
-    match?.shot_clock_secondes,
-    id,
-  ]);
+  }, [chronoPilote, id]);
 
   const loadMatch = async () => {
     try {
       const response = await getMatch(id);
-      setMatch(response.data);
+      setMatch((precedent) =>
+        // Ne pas faire reculer le chrono local avec un état serveur en retard d'un tick
+        chronoPiloteRef.current && precedent && response.data.chrono_en_cours
+          ? {
+              ...response.data,
+              temps_restant_secondes: precedent.temps_restant_secondes,
+              shot_clock_secondes: precedent.shot_clock_secondes,
+              periode_actuelle: precedent.periode_actuelle,
+            }
+          : response.data,
+      );
 
       // Sélectionner automatiquement le premier joueur si aucun n'est sélectionné
       if (response.data.statistiques && response.data.statistiques.length > 0) {
@@ -122,25 +151,22 @@ function MatchLive() {
   };
 
   const handleToggleChrono = async () => {
-    await updateMatch(id, { chrono_en_cours: !match.chrono_en_cours });
-    loadMatch();
+    await patchMatch({ chrono_en_cours: !match.chrono_en_cours });
   };
 
   const handleResetChrono = async () => {
-    await updateMatch(id, {
+    await patchMatch({
       temps_restant_secondes: match.duree_periode_secondes,
       chrono_en_cours: false,
     });
-    loadMatch();
   };
 
   const handleNextPeriode = async () => {
-    await updateMatch(id, {
+    await patchMatch({
       periode_actuelle: match.periode_actuelle + 1,
       temps_restant_secondes: match.duree_periode_secondes,
       chrono_en_cours: false,
     });
-    loadMatch();
   };
 
   const handleTimeout = async (team) => {
@@ -149,14 +175,12 @@ function MatchLive() {
       team === "home" ? match.timeouts_domicile : match.timeouts_exterieur;
 
     if (current > 0) {
-      await updateMatch(id, { [field]: current - 1, chrono_en_cours: false });
-      loadMatch();
+      await patchMatch({ [field]: current - 1, chrono_en_cours: false });
     }
   };
 
   const handleResetShotClock = async (seconds) => {
-    await updateMatch(id, { shot_clock_secondes: seconds });
-    loadMatch();
+    await patchMatch({ shot_clock_secondes: seconds });
   };
 
   const handleTogglePossession = async () => {
@@ -165,10 +189,9 @@ function MatchLive() {
       domicile: "exterieur",
       exterieur: "domicile",
     };
-    await updateMatch(id, {
+    await patchMatch({
       possession_fleche: next[match.possession_fleche || "neutre"],
     });
-    loadMatch();
   };
 
   const handleQuickStat = async (team, field, value) => {
@@ -1150,12 +1173,11 @@ function MatchLive() {
             <div className="flex gap-4">
               <button
                 onClick={async () => {
-                  await updateMatch(id, {
+                  await patchMatch({
                     temps_restant_secondes: tempTime.min * 60 + tempTime.sec,
                     chrono_en_cours: false,
                   });
                   setShowTimeModal(false);
-                  loadMatch();
                 }}
                 className="btn-basketball flex-1 py-4"
               >
@@ -1184,12 +1206,11 @@ function MatchLive() {
                 <button
                   key={p}
                   onClick={async () => {
-                    await updateMatch(id, {
+                    await patchMatch({
                       periode_actuelle: p,
                       chrono_en_cours: false,
                     });
                     setShowPeriodModal(false);
-                    loadMatch();
                   }}
                   className={`py-4 rounded-xl font-black transition-all ${match.periode_actuelle === p ? "bg-primary-orange text-white" : "bg-white/5 text-gray-400 hover:text-white"}`}
                 >

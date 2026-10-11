@@ -1,7 +1,11 @@
-from rest_framework import viewsets, status, permissions, filters
+from rest_framework import viewsets, mixins, status, permissions, filters
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from django.db.models import F
+from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.contrib.auth.models import User
 from .models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
 from .serializers import (
@@ -11,35 +15,66 @@ from .serializers import (
 )
 
 
+def get_tournoi(obj):
+    """Retourne le tournoi auquel un objet est rattaché."""
+    if isinstance(obj, Tournoi):
+        return obj
+    if isinstance(obj, (Equipe, Match)):
+        return obj.tournoi
+    if isinstance(obj, Joueur):
+        return obj.equipe.tournoi
+    if isinstance(obj, StatistiqueJoueur):
+        return obj.match.tournoi
+    return None
+
+
+def peut_modifier(user, tournoi):
+    """Seul l'organisateur modifie un tournoi ; les tournois sans organisateur sont réservés au staff."""
+    if tournoi is None or not user.is_authenticated:
+        return False
+    if tournoi.organisateur_id is None:
+        return user.is_staff
+    return tournoi.organisateur_id == user.id
+
+
 class IsOwnerOrReadOnly(permissions.BasePermission):
-    """Permission personnalisée : seul le propriétaire peut modifier l'objet."""
+    """Permission personnalisée : seul l'organisateur du tournoi peut modifier l'objet."""
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
-        
-        # Récupérer le tournoi associé à l'objet pour trouver l'organisateur
-        tournoi = None
-        if isinstance(obj, Tournoi):
-            tournoi = obj
-        elif hasattr(obj, 'tournoi'):
-            tournoi = obj.tournoi
-        elif hasattr(obj, 'equipe'):
-            tournoi = obj.equipe.tournoi
-        elif hasattr(obj, 'joueur'):
-            tournoi = obj.joueur.equipe.tournoi
-        elif hasattr(obj, 'match'):
-            tournoi = obj.match.tournoi
-            
-        if tournoi:
-            if not tournoi.organisateur:
-                return True # Ancien tournoi
-            return tournoi.organisateur == request.user
-            
-        return False
+        return peut_modifier(request.user, get_tournoi(obj))
 
 
-class UserViewSet(viewsets.ModelViewSet):
-    """ViewSet pour l'inscription et la gestion des utilisateurs."""
+class OrganisateurRequisMixin:
+    """
+    Vérifie aussi le tournoi *ciblé* lors d'une création ou d'une modification
+    (has_object_permission ne voit que l'objet existant, jamais les données envoyées).
+    """
+    def get_tournoi_cible(self, serializer):
+        data = serializer.validated_data
+        if 'tournoi' in data:
+            return data['tournoi']
+        if 'equipe' in data:
+            return data['equipe'].tournoi
+        if 'match' in data:
+            return data['match'].tournoi
+        return get_tournoi(serializer.instance)
+
+    def verifier_organisateur(self, serializer):
+        if not peut_modifier(self.request.user, self.get_tournoi_cible(serializer)):
+            raise PermissionDenied("Vous n'êtes pas l'organisateur de ce tournoi.")
+
+    def perform_create(self, serializer):
+        self.verifier_organisateur(serializer)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self.verifier_organisateur(serializer)
+        serializer.save()
+
+
+class UserViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """ViewSet pour l'inscription uniquement (pas de liste, modification ni suppression)."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
@@ -57,19 +92,12 @@ class TournoiViewSet(viewsets.ModelViewSet):
         return Tournoi.objects.prefetch_related('equipes', 'matchs').all()
 
     def get_object(self):
-        queryset = self.get_queryset()
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        
-        # Essayer de récupérer par slug (défaut)
-        try:
-            return super().get_object()
-        except:
-            # Si échec, essayer par ID si le paramètre est numérique
-            val = self.kwargs[lookup_url_kwarg]
-            if val.isdigit():
-                return get_object_or_404(queryset, id=val)
-            raise
+        # Les slugs ne sont jamais purement numériques : une valeur numérique est un ID
+        val = self.kwargs[self.lookup_field]
+        filtre = {'id': val} if val.isdigit() else {'slug': val}
+        tournoi = get_object_or_404(self.get_queryset(), **filtre)
+        self.check_object_permissions(self.request, tournoi)
+        return tournoi
 
     def perform_create(self, serializer):
         # L'organisateur est l'utilisateur connecté
@@ -78,12 +106,7 @@ class TournoiViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def classement(self, request, slug=None):
         """Calcule le classement des équipes du tournoi."""
-        # On cherche le tournoi par slug ou par ID
-        lookup = self.kwargs.get('slug')
-        if lookup.isdigit():
-            tournoi = get_object_or_404(Tournoi, id=lookup)
-        else:
-            tournoi = get_object_or_404(Tournoi, slug=lookup)
+        tournoi = self.get_object()
             
         equipes = tournoi.equipes.all()
         matchs_termines = tournoi.matchs.filter(statut='termine')
@@ -145,11 +168,7 @@ class TournoiViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def mvp(self, request, slug=None):
         """Trouve le MVP du tournoi (meilleure évaluation moyenne)."""
-        lookup = self.kwargs.get('slug')
-        if lookup.isdigit():
-            tournoi = get_object_or_404(Tournoi, id=lookup)
-        else:
-            tournoi = get_object_or_404(Tournoi, slug=lookup)
+        tournoi = self.get_object()
             
         # On calcule l'évaluation pour tous les joueurs du tournoi
         joueurs = Joueur.objects.filter(equipe__tournoi=tournoi)
@@ -185,15 +204,8 @@ class TournoiViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def reset_playoffs(self, request, slug=None):
         """Réinitialise les playoffs pour ce tournoi (soit tout, soit à partir d'une phase)."""
-        lookup = self.kwargs.get('slug')
-        if lookup.isdigit():
-            tournoi = get_object_or_404(Tournoi, id=lookup)
-        else:
-            tournoi = get_object_or_404(Tournoi, slug=lookup)
-            
-        if tournoi.organisateur and tournoi.organisateur != request.user:
-            return Response({"error": "Vous n'êtes pas l'organisateur de ce tournoi."}, status=status.HTTP_403_FORBIDDEN)
-            
+        tournoi = self.get_object()  # vérifie que l'utilisateur est l'organisateur
+
         phase = request.data.get('phase', None)
         phases_ordre = ['8eme', 'quart', 'demi', 'finale']
         
@@ -211,7 +223,7 @@ class TournoiViewSet(viewsets.ModelViewSet):
             return Response({"message": f"Réinitialisation totale des playoffs réussie. {count} matchs éliminatoires supprimés."})
 
 
-class EquipeViewSet(viewsets.ModelViewSet):
+class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     """ViewSet pour gérer les équipes."""
     queryset = Equipe.objects.select_related('tournoi').all()
     serializer_class = EquipeSerializer
@@ -228,7 +240,7 @@ class EquipeViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class JoueurViewSet(viewsets.ModelViewSet):
+class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     """ViewSet pour gérer les joueurs."""
     queryset = Joueur.objects.select_related('equipe', 'equipe__tournoi').all()
     serializer_class = JoueurSerializer
@@ -242,7 +254,7 @@ class JoueurViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class MatchViewSet(viewsets.ModelViewSet):
+class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     """ViewSet pour gérer les matchs."""
     queryset = Match.objects.select_related(
         'tournoi', 'equipe_domicile', 'equipe_exterieur'
@@ -315,28 +327,21 @@ class MatchViewSet(viewsets.ModelViewSet):
         serializer = UpdateStatistiqueSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        action_type = serializer.validated_data['action']
+
+        champ = serializer.validated_data['champ']
         valeur = serializer.validated_data['valeur']
-        champ = request.data.get('champ')  # 'points', 'passes', 'rebonds', 'contres', 'fautes'
-        
-        if champ not in ['points', 'passes', 'rebonds', 'contres', 'fautes']:
-            return Response(
-                {'error': 'Champ invalide. Utilisez: points, passes, rebonds, contres, fautes'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        valeur_actuelle = getattr(stat, champ)
-        
-        if action_type == 'increment':
-            nouvelle_valeur = valeur_actuelle + valeur
-        else:  # decrement
-            nouvelle_valeur = max(0, valeur_actuelle - valeur)
-        
-        setattr(stat, champ, nouvelle_valeur)
-        stat.save()
-        
-        # Le save() de StatistiqueJoueur mettra automatiquement à jour le score du match
+
+        # Mise à jour atomique en base : deux clics simultanés ne s'écrasent pas
+        if serializer.validated_data['action'] == 'increment':
+            nouvelle_valeur = F(champ) + valeur
+        else:
+            nouvelle_valeur = Greatest(F(champ) - valeur, 0)
+        StatistiqueJoueur.objects.filter(pk=stat.pk).update(
+            **{champ: nouvelle_valeur, 'updated_at': timezone.now()}
+        )
+        stat.refresh_from_db()
+        match.calculer_scores_depuis_stats()
+
         serializer_response = StatistiqueJoueurSerializer(stat)
         match.refresh_from_db()
         
@@ -349,7 +354,7 @@ class MatchViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
-class StatistiqueJoueurViewSet(viewsets.ModelViewSet):
+class StatistiqueJoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     """ViewSet pour gérer les statistiques des joueurs."""
     queryset = StatistiqueJoueur.objects.select_related(
         'joueur__equipe', 'match'

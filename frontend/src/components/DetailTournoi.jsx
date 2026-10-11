@@ -17,16 +17,10 @@ import {
   getTournamentMVP,
   updateTournoi,
   resetPlayoffs,
+  getImageUrl,
 } from "../api";
 import { useAuth } from "../AuthContext";
 
-const API_BASE_URL = "http://localhost:8000";
-
-const getImageUrl = (path) => {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  return `${API_BASE_URL}${path}`;
-};
 
 function DetailTournoi() {
   const { user } = useAuth();
@@ -1217,12 +1211,6 @@ function DetailTournoi() {
 }
 
 function MatchCard({ match, equipes, onDelete, isOwner }) {
-  const getImageUrl = (path) => {
-    if (!path) return null;
-    if (path.startsWith("http")) return path;
-    return `${API_BASE_URL}${path}`;
-  };
-
   return (
     <div className="glass-card overflow-hidden group">
       <div className="flex items-stretch bg-white/3">

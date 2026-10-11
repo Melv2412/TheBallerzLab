@@ -36,8 +36,19 @@ class Tournoi(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.nom)
+            self.slug = self.generer_slug_unique()
         super().save(*args, **kwargs)
+
+    def generer_slug_unique(self):
+        """Génère un slug unique et jamais purement numérique (sinon confondu avec un ID)."""
+        base = slugify(self.nom)[:240] or 'tournoi'
+        if base.isdigit():
+            base = f'tournoi-{base}'
+        slug, i = base, 2
+        while Tournoi.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            slug = f'{base}-{i}'
+            i += 1
+        return slug
 
     def __str__(self):
         return self.nom

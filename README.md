@@ -28,7 +28,6 @@ pip install -r requirements.txt
 3. Effectuer les migrations :
 
 ```bash
-python manage.py makemigrations
 python manage.py migrate
 ```
 
@@ -124,9 +123,28 @@ Basket4.0/
 - ✅ Interface responsive avec Tailwind CSS
 - ✅ Design moderne (Jaune, Violet, Noir)
 
+## Tests
+
+```bash
+python manage.py test tournois
+```
+
+## Configuration (production)
+
+Les réglages sensibles se lisent dans des variables d'environnement (ou un fichier `.env`) :
+
+| Variable | Défaut (dev) |
+|---|---|
+| `DJANGO_SECRET_KEY` | clé de dev non sécurisée |
+| `DJANGO_DEBUG` | `True` |
+| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` |
+
+Côté frontend, `VITE_API_URL` et `VITE_MEDIA_URL` permettent de pointer vers un autre backend (par défaut, le proxy Vite redirige `/api` et `/media` vers `localhost:8000`).
+
 ## Notes
 
-- L'application est conçue pour un seul utilisateur (créateur/arbitre)
+- Chaque tournoi appartient à son organisateur : lui seul peut modifier ses équipes, joueurs, matchs et stats (les autres utilisateurs ont un accès en lecture)
 - Tous les matchs doivent appartenir à un tournoi
 - Les scores sont calculés automatiquement à partir des points des joueurs
 - Les statistiques ne peuvent être modifiées que lorsque le match est "en cours"

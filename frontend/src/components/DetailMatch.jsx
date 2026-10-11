@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique } from '../api'
+import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, getImageUrl } from '../api'
 import { useAuth } from '../AuthContext'
-const API_BASE_URL = "http://localhost:8000";
-
-const getImageUrl = (path) => {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  return `${API_BASE_URL}${path}`;
-};
 
 function DetailMatch() {
   const { user } = useAuth()
