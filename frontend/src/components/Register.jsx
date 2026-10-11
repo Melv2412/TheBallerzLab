@@ -31,7 +31,10 @@ function Register() {
       });
       navigate('/login');
     } catch (err) {
-      setError('Erreur lors de l’inscription. Le pseudo est peut-être déjà pris.');
+      // Afficher le premier message renvoyé par le serveur (pseudo pris, mot de passe trop faible…)
+      const erreurs = err.response?.data;
+      const message = erreurs && Object.values(erreurs).flat()[0];
+      setError(typeof message === 'string' ? message : 'Erreur lors de l’inscription.');
     } finally {
       setLoading(false);
     }

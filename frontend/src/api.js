@@ -1,6 +1,14 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:8000/api'
+// En dev, le proxy Vite redirige /api et /media vers Django (voir vite.config.js)
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_URL || ''
+
+export const getImageUrl = (path) => {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  return `${MEDIA_BASE_URL}${path}`
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -18,13 +26,47 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Intercepteur pour gérer les erreurs (notamment 401)
+// Un seul rafraîchissement à la fois, partagé par les requêtes en échec
+let refreshEnCours = null
+
+const rafraichirToken = () => {
+  if (!refreshEnCours) {
+    const refresh = localStorage.getItem('refresh')
+    refreshEnCours = (refresh
+      ? axios.post(`${API_BASE_URL}/token/refresh/`, { refresh })
+      : Promise.reject(new Error('Pas de refresh token'))
+    )
+      .then((response) => {
+        localStorage.setItem('token', response.data.access)
+        return response.data.access
+      })
+      .finally(() => {
+        refreshEnCours = null
+      })
+  }
+  return refreshEnCours
+}
+
+// Intercepteur pour gérer les erreurs : sur un 401, on rafraîchit le token puis on rejoue la requête
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Rediriger vers la connexion ou rafraîchir le token
-      // console.log('Non autorisé')
+  async (error) => {
+    const requete = error.config
+    const estRequeteToken = requete?.url?.startsWith('/token/')
+
+    if (error.response?.status === 401 && requete && !requete._retry && !estRequeteToken) {
+      requete._retry = true
+      try {
+        const access = await rafraichirToken()
+        requete.headers.Authorization = `Bearer ${access}`
+        return api(requete)
+      } catch {
+        // Session expirée : on déconnecte (AuthContext écoute cet événement)
+        localStorage.removeItem('token')
+        localStorage.removeItem('refresh')
+        localStorage.removeItem('user')
+        window.dispatchEvent(new Event('auth:logout'))
+      }
     }
     console.error('Erreur API:', error.response?.data || error.message)
     return Promise.reject(error)

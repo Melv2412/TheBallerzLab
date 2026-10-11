@@ -15,6 +15,11 @@ export const AuthProvider = ({ children }) => {
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
+
+    // Déclenché par api.js quand la session a expiré et ne peut pas être rafraîchie
+    const onLogout = () => setUser(null);
+    window.addEventListener('auth:logout', onLogout);
+    return () => window.removeEventListener('auth:logout', onLogout);
   }, []);
 
   const login = async (credentials) => {
