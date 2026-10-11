@@ -1,6 +1,10 @@
+import base64
 from datetime import date
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -9,6 +13,7 @@ from tournois.models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
 
 class BaseAPITestCase(APITestCase):
     def setUp(self):
+        cache.clear()  # remet à zéro les compteurs de limitation
         self.orga = User.objects.create_user('orga', password='motdepasse-solide-42')
         self.intrus = User.objects.create_user('intrus', password='motdepasse-solide-42')
 
@@ -181,3 +186,28 @@ class ClassementTests(BaseAPITestCase):
     def test_tournoi_au_nom_numerique_accessible(self):
         Tournoi.objects.create(nom='2025', date_debut=date(2026, 1, 1), date_fin=date(2026, 1, 2))
         self.assertEqual(self.client.get('/api/tournois/tournoi-2025/classement/').status_code, status.HTTP_200_OK)
+
+
+class LimitationTentativesTests(BaseAPITestCase):
+    def test_trop_de_tentatives_de_connexion_bloquees(self):
+        identifiants = {'username': 'orga', 'password': 'mauvais'}
+        for _ in range(10):
+            self.assertEqual(self.client.post('/api/token/', identifiants).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.client.post('/api/token/', identifiants).status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+class TailleImageTests(BaseAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_authenticate(self.orga)
+
+    @override_settings(TAILLE_MAX_IMAGE_MO=0)
+    def test_logo_trop_lourd_refuse(self):
+        # 1x1 GIF valide ; avec une limite à 0 Mo, toute image est trop lourde
+        gif = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
+        logo = SimpleUploadedFile('logo.gif', gif, content_type='image/gif')
+        reponse = self.client.post(
+            '/api/equipes/', {'nom': 'D', 'tournoi': self.tournoi.id, 'logo': logo}, format='multipart',
+        )
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('logo', reponse.data)

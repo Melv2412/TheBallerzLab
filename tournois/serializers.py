@@ -1,6 +1,16 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.conf import settings
+
+
+def valider_taille_image(image):
+    """Refuse les images trop lourdes (stockage limité en prod)."""
+    if image and image.size > settings.TAILLE_MAX_IMAGE_MO * 1024 * 1024:
+        raise serializers.ValidationError(
+            f"L'image ne doit pas dépasser {settings.TAILLE_MAX_IMAGE_MO} Mo."
+        )
+    return image
 from .models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
 
 
@@ -59,7 +69,7 @@ class EquipeSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle Equipe."""
     tournoi_nom = serializers.CharField(source='tournoi.nom', read_only=True)
     joueurs_count = serializers.SerializerMethodField()
-    logo = serializers.ImageField(required=False, allow_null=True)
+    logo = serializers.ImageField(required=False, allow_null=True, validators=[valider_taille_image])
 
     class Meta:
         model = Equipe
@@ -80,6 +90,7 @@ class JoueurSerializer(serializers.ModelSerializer):
     class Meta:
         model = Joueur
         fields = ['id', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'tournoi_nom', 'created_at', 'updated_at']
+        extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
 
 
 class StatistiqueJoueurSerializer(serializers.ModelSerializer):
