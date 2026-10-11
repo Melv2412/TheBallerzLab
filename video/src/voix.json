@@ -1,0 +1,47 @@
+{
+  "voix": "fr_FR-tom-medium",
+  "scenes": [
+    {
+      "id": "intro",
+      "texte": "Bienvenue dans The Lab.",
+      "audio": "voice/intro.wav",
+      "duree": 1.666
+    },
+    {
+      "id": "probleme",
+      "texte": "Organiser un tournoi de basket, c'est jongler entre les feuilles de match, les scores et les statistiques.",
+      "audio": "voice/probleme.wav",
+      "duree": 5.451
+    },
+    {
+      "id": "tournoi",
+      "texte": "Avec The Lab, crée ton tournoi en quelques clics : équipes, joueurs, poules et phases finales.",
+      "audio": "voice/tournoi.wav",
+      "duree": 5.584
+    },
+    {
+      "id": "live",
+      "texte": "Pendant le match, tu pilotes la table de marque en direct : chrono, shot clock, fautes et temps morts.",
+      "audio": "voice/live.wav",
+      "duree": 5.834
+    },
+    {
+      "id": "stats",
+      "texte": "Chaque panier, chaque rebond, chaque passe est enregistré. Le classement et le MVP se calculent tout seuls.",
+      "audio": "voice/stats.wav",
+      "duree": 6.339
+    },
+    {
+      "id": "public",
+      "texte": "Et le public suit tout en temps réel, depuis son téléphone.",
+      "audio": "voice/public.wav",
+      "duree": 3.315
+    },
+    {
+      "id": "outro",
+      "texte": "The Lab. Ton terrain, tes règles.",
+      "audio": "voice/outro.wav",
+      "duree": 2.85
+    }
+  ]
+}
