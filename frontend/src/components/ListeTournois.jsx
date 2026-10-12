@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getTournois, createTournoi, deleteTournoi } from '../api'
+import { getTournois, createTournoi, deleteTournoi, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 
 function ListeTournois() {
-  const { user } = useAuth()
+  const { user, rafraichirProfil } = useAuth()
+  // undefined = profil pas encore chargé : on laisse essayer, le serveur tranchera
+  const enAttenteValidation = user?.organisateur_valide === false
+  const limiteAtteinte = user?.limite_tournois_actifs != null && user.tournois_actifs >= user.limite_tournois_actifs
+  const [avertissement, setAvertissement] = useState('')
+
+  const ouvrirCreation = () => {
+    if (enAttenteValidation) {
+      setAvertissement("Ton compte organisateur est en attente de validation par l'équipe THE LAB. Tu pourras créer des tournois dès qu'il sera validé.")
+    } else if (limiteAtteinte) {
+      setAvertissement(`Tu as déjà ${user.limite_tournois_actifs} tournois en cours ou à venir. Un tournoi libère sa place une fois sa date de fin passée.`)
+    } else {
+      setShowModal(true)
+    }
+  }
   const [tournois, setTournois] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -47,12 +61,12 @@ function ListeTournois() {
       await createTournoi(formData)
       setShowModal(false)
       setFormData({ nom: '', date_debut: '', date_fin: '' })
+      rafraichirProfil()
       setTimeout(() => {
         loadTournois()
       }, 100)
     } catch (error) {
-      console.error('Erreur lors de la création:', error)
-      alert(`Erreur lors de la création`)
+      alert(messageErreur(error, 'Erreur lors de la création du tournoi.'))
     }
   }
 
@@ -117,7 +131,7 @@ function ListeTournois() {
 
           {user && (
             <button
-              onClick={() => setShowModal(true)}
+              onClick={ouvrirCreation}
               className="btn-basketball flex items-center gap-3 w-full md:w-auto justify-center whitespace-nowrap"
             >
               <span className="text-xl">+</span> Créer un Tournoi
@@ -126,6 +140,28 @@ function ListeTournois() {
         </div>
       </div>
 
+      {user && enAttenteValidation && (
+        <div className="mb-8 bg-primary-orange/10 border border-primary-orange/30 rounded-2xl p-4 sm:p-5 flex items-start gap-4">
+          <span className="text-2xl">⏳</span>
+          <div>
+            <p className="text-primary-orange font-black uppercase text-xs tracking-widest">Compte en attente de validation</p>
+            <p className="text-gray-300 text-sm mt-1">
+              Tu peux suivre tous les tournois. La création de tournois sera disponible dès que l'équipe THE LAB aura validé ton compte organisateur.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {avertissement && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setAvertissement('')}>
+          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-8 w-full max-w-md text-center shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="text-5xl mb-4">{enAttenteValidation ? '⏳' : '🏁'}</div>
+            <p className="text-gray-200 mb-6">{avertissement}</p>
+            <button onClick={() => setAvertissement('')} className="btn-basketball w-full py-4">Compris</button>
+          </div>
+        </div>
+      )}
+
       {tournois.length === 0 ? (
         <div className="glass-card p-20 text-center">
           <div className="text-8xl mb-6 opacity-20">⛹️</div>
@@ -133,7 +169,7 @@ function ListeTournois() {
           <p className="text-gray-400 mb-8 max-w-md mx-auto">Préparez votre sifflet et organisez votre première compétition dès aujourd'hui.</p>
           {user && (
             <button
-              onClick={() => setShowModal(true)}
+              onClick={ouvrirCreation}
               className="btn-basketball"
             >
               Lancer un tournoi
