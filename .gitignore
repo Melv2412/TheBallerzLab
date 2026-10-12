@@ -43,3 +43,6 @@ Thumbs.db
 /local_docs/
 
 
+
+# Fichiers locaux sensibles (variables Vercel, etc.)
+/not_to_commit/
