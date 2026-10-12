@@ -54,12 +54,16 @@ class TournoiSerializer(serializers.ModelSerializer):
 
     def get_equipes_count(self, obj):
         """Retourne le nombre d'équipes du tournoi."""
+        if hasattr(obj, 'nb_equipes'):  # calculé par la requête (voir TournoiViewSet)
+            return obj.nb_equipes
         if hasattr(obj, 'equipes'):
             return obj.equipes.count() if hasattr(obj.equipes, 'count') else len(obj.equipes.all())
         return 0
 
     def get_matchs_count(self, obj):
         """Retourne le nombre de matchs du tournoi."""
+        if hasattr(obj, 'nb_matchs'):
+            return obj.nb_matchs
         if hasattr(obj, 'matchs'):
             return obj.matchs.count() if hasattr(obj.matchs, 'count') else len(obj.matchs.all())
         return 0
@@ -77,6 +81,8 @@ class EquipeSerializer(serializers.ModelSerializer):
 
     def get_joueurs_count(self, obj):
         """Retourne le nombre de joueurs de l'équipe."""
+        if hasattr(obj, 'nb_joueurs'):  # calculé par la requête (voir EquipeViewSet)
+            return obj.nb_joueurs
         if hasattr(obj, 'joueurs'):
             return obj.joueurs.count() if hasattr(obj.joueurs, 'count') else len(obj.joueurs.all())
         return 0
@@ -186,13 +192,17 @@ class MatchSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"L'équipe {equipe.nom} ne fait pas partie de ce tournoi.")
         return attrs
 
+    def _fautes(self, obj, equipe_id):
+        # Les stats sont déjà chargées (prefetch) : pas de requête supplémentaire
+        return sum(s.fautes for s in obj.statistiques_joueurs.all() if s.joueur.equipe_id == equipe_id)
+
     def get_fautes_domicile(self, obj):
         """Retourne le total des fautes de l'équipe domicile."""
-        return obj.get_fautes_domicile()
-    
+        return self._fautes(obj, obj.equipe_domicile_id)
+
     def get_fautes_exterieur(self, obj):
         """Retourne le total des fautes de l'équipe extérieur."""
-        return obj.get_fautes_exterieur()
+        return self._fautes(obj, obj.equipe_exterieur_id)
 
 
 class MatchListSerializer(serializers.ModelSerializer):

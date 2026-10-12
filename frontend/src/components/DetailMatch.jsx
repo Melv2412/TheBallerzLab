@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, getImageUrl } from '../api'
 import { useAuth } from '../AuthContext'
+import { usePolling } from '../usePolling'
 
 function DetailMatch() {
   const { user } = useAuth()
@@ -12,11 +13,8 @@ function DetailMatch() {
 
   const isOwner = user && match && match.organisateur_nom === user.username;
 
-  useEffect(() => {
-    loadMatch()
-    const interval = setInterval(loadMatch, 2000) 
-    return () => clearInterval(interval)
-  }, [id])
+  // Toutes les 3 s pendant le match, toutes les 30 s sinon (terminé ou à venir)
+  usePolling(() => loadMatch(), () => (match?.statut === 'en_cours' ? 3000 : 30000), [id])
 
   const loadMatch = async () => {
     try {

@@ -211,3 +211,52 @@ class TailleImageTests(BaseAPITestCase):
         )
         self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('logo', reponse.data)
+
+
+class PerformanceRequetesTests(BaseAPITestCase):
+    """Le nombre de requêtes SQL ne doit pas grandir avec le nombre d'équipes ou de joueurs."""
+
+    def setUp(self):
+        super().setUp()
+        # Gonfle le tournoi : 8 équipes de 6 joueurs, des matchs terminés avec stats
+        equipes = [self.dom, self.ext] + [
+            Equipe.objects.create(nom=f'E{i}', tournoi=self.tournoi) for i in range(6)
+        ]
+        for equipe in equipes:
+            for n in range(1, 7):
+                Joueur.objects.get_or_create(equipe=equipe, numero_maillot=n, defaults={'prenom': 'P', 'nom': f'N{n}'})
+        for dom, ext in zip(equipes[::2], equipes[1::2]):
+            match = Match.objects.create(tournoi=self.tournoi, equipe_domicile=dom, equipe_exterieur=ext, statut='termine')
+            for joueur in Joueur.objects.filter(equipe__in=[dom, ext]):
+                StatistiqueJoueur.objects.create(joueur=joueur, match=match, points=joueur.numero_maillot, passes=1)
+
+    def test_classement_en_requetes_constantes(self):
+        with self.assertNumQueries(3):
+            reponse = self.client.get('/api/tournois/interpromo/classement/')
+        self.assertEqual(len(reponse.data), 8)
+        self.assertEqual(sum(e['joues'] for e in reponse.data), 8)
+
+    def test_mvp_en_requetes_constantes(self):
+        with self.assertNumQueries(2):
+            reponse = self.client.get('/api/tournois/interpromo/mvp/')
+        self.assertEqual(len(reponse.data), 5)
+        meilleur = reponse.data[0]
+        self.assertEqual(meilleur['moyenne_eval'], 7.0)  # 6 points + 1 passe sur 1 match
+        self.assertEqual(meilleur['nb_matchs'], 1)
+
+    def test_liste_des_tournois_en_une_requete(self):
+        with self.assertNumQueries(1):
+            reponse = self.client.get('/api/tournois/')
+        interpromo = next(t for t in reponse.data if t['slug'] == 'interpromo')
+        self.assertEqual(interpromo['equipes_count'], 8)
+        self.assertEqual(interpromo['matchs_count'], 5)
+
+    def test_tous_les_joueurs_d_un_tournoi_en_une_requete(self):
+        with self.assertNumQueries(1):
+            reponse = self.client.get('/api/joueurs/?tournoi=interpromo')
+        self.assertEqual(len(reponse.data), 48)
+
+    def test_detail_du_match_ne_depend_pas_du_nombre_de_joueurs(self):
+        with self.assertNumQueries(4):
+            reponse = self.client.get(f'/api/matchs/{self.match.id}/')
+        self.assertEqual(reponse.data['fautes_domicile'], 0)

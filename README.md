@@ -129,6 +129,8 @@ Basket4.0/
 python manage.py test tournois
 ```
 
+Les mêmes tests, plus la compilation du frontend, tournent automatiquement sur GitHub à chaque push ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Certains tests vérifient le nombre de requêtes SQL des pages lourdes (classement, MVP, listes) : si une modification les ralentit, ils échouent.
+
 ## Configuration (production)
 
 Le même code tourne en local et en prod : tout se règle par variables d'environnement (ou un fichier `.env`, jamais commité). Sans aucune variable, on obtient la configuration locale (SQLite, médias dans `/media`, DEBUG).
