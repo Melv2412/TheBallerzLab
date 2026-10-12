@@ -95,7 +95,7 @@ function ListeTournois() {
       <div className="relative z-10">
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <div className="card-title-accent">
-          <h1 className="text-5xl font-black italic tracking-tighter">
+          <h1 className="text-4xl sm:text-5xl font-black italic tracking-tighter">
             {user ? 'Mes Tournois' : 'Découvrir The Lab'}
           </h1>
           <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mt-1">
@@ -205,8 +205,8 @@ function ListeTournois() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-10 w-full max-w-lg shadow-2xl animate-fade-in ring-8 ring-primary-orange/5">
-            <h2 className="text-4xl font-black mb-8 italic tracking-tighter uppercase text-white">Nouveau Championnat</h2>
+          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-10 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in ring-8 ring-primary-orange/5">
+            <h2 className="text-2xl sm:text-4xl font-black mb-6 sm:mb-8 italic tracking-tighter uppercase text-white">Nouveau Championnat</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-xs font-black text-primary-orange mb-2 uppercase tracking-widest">Nom du Tournoi</label>
@@ -219,7 +219,7 @@ function ListeTournois() {
                   className="w-full px-5 py-4 glass-input rounded-2xl focus:outline-none placeholder:text-gray-600"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-xs font-black text-primary-orange mb-2 uppercase tracking-widest">Date Début</label>
                   <input

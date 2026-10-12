@@ -518,15 +518,15 @@ function DetailTournoi() {
       <div className="relative z-10">
         
         {tournoi && !isOwner && (
-          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between animate-pulse">
-            <div className="flex items-center gap-4">
+          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               <span className="text-2xl">👁️</span>
               <div>
                 <p className="text-blue-400 font-black uppercase text-[10px] tracking-widest">Mode Consultant Actif</p>
                 <p className="text-gray-400 text-xs">Vous consultez les statistiques du tournoi de <span className="text-white font-bold">{tournoi.organisateur_nom || 'l\'organisateur'}</span>.</p>
               </div>
             </div>
-            <div className="text-[10px] font-black text-blue-500/50 uppercase tracking-tighter">Lecture seule</div>
+            <div className="hidden sm:block text-[10px] font-black text-blue-500/50 uppercase tracking-tighter">Lecture seule</div>
           </div>
         )}
 
@@ -535,17 +535,17 @@ function DetailTournoi() {
         <Link to="/" className="text-gray-400 hover:text-white transition-colors mb-4 inline-block font-bold text-xs uppercase tracking-widest">
           ← Retour aux championnats
         </Link>
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-          <div className="card-title-accent">
-            <h1 className="text-6xl font-black italic tracking-tighter text-white uppercase">{tournoi.nom}</h1>
-            <div className="flex items-center gap-4 mt-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div className="card-title-accent min-w-0 max-w-full">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase break-words">{tournoi.nom}</h1>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
               <span className="bg-primary-orange text-white px-3 py-1 rounded text-[10px] font-black tracking-widest uppercase">Live Report</span>
               <p className="text-gray-400 font-bold text-xs uppercase tracking-widest italic">
                 {new Date(tournoi.date_debut).toLocaleDateString("fr-FR")} — {new Date(tournoi.date_fin).toLocaleDateString("fr-FR")}
               </p>
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-3 sm:gap-4">
             <button 
               onClick={() => window.print()}
               className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-xs tracking-widest flex items-center gap-2"
@@ -577,7 +577,7 @@ function DetailTournoi() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex gap-4 mb-8 border-b border-white/5 no-print">
+      <div className="flex gap-4 mb-8 border-b border-white/5 no-print overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         {[
           { id: "classement", label: "Classement", icon: "📊" },
           { id: "matchs", label: "Calendrier", icon: "🏀" },
@@ -588,7 +588,7 @@ function DetailTournoi() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`pb-4 px-2 font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center gap-2 border-b-2 ${activeTab === tab.id ? 'text-primary-orange border-primary-orange' : 'text-gray-500 border-transparent hover:text-white'}`}
+            className={`pb-4 px-2 font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center gap-2 border-b-2 whitespace-nowrap shrink-0 ${activeTab === tab.id ? 'text-primary-orange border-primary-orange' : 'text-gray-500 border-transparent hover:text-white'}`}
           >
             <span>{tab.icon}</span> {tab.label}
           </button>
@@ -597,16 +597,16 @@ function DetailTournoi() {
 
       {/* Sub-Tabs Navigation for Classement */}
       {activeTab === "classement" && (
-        <div className="flex gap-4 mb-6 no-print">
+        <div className="grid grid-cols-2 sm:flex gap-3 sm:gap-4 mb-6 no-print">
           <button
             onClick={() => setSubTabClassement('poule')}
-            className={`px-6 py-3 rounded-xl font-black uppercase text-xs tracking-wider transition-all ${subTabClassement === 'poule' ? 'bg-primary-orange text-white border-2 border-primary-orange' : 'bg-white/5 text-gray-400 hover:text-white border-2 border-white/10'}`}
+            className={`px-3 sm:px-6 py-3 rounded-xl font-black uppercase text-xs tracking-wider transition-all ${subTabClassement === 'poule' ? 'bg-primary-orange text-white border-2 border-primary-orange' : 'bg-white/5 text-gray-400 hover:text-white border-2 border-white/10'}`}
           >
             Saison Régulière (Poules)
           </button>
           <button
             onClick={() => setSubTabClassement('elimination')}
-            className={`px-6 py-3 rounded-xl font-black uppercase text-xs tracking-wider transition-all ${subTabClassement === 'elimination' ? 'bg-primary-orange text-white border-2 border-primary-orange' : 'bg-white/5 text-gray-400 hover:text-white border-2 border-white/10'}`}
+            className={`px-3 sm:px-6 py-3 rounded-xl font-black uppercase text-xs tracking-wider transition-all ${subTabClassement === 'elimination' ? 'bg-primary-orange text-white border-2 border-primary-orange' : 'bg-white/5 text-gray-400 hover:text-white border-2 border-white/10'}`}
           >
             Phases Éliminatoires
           </button>
@@ -618,11 +618,11 @@ function DetailTournoi() {
         
         {activeTab === "classement" && (
           <div className="lg:col-span-2 glass-card overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
-              <h2 className="text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
+            <div className="p-5 sm:p-8 border-b border-white/5 flex items-center justify-between gap-3">
+              <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
                 <span className="text-primary-orange">📊</span> {subTabClassement === 'poule' ? "Classement Général" : "Classement Éliminatoires"}
               </h2>
-              <div className="flex gap-4 text-[10px] font-black uppercase tracking-tighter text-gray-500">
+              <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-[10px] font-black uppercase tracking-tighter text-gray-500 shrink-0">
                 <span title="Victoire (2pts)">V: 2pts</span>
                 <span title="Défaite (1pt)">D: 1pt</span>
               </div>
@@ -631,13 +631,13 @@ function DetailTournoi() {
               <table className="w-full text-left stats-table border-collapse">
                 <thead>
                   <tr>
-                    <th className="p-4 text-center w-12">#</th>
-                    <th className="p-4">Équipe</th>
-                    <th className="p-4 text-center">J</th>
-                    <th className="p-4 text-center">G</th>
-                    <th className="p-4 text-center">P</th>
-                    <th className="p-4 text-center">Diff</th>
-                    <th className="p-4 text-center bg-primary-orange/20 text-primary-orange">Pts</th>
+                    <th className="p-2 sm:p-4 text-center w-10 sm:w-12">#</th>
+                    <th className="p-2 sm:p-4">Équipe</th>
+                    <th className="p-2 sm:p-4 text-center">J</th>
+                    <th className="p-2 sm:p-4 text-center">G</th>
+                    <th className="p-2 sm:p-4 text-center">P</th>
+                    <th className="hidden sm:table-cell p-4 text-center">Diff</th>
+                    <th className="p-2 sm:p-4 text-center bg-primary-orange/20 text-primary-orange">Pts</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -648,32 +648,32 @@ function DetailTournoi() {
                   ) : (
                     classement.map((entry, index) => (
                       <tr key={entry.id} className="group">
-                        <td className="p-4 text-center">
+                        <td className="p-2 sm:p-4 text-center">
                           <span className={`inline-flex w-7 h-7 items-center justify-center rounded font-black italic text-xs ${index < 3 ? 'bg-primary-orange text-white' : 'bg-white/5'}`}>
                             {index + 1}
                           </span>
                         </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-white/5 p-1 border border-white/10 flex items-center justify-center overflow-hidden">
+                        <td className="p-2 sm:p-4">
+                          <div className="flex items-center gap-2 sm:gap-4">
+                            <div className="hidden sm:flex w-10 h-10 shrink-0 rounded-lg bg-white/5 p-1 border border-white/10 flex items-center justify-center overflow-hidden">
                               {getImageUrl(equipes.find(e => e.id === entry.id)?.logo) ? (
                                 <img src={getImageUrl(equipes.find(e => e.id === entry.id).logo)} className="w-full h-full object-cover" alt="logo" />
                               ) : (
                                 <span className="text-lg">🛡️</span>
                               )}
                             </div>
-                            <span className="font-black italic text-lg tracking-tight uppercase group-hover:text-primary-orange transition-colors">{entry.nom}</span>
+                            <span className="font-black italic text-sm sm:text-lg tracking-tight uppercase group-hover:text-primary-orange transition-colors break-words">{entry.nom}</span>
                           </div>
                         </td>
-                        <td className="p-4 text-center font-bold text-gray-400">{entry.joues}</td>
-                        <td className="p-4 text-center">
+                        <td className="p-2 sm:p-4 text-center font-bold text-gray-400">{entry.joues}</td>
+                        <td className="p-2 sm:p-4 text-center">
                           <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-xs font-black">{entry.gagnes}</span>
                         </td>
-                        <td className="p-4 text-center">
+                        <td className="p-2 sm:p-4 text-center">
                           <span className="bg-red-500/10 text-red-500 px-2 py-1 rounded text-xs font-black">{entry.perdus}</span>
                         </td>
-                        <td className="p-4 text-center font-mono font-bold italic text-gray-500">{entry.difference > 0 ? `+${entry.difference}` : entry.difference}</td>
-                        <td className="p-4 text-center font-black text-2xl bg-white/3 italic text-primary-orange">{entry.points}</td>
+                        <td className="hidden sm:table-cell p-4 text-center font-mono font-bold italic text-gray-500">{entry.difference > 0 ? `+${entry.difference}` : entry.difference}</td>
+                        <td className="p-2 sm:p-4 text-center font-black text-xl sm:text-2xl bg-white/3 italic text-primary-orange">{entry.points}</td>
                       </tr>
                     ))
                   )}
@@ -685,12 +685,12 @@ function DetailTournoi() {
 
         {activeTab === "classement" && (
           <div className="glass-card overflow-hidden h-fit">
-            <div className="p-8 border-b border-white/5">
-              <h2 className="text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
+            <div className="p-5 sm:p-8 border-b border-white/5">
+              <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
                 <span className="text-primary-orange">👑</span> {subTabClassement === 'poule' ? "Leaders Évaluation" : "Leaders Phase Finale"}
               </h2>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               {tournamentMVP.length === 0 ? (
                 <div className="text-center py-10 opacity-30 italic">Statistiques en cours d'analyse...</div>
               ) : (
@@ -734,27 +734,27 @@ function DetailTournoi() {
 
       {activeTab === "rosters" && (
         <div className="animate-fade-in">
-          <h2 className="text-4xl font-black italic mb-6 card-title-accent uppercase">🛡️ Rosters & Équipes</h2>
+          <h2 className="text-2xl sm:text-4xl font-black italic mb-6 card-title-accent uppercase">🛡️ Rosters & Équipes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {equipes.map((equipe) => (
               <div key={equipe.id} className="glass-card group overflow-hidden border-b-4 border-b-primary-orange/50">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-6">
-                    <div className="flex gap-4 items-center">
-                      <div className="w-16 h-16 rounded-2xl bg-white p-2 flex items-center justify-center shadow-xl shadow-black/40 overflow-hidden ring-4 ring-white/5">
+                    <div className="flex gap-4 items-center min-w-0">
+                      <div className="w-16 h-16 shrink-0 rounded-2xl bg-white p-2 flex items-center justify-center shadow-xl shadow-black/40 overflow-hidden ring-4 ring-white/5">
                         {getImageUrl(equipe.logo) ? (
                           <img src={getImageUrl(equipe.logo)} className="w-full h-full object-cover" alt="logo" />
                         ) : (
                           <span className="text-2xl">🛡️</span>
                         )}
                       </div>
-                      <div>
-                        <h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">{equipe.nom}</h3>
+                      <div className="min-w-0">
+                        <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter leading-none break-words">{equipe.nom}</h3>
                         <p className="text-[10px] font-bold text-gray-400 mt-2 tracking-widest uppercase italic">Effectif: {joueursParEquipe[equipe.id]?.length || 0} joueurs</p>
                       </div>
                     </div>
                     {isOwner && (
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
                         <button onClick={() => setShowJoueurModal(equipe.id)} className="bg-primary-orange/10 p-2 rounded-lg text-primary-orange hover:bg-primary-orange hover:text-white transition-all">👤+</button>
                         <button onClick={() => handleEditEquipe(equipe)} className="bg-blue-500/10 p-2 rounded-lg text-blue-500 hover:bg-blue-500 hover:text-white transition-all">✎</button>
                         <button onClick={() => handleDeleteEquipe(equipe.id)} className="bg-red-500/10 p-2 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all">✕</button>
@@ -782,7 +782,7 @@ function DetailTournoi() {
                             </div>
                           </div>
                           {isOwner && (
-                            <div className="flex gap-2 opacity-0 group-hover/player:opacity-100 transition-all">
+                            <div className="flex gap-3 md:gap-2 md:opacity-0 md:group-hover/player:opacity-100 transition-all shrink-0">
                               <button onClick={() => handleEditJoueur(joueur, equipe.id)} className="text-blue-400 hover:text-blue-500 transition-all">✎</button>
                               <button onClick={() => handleDeleteJoueur(joueur.id)} className="text-red-400 hover:text-red-500 transition-all">✕</button>
                             </div>
@@ -817,13 +817,13 @@ function DetailTournoi() {
 
       {activeTab === "matchs" && (
         <div className="animate-fade-in">
-          <h2 className="text-4xl font-black italic mb-6 card-title-accent uppercase">🏀 Calendrier des Matchs</h2>
+          <h2 className="text-2xl sm:text-4xl font-black italic mb-6 card-title-accent uppercase">🏀 Calendrier des Matchs</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {matchs.filter(m => m.phase === 'poule').map((match) => (
               <MatchCard key={match.id} match={match} equipes={equipes} onDelete={handleDeleteMatch} isOwner={isOwner} />
             ))}
             {matchs.filter(m => m.phase === 'poule').length === 0 && (
-              <div className="col-span-2 glass-card p-10 text-center opacity-40">Aucun match programmé en phase de poule.</div>
+              <div className="md:col-span-2 glass-card p-10 text-center opacity-40">Aucun match programmé en phase de poule.</div>
             )}
           </div>
         </div>
@@ -832,7 +832,7 @@ function DetailTournoi() {
       {activeTab === "brackets" && (
         <div className="animate-fade-in">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-white/5 pb-4">
-            <h2 className="text-4xl font-black italic card-title-accent uppercase flex items-center gap-4">
+            <h2 className="text-2xl sm:text-4xl font-black italic card-title-accent uppercase flex items-center gap-4">
               🏆 Brackets de la Phase Finale
             </h2>
             {allPouleMatchsFinished && isOwner && hasPlayoffMatchs && (
@@ -860,7 +860,7 @@ function DetailTournoi() {
           </div>
           
           {!allPouleMatchsFinished ? (
-            <div className="glass-card p-12 text-center max-w-lg mx-auto">
+            <div className="glass-card p-6 sm:p-12 text-center max-w-lg mx-auto">
               <div className="text-6xl mb-4">🔒</div>
               <h3 className="text-2xl font-black uppercase italic text-white mb-2">Phase Finale Verrouillée</h3>
               <p className="text-gray-400 text-sm mb-6">
@@ -877,7 +877,7 @@ function DetailTournoi() {
           ) : (
             <div className="flex flex-col gap-12 max-w-5xl mx-auto">
               {isOwner && !hasPlayoffMatchs && (
-                <div className="bg-white/5 border border-primary-orange/20 rounded-3xl p-10 text-center max-w-xl mx-auto shadow-2xl">
+                <div className="bg-white/5 border border-primary-orange/20 rounded-3xl p-6 sm:p-10 text-center max-w-xl mx-auto shadow-2xl">
                   <div className="text-5xl mb-4">🏆</div>
                   <h3 className="text-2xl font-black uppercase italic text-white mb-2">Prêt pour la Phase Finale</h3>
                   <p className="text-gray-400 text-sm mb-6">
@@ -900,9 +900,9 @@ function DetailTournoi() {
                 { id: 'finale', label: 'La Grande Finale', active: tournoi.has_finale }
               ].filter(p => p.active).map((phase, pIdx) => (
                 <div key={phase.id} className="relative">
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="bg-primary-orange w-12 h-1 text-white"></span>
-                    <h3 className="text-2xl font-black uppercase italic tracking-tighter">{phase.label}</h3>
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6">
+                    <span className="bg-primary-orange w-8 sm:w-12 h-1 text-white"></span>
+                    <h3 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter">{phase.label}</h3>
                     {isOwner && (
                       <button 
                         onClick={() => {
@@ -921,7 +921,7 @@ function DetailTournoi() {
                       <MatchCard key={match.id} match={match} equipes={equipes} onDelete={handleDeleteMatch} isOwner={isOwner} />
                     ))}
                     {matchs.filter(m => m.phase === phase.id).length === 0 && (
-                      <div className="col-span-2 bg-white/3 border-2 border-dashed border-white/5 rounded-3xl p-8 text-center opacity-30 italic font-bold">
+                      <div className="md:col-span-2 bg-white/3 border-2 border-dashed border-white/5 rounded-3xl p-8 text-center opacity-30 italic font-bold">
                         Matchs de {phase.label} non programmés.
                       </div>
                     )}
@@ -934,8 +934,8 @@ function DetailTournoi() {
       )}
 
       {activeTab === "settings" && isOwner && (
-        <div className="animate-fade-in max-w-3xl mx-auto glass-card p-10 border border-white/5 relative">
-          <h2 className="text-4xl font-black italic mb-8 card-title-accent uppercase">
+        <div className="animate-fade-in max-w-3xl mx-auto glass-card p-5 sm:p-10 border border-white/5 relative">
+          <h2 className="text-2xl sm:text-4xl font-black italic mb-8 card-title-accent uppercase">
             ⚙️ Paramètres du Tournoi
           </h2>
           <form onSubmit={handleSaveSettings} className="space-y-8">
@@ -1072,8 +1072,8 @@ function DetailTournoi() {
       {/* Modals - Simplified & Styled */}
       {showEquipeModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-10 w-full max-w-md shadow-2xl animate-fade-in relative ring-8 ring-primary-orange/5">
-             <h2 className="text-4xl font-black mb-8 italic tracking-tighter uppercase text-white">{editingEquipeId ? "Éditer l'Équipe" : "Inscrire une Équipe"}</h2>
+          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-10 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in relative ring-8 ring-primary-orange/5">
+             <h2 className="text-2xl sm:text-4xl font-black mb-6 sm:mb-8 italic tracking-tighter uppercase text-white">{editingEquipeId ? "Éditer l'Équipe" : "Inscrire une Équipe"}</h2>
              <form onSubmit={handleCreateEquipe} className="space-y-6">
                 <div>
                   <label className="block text-xs font-black text-primary-orange mb-2 uppercase tracking-widest">Nom de l'Équipe</label>
@@ -1103,7 +1103,7 @@ function DetailTournoi() {
                 </div>
                 <div className="flex gap-4 pt-4">
                    <button type="submit" className="btn-basketball flex-1 py-5">{editingEquipeId ? "Mettre à jour" : "Inscrire l'Équipe"}</button>
-                  <button type="button" onClick={() => { setShowEquipeModal(false); setEditingEquipeId(null); setEquipeForm({ nom: "", logo: null }); }} className="flex-1 bg-white/5 text-gray-400 py-5 rounded-2xl font-black uppercase tracking-widest">Fermer</button>
+                  <button type="button" onClick={() => { setShowEquipeModal(false); setEditingEquipeId(null); setEquipeForm({ nom: "", logo: null }); }} className="flex-1 bg-white/5 text-gray-400 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-widest">Fermer</button>
                 </div>
              </form>
           </div>
@@ -1112,10 +1112,10 @@ function DetailTournoi() {
 
       {showMatchModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-10 w-full max-w-lg shadow-2xl animate-fade-in ring-8 ring-primary-orange/5">
-             <h2 className="text-4xl font-black mb-8 italic tracking-tighter uppercase text-white">Organiser Match</h2>
+          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-10 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in ring-8 ring-primary-orange/5">
+             <h2 className="text-2xl sm:text-4xl font-black mb-6 sm:mb-8 italic tracking-tighter uppercase text-white">Organiser Match</h2>
              <form onSubmit={handleCreateMatch} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 items-center">
                     <div>
                       <label className="block text-[10px] font-black text-primary-orange mb-2 uppercase tracking-widest text-center">Domicile</label>
                       <select required value={matchForm.equipe_domicile} onChange={(e) => setMatchForm({...matchForm, equipe_domicile: e.target.value})} className="w-full px-4 py-4 glass-input rounded-xl focus:outline-none text-center appearance-none">
@@ -1131,7 +1131,7 @@ function DetailTournoi() {
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                     <div>
                       <label className="block text-xs font-black text-primary-orange mb-2 uppercase tracking-widest">Phase du Match</label>
                       <select required value={matchForm.phase} onChange={(e) => setMatchForm({...matchForm, phase: e.target.value})} className="w-full px-4 py-4 glass-input rounded-xl focus:outline-none appearance-none">
@@ -1149,7 +1149,7 @@ function DetailTournoi() {
                   </div>
                 <div className="flex gap-4 pt-4">
                   <button type="submit" className="btn-basketball flex-1 py-5">Programmer la Rencontre</button>
-                  <button type="button" onClick={() => setShowMatchModal(false)} className="flex-1 bg-white/5 text-gray-400 py-5 rounded-2xl font-black uppercase tracking-widest">Annuler</button>
+                  <button type="button" onClick={() => setShowMatchModal(false)} className="flex-1 bg-white/5 text-gray-400 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-widest">Annuler</button>
                 </div>
              </form>
           </div>
@@ -1158,10 +1158,10 @@ function DetailTournoi() {
 
       {showJoueurModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-10 w-full max-w-md shadow-2xl animate-fade-in ring-8 ring-primary-orange/5">
-             <h2 className="text-4xl font-black mb-8 italic tracking-tighter uppercase text-white text-center">{editingJoueurId ? "Éditer Joueur" : "Nouveau Joueur"}</h2>
+          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-10 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in ring-8 ring-primary-orange/5">
+             <h2 className="text-2xl sm:text-4xl font-black mb-6 sm:mb-8 italic tracking-tighter uppercase text-white text-center">{editingJoueurId ? "Éditer Joueur" : "Nouveau Joueur"}</h2>
              <form onSubmit={(e) => handleCreateJoueur(e, showJoueurModal)} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-black text-primary-orange mb-2 uppercase tracking-widest">Prénom</label>
                     <input type="text" required value={joueurForm.prenom} onChange={(e) => setJoueurForm({...joueurForm, prenom: e.target.value})} className="w-full px-5 py-4 glass-input rounded-2xl focus:outline-none"/>
@@ -1199,7 +1199,7 @@ function DetailTournoi() {
                 </div>
                 <div className="flex gap-4 pt-4">
                    <button type="submit" className="btn-basketball flex-1 py-5">{editingJoueurId ? "Sauvegarder" : "Ajouter le Joueur"}</button>
-                  <button type="button" onClick={() => { setShowJoueurModal(null); setEditingJoueurId(null); setJoueurForm({ prenom: "", nom: "", numero_maillot: "", photo: null }); }} className="flex-1 bg-white/5 text-gray-400 py-5 rounded-2xl font-black uppercase tracking-widest">Annuler</button>
+                  <button type="button" onClick={() => { setShowJoueurModal(null); setEditingJoueurId(null); setJoueurForm({ prenom: "", nom: "", numero_maillot: "", photo: null }); }} className="flex-1 bg-white/5 text-gray-400 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-widest">Annuler</button>
                 </div>
              </form>
           </div>
@@ -1214,7 +1214,7 @@ function MatchCard({ match, equipes, onDelete, isOwner }) {
   return (
     <div className="glass-card overflow-hidden group">
       <div className="flex items-stretch bg-white/3">
-        <div className="flex-1 p-6 text-center border-r border-white/5">
+        <div className="flex-1 min-w-0 p-4 sm:p-6 text-center border-r border-white/5">
           <div className="w-12 h-12 rounded-xl bg-white p-1 mx-auto mb-3 shadow-lg flex items-center justify-center overflow-hidden">
              {getImageUrl(equipes.find(e => e.id === match.equipe_domicile)?.logo) ? (
               <img src={getImageUrl(equipes.find(e => e.id === match.equipe_domicile).logo)} className="w-full h-full object-cover" />
@@ -1223,7 +1223,7 @@ function MatchCard({ match, equipes, onDelete, isOwner }) {
           <h4 className="font-black italic text-sm uppercase leading-tight mb-1 truncate">{match.equipe_domicile_nom}</h4>
         </div>
 
-        <div className="w-24 flex flex-col items-center justify-center p-2 bg-primary-orange/5">
+        <div className="w-20 sm:w-24 shrink-0 flex flex-col items-center justify-center p-2 bg-primary-orange/5">
           {match.statut === "termine" ? (
             <div className="text-2xl font-black italic">{match.score_domicile}:{match.score_exterieur}</div>
           ) : (
@@ -1234,7 +1234,7 @@ function MatchCard({ match, equipes, onDelete, isOwner }) {
           </div>
         </div>
 
-        <div className="flex-1 p-6 text-center border-l border-white/5">
+        <div className="flex-1 min-w-0 p-4 sm:p-6 text-center border-l border-white/5">
           <div className="w-12 h-12 rounded-xl bg-white p-1 mx-auto mb-3 shadow-lg flex items-center justify-center overflow-hidden">
             {getImageUrl(equipes.find(e => e.id === match.equipe_exterieur)?.logo) ? (
               <img src={getImageUrl(equipes.find(e => e.id === match.equipe_exterieur).logo)} className="w-full h-full object-cover" />
@@ -1243,17 +1243,17 @@ function MatchCard({ match, equipes, onDelete, isOwner }) {
           <h4 className="font-black italic text-sm uppercase leading-tight mb-1 truncate">{match.equipe_exterieur_nom}</h4>
         </div>
       </div>
-      <div className="p-3 bg-black/40 flex justify-between items-center px-6">
+      <div className="p-3 bg-black/40 flex justify-between items-center px-4 sm:px-6">
         <div className="text-[8px] font-black text-gray-500 uppercase italic">
           {match.date_match ? new Date(match.date_match).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : "À définir"}
         </div>
         <div className="flex gap-2">
-          <Link to={`/match/${match.id}`} className="px-3 py-1.5 rounded-lg bg-primary-orange text-white font-black italic uppercase text-[8px] tracking-widest hover:scale-105 transition-all">Stats</Link>
+          <Link to={`/match/${match.id}`} className="px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg bg-primary-orange text-white font-black italic uppercase text-[10px] sm:text-[8px] tracking-widest hover:scale-105 transition-all">Stats</Link>
           {/* {match.statut !== 'termine' && (
              <Link to={`/match/${match.id}/live`} className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-black italic uppercase text-[8px] tracking-widest hover:scale-105 transition-all ring-2 ring-red-600/20">Live</Link>
           )} */}
           {isOwner && (
-            <button onClick={() => onDelete(match.id)} className="text-gray-500 hover:text-red-500 transition-all font-black text-xs ml-2">✕</button>
+            <button onClick={() => onDelete(match.id)} className="text-gray-500 hover:text-red-500 transition-all font-black text-sm sm:text-xs ml-2 px-2">✕</button>
           )}
         </div>
       </div>
