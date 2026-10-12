@@ -1,12 +1,13 @@
 from rest_framework import viewsets, mixins, status, permissions, filters
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from django.db.models import Count, F, Sum
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.conf import settings
 from django.contrib.auth.models import User
 from .models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
 from .serializers import (
@@ -14,6 +15,7 @@ from .serializers import (
     MatchSerializer, MatchListSerializer, StatistiqueJoueurSerializer,
     UpdateStatistiqueSerializer
 )
+from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
 
 
 def get_tournoi(obj):
@@ -82,6 +84,19 @@ class UserViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'inscription'
 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated], throttle_classes=[])
+    def me(self, request):
+        """Profil de l'utilisateur connecté : peut-il créer un tournoi ?"""
+        user = request.user
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'is_staff': user.is_staff,
+            'organisateur_valide': est_organisateur_valide(user),
+            'tournois_actifs': nb_tournois_actifs(user),
+            'limite_tournois_actifs': None if user.is_staff else settings.LIMITE_TOURNOIS_ACTIFS,
+        })
+
 
 class TournoiViewSet(viewsets.ModelViewSet):
     """ViewSet pour gérer les tournois."""
@@ -107,8 +122,18 @@ class TournoiViewSet(viewsets.ModelViewSet):
         return tournoi
 
     def perform_create(self, serializer):
+        user = self.request.user
+        if not est_organisateur_valide(user):
+            raise PermissionDenied(
+                "Ton compte organisateur est en attente de validation par l'équipe THE LAB."
+            )
+        if limite_tournois_atteinte(user):
+            raise ValidationError({'detail': (
+                f"Tu as déjà {settings.LIMITE_TOURNOIS_ACTIFS} tournois en cours ou à venir. "
+                "Un tournoi libère sa place une fois sa date de fin passée."
+            )})
         # L'organisateur est l'utilisateur connecté
-        serializer.save(organisateur=self.request.user)
+        serializer.save(organisateur=user)
 
     @action(detail=True, methods=['get'])
     def classement(self, request, slug=None):

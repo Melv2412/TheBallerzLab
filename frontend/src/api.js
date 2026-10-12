@@ -76,6 +76,17 @@ api.interceptors.response.use(
 // Auth
 export const login = (credentials) => api.post('/token/', credentials)
 export const register = (userData) => api.post('/users/', userData)
+export const getMe = () => api.get('/users/me/')
+
+// Premier message d'erreur renvoyé par l'API (ex. « Un tournoi ne peut pas dépasser 32 équipes. »)
+export const messageErreur = (error, defaut = 'Une erreur est survenue.') => {
+  const data = error?.response?.data
+  if (!data) return defaut
+  if (typeof data === 'string') return defaut
+  if (data.detail) return String(data.detail)
+  const premier = Object.values(data).flat()[0]
+  return typeof premier === 'string' ? premier : defaut
+}
 
 // Tournois
 export const getTournois = (search = '') => {
