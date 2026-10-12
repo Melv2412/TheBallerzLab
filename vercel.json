@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "basket_tournament/wsgi.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{frontend/**,video/**,Tests/**,tournois/tests/**,local_docs/**,media/**,venv/**,*.sqlite3}"
+    }
+  }
+}

@@ -144,14 +144,33 @@ La liste complète est dans [.env.example](.env.example). En résumé :
 
 Côté frontend, `VITE_API_URL` et `VITE_MEDIA_URL` permettent de pointer vers un autre backend (par défaut, le proxy Vite redirige `/api` et `/media` vers `localhost:8000`).
 
-### Déploiement
+### Déploiement (Vercel + Supabase)
 
-- **Backend → Railway** : [railway.json](railway.json) lance les migrations avant chaque déploiement, puis `collectstatic` et gunicorn. Définir les variables de [.env.example](.env.example) dans Railway. Sans les variables `STORAGE_*`, les images envoyées seraient perdues à chaque redéploiement.
-- **Frontend → Vercel** : Root Directory = `frontend`, définir `VITE_API_URL` (voir [frontend/.env.example](frontend/.env.example)). [frontend/vercel.json](frontend/vercel.json) renvoie toutes les routes vers `index.html` (sinon 404 au rechargement d'une page).
-- Mettre l'URL Vercel dans `CORS_ALLOWED_ORIGINS` côté Railway.
-- Créer un compte admin : `python manage.py createsuperuser` (via `railway run` ou en local avec `DATABASE_URL` pointant sur Supabase).
+Deux projets Vercel, branchés sur le même dépôt GitHub :
 
-Protections actives en prod (`DJANGO_DEBUG=False`) : HTTPS obligatoire, cookies sécurisés, HSTS, connexion limitée à 10 tentatives/min et inscription à 20/heure par IP, images limitées à 2 Mo.
+| Projet Vercel | Root Directory | Variables |
+|---|---|---|
+| Backend (ex. `thelab-api`) | `./` (racine) | celles de [.env.example](.env.example) |
+| Frontend (ex. `thelab`) | `frontend` | `VITE_API_URL` (voir [frontend/.env.example](frontend/.env.example)) |
+
+- **Backend** : Vercel détecte Django via `manage.py`, installe `requirements.txt`, lance `collectstatic` et sert l'app comme une fonction serverless. [vercel.json](vercel.json) exclut du bundle le frontend, la vidéo et les tests.
+- **Frontend** : [frontend/vercel.json](frontend/vercel.json) renvoie toutes les routes vers `index.html` (sinon 404 au rechargement d'une page).
+- Mettre l'URL du frontend dans `CORS_ALLOWED_ORIGINS` côté backend, et le domaine du backend dans `DJANGO_ALLOWED_HOSTS`.
+- Sans les variables `STORAGE_*`, les images envoyées ne seraient pas conservées (le disque d'une fonction Vercel est temporaire).
+
+Vercel ne lance pas les migrations : on les lance depuis son PC, en pointant temporairement sur Supabase. Pour ces commandes, utiliser la connexion **Session pooler** de Supabase (port 5432) :
+
+```powershell
+venv\Scripts\activate
+$env:DATABASE_URL = "postgresql://postgres.<projet>:<mot-de-passe>@aws-0-eu-west-3.pooler.supabase.com:5432/postgres"
+python manage.py migrate
+python manage.py createsuperuser
+Remove-Item Env:DATABASE_URL   # revenir à SQLite en local
+```
+
+À refaire à chaque nouvelle migration, avant de déployer le code qui en dépend.
+
+Protections actives en prod (`DJANGO_DEBUG=False`) : HTTPS obligatoire, cookies sécurisés, HSTS, connexion limitée à 10 tentatives/min et inscription à 20/heure par IP, images limitées à 2 Mo. Sur Vercel, les compteurs de limitation sont propres à chaque instance de la fonction : c'est une protection de base, pas une garantie stricte.
 
 ### Migrer les données locales vers Supabase
 
@@ -159,7 +178,7 @@ Protections actives en prod (`DJANGO_DEBUG=False`) : HTTPS obligatoire, cookies 
 # 1. Exporter depuis SQLite (sans variable DATABASE_URL)
 python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.permission -e admin.logentry -e sessions --indent 2 -o donnees.json
 
-# 2. Créer les tables puis importer dans Supabase (avec DATABASE_URL définie)
+# 2. Créer les tables puis importer dans Supabase (avec DATABASE_URL définie, voir ci-dessus)
 python manage.py migrate
 python manage.py loaddata donnees.json
 ```

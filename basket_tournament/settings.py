@@ -26,7 +26,7 @@ DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
-# Nécessaire pour l'admin Django en HTTPS (ex. https://mon-api.up.railway.app)
+# Nécessaire pour l'admin Django en HTTPS (ex. https://thelab-api.vercel.app)
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 # Derrière le proxy HTTPS de l'hébergeur
@@ -170,7 +170,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STORAGES = {
     # Local : logos et photos dans /media
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
-    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
 
 STORAGE_BUCKET = config('STORAGE_BUCKET', default='')
