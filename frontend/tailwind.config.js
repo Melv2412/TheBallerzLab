@@ -8,6 +8,7 @@ export default {
     extend: {
       colors: {
         primary: {
+          orange: '#ff6b00', // = --primary-orange (index.css), couleur de la marque
           yellow: '#FFD700',
           purple: '#8B5CF6',
           black: '#000000',
