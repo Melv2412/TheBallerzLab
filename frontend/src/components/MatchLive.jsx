@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getMatch, updateMatch, updateStatistique, getImageUrl } from "../api";
 import { useAuth } from "../AuthContext";
+import { usePolling } from "../usePolling";
 
 // Calcule l'état du chrono après `secondes` écoulées (chrono en marche)
 const avancerChrono = (m, secondes) => {
@@ -80,14 +81,17 @@ function MatchLive() {
     setMatch(response.data);
   };
 
-  useEffect(() => {
-    loadMatch();
-    const interval = setInterval(() => {
-      // Pendant que l'organisateur pilote le chrono, son état local fait foi
-      if (!chronoPiloteRef.current) loadMatch();
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [id]);
+  usePolling(
+    // Pendant que l'organisateur pilote le chrono, son état local fait foi
+    () => (chronoPiloteRef.current ? null : loadMatch()),
+    () => {
+      const m = matchRef.current;
+      const enDirect = m?.statut === "en_cours" || m?.chrono_en_cours;
+      if (!enDirect) return 10000; // match à venir ou terminé : pas besoin de rafraîchir souvent
+      return isOwner ? 2000 : 3000;
+    },
+    [id],
+  );
 
   useEffect(() => {
     if (!chronoPilote) return;
