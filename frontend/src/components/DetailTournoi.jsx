@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   getTournoi,
   getEquipes,
   getMatchs,
-  getJoueurs,
+  getJoueursTournoi,
   createEquipe,
   createMatch,
   createJoueur,
@@ -187,8 +187,12 @@ function DetailTournoi() {
     loadData();
   }, [slug]);
 
+  // Clé (slug + onglet) du classement déjà chargé par loadData, pour ne pas le recharger deux fois
+  const classementChargeRef = useRef(null);
+
   useEffect(() => {
-    if (tournoi?.slug) {
+    if (tournoi?.slug && classementChargeRef.current !== `${slug}|${subTabClassement}`) {
+      classementChargeRef.current = `${slug}|${subTabClassement}`;
       const fetchRanking = async () => {
         try {
           const classementRes = await getClassement(tournoi.slug, subTabClassement);
@@ -208,50 +212,41 @@ function DetailTournoi() {
     if (!slug) return;
     setLoading(true);
     try {
-      // 1. Charger le tournoi
-      const tournoiRes = await getTournoi(slug);
-      const tournoiData = tournoiRes.data;
-      setTournoi(tournoiData);
+      // Toutes les requêtes partent en même temps : l'API accepte le slug partout
+      const [tournoiRes, equipesRes, matchsRes, classementRes, mvpRes, joueursRes] = await Promise.allSettled([
+        getTournoi(slug),
+        getEquipes(slug),
+        getMatchs(slug),
+        getClassement(slug, subTabClassement),
+        getTournamentMVP(slug, subTabClassement),
+        getJoueursTournoi(slug),
+      ]);
+      classementChargeRef.current = `${slug}|${subTabClassement}`;
 
-      // 2. Charger les données liées de manière isolée pour éviter qu'une erreur bloque tout
-      let eData = [];
-      try {
-        const equipesRes = await getEquipes(tournoiData.id);
-        eData = equipesRes.data.results || equipesRes.data;
-        if (!Array.isArray(eData)) eData = [];
-        setEquipes(eData);
-      } catch (err) { console.error("Erreur Equipes:", err); }
-
-      try {
-        const matchsRes = await getMatchs(tournoiData.id);
-        const mData = matchsRes.data.results || matchsRes.data;
-        setMatchs(Array.isArray(mData) ? mData : []);
-      } catch (err) { console.error("Erreur Matchs:", err); }
-
-      try {
-        const classementRes = await getClassement(tournoiData.slug, subTabClassement);
-        setClassement(classementRes.data || []);
-      } catch (err) { console.error("Erreur Classement:", err); }
-
-      try {
-        const mvpRes = await getTournamentMVP(tournoiData.slug, subTabClassement);
-        setTournamentMVP(mvpRes.data || []);
-      } catch (err) { console.error("Erreur MVP:", err); }
-
-      // 3. Charger les joueurs
-      const updatedJoueurs = {};
-      
-      for (const eq of eData) {
-        try {
-          const res = await getJoueurs(eq.id);
-          const jData = res.data.results || res.data;
-          updatedJoueurs[eq.id] = Array.isArray(jData) ? jData : [];
-        } catch (err) {
-          console.error(`Erreur joueurs équipe ${eq.id}:`, err);
-          updatedJoueurs[eq.id] = [];
+      // Une erreur sur une requête ne bloque pas les autres
+      const liste = (res, nom) => {
+        if (res.status !== "fulfilled") {
+          console.error(`Erreur ${nom}:`, res.reason);
+          return [];
         }
+        const data = res.value.data?.results || res.value.data;
+        return Array.isArray(data) ? data : [];
+      };
+
+      if (tournoiRes.status !== "fulfilled") throw tournoiRes.reason;
+      setTournoi(tournoiRes.value.data);
+
+      const eData = liste(equipesRes, "Equipes");
+      setEquipes(eData);
+      setMatchs(liste(matchsRes, "Matchs"));
+      setClassement(liste(classementRes, "Classement"));
+      setTournamentMVP(liste(mvpRes, "MVP"));
+
+      const parEquipe = Object.fromEntries(eData.map((eq) => [eq.id, []]));
+      for (const joueur of liste(joueursRes, "Joueurs")) {
+        (parEquipe[joueur.equipe] = parEquipe[joueur.equipe] || []).push(joueur);
       }
-      setJoueursParEquipe(updatedJoueurs);
+      setJoueursParEquipe(parEquipe);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
     } finally {

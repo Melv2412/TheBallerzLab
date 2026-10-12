@@ -109,6 +109,7 @@ export const getJoueurs = (equipeId = null) => {
   const url = equipeId ? `/joueurs/?equipe=${equipeId}` : '/joueurs/'
   return api.get(url)
 }
+export const getJoueursTournoi = (tournoi) => api.get(`/joueurs/?tournoi=${encodeURIComponent(tournoi)}`)
 export const createJoueur = (data) => api.post('/joueurs/', data)
 export const updateJoueur = (id, data) => api.patch(`/joueurs/${id}/`, data)
 export const deleteJoueur = (id) => api.delete(`/joueurs/${id}/`)
