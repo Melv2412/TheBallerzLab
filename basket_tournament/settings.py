@@ -201,6 +201,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Taille maximale des images envoyées (logos, photos)
 TAILLE_MAX_IMAGE_MO = config('TAILLE_MAX_IMAGE_MO', default=2, cast=int)
 
+# Limites par organisateur (le staff n'est pas limité) — voir tournois/organisateurs.py
+LIMITE_TOURNOIS_ACTIFS = config('LIMITE_TOURNOIS_ACTIFS', default=3, cast=int)
+LIMITE_EQUIPES_PAR_TOURNOI = config('LIMITE_EQUIPES_PAR_TOURNOI', default=32, cast=int)
+LIMITE_JOUEURS_PAR_EQUIPE = config('LIMITE_JOUEURS_PAR_EQUIPE', default=25, cast=int)
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

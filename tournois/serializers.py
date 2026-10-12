@@ -79,6 +79,15 @@ class EquipeSerializer(serializers.ModelSerializer):
         model = Equipe
         fields = ['id', 'nom', 'logo', 'tournoi', 'tournoi_nom', 'joueurs_count', 'created_at', 'updated_at']
 
+    def validate_tournoi(self, tournoi):
+        # Seulement à la création ou au changement de tournoi
+        if self.instance is None or self.instance.tournoi_id != tournoi.pk:
+            if tournoi.equipes.count() >= settings.LIMITE_EQUIPES_PAR_TOURNOI:
+                raise serializers.ValidationError(
+                    f"Un tournoi ne peut pas dépasser {settings.LIMITE_EQUIPES_PAR_TOURNOI} équipes."
+                )
+        return tournoi
+
     def get_joueurs_count(self, obj):
         """Retourne le nombre de joueurs de l'équipe."""
         if hasattr(obj, 'nb_joueurs'):  # calculé par la requête (voir EquipeViewSet)
@@ -97,6 +106,14 @@ class JoueurSerializer(serializers.ModelSerializer):
         model = Joueur
         fields = ['id', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'tournoi_nom', 'created_at', 'updated_at']
         extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
+
+    def validate_equipe(self, equipe):
+        if self.instance is None or self.instance.equipe_id != equipe.pk:
+            if equipe.joueurs.count() >= settings.LIMITE_JOUEURS_PAR_EQUIPE:
+                raise serializers.ValidationError(
+                    f"Une équipe ne peut pas dépasser {settings.LIMITE_JOUEURS_PAR_EQUIPE} joueurs."
+                )
+        return equipe
 
 
 class StatistiqueJoueurSerializer(serializers.ModelSerializer):

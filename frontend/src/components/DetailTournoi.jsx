@@ -18,6 +18,7 @@ import {
   updateTournoi,
   resetPlayoffs,
   getImageUrl,
+  messageErreur,
 } from "../api";
 import { useAuth } from "../AuthContext";
 
@@ -277,7 +278,7 @@ function DetailTournoi() {
       loadData();
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de l'enregistrement de l'équipe");
+      alert(messageErreur(error, "Erreur lors de l'enregistrement de l'équipe"));
     }
   };
 
@@ -321,7 +322,7 @@ function DetailTournoi() {
       loadData();
     } catch (error) {
       console.error("Erreur détaillée lors de la création du match:", error.response?.data);
-      alert("Erreur lors de la création du match");
+      alert(messageErreur(error, "Erreur lors de la création du match"));
     }
   };
 
@@ -366,7 +367,7 @@ function DetailTournoi() {
       loadData();
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de l'enregistrement du joueur");
+      alert(messageErreur(error, "Erreur lors de l'enregistrement du joueur"));
     }
   };
 
