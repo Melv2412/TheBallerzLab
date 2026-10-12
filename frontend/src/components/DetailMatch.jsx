@@ -96,8 +96,8 @@ function DetailMatch() {
         </Link>
 
         {match && !isOwner && (
-          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between animate-pulse">
-            <div className="flex items-center gap-4">
+          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               <span className="text-2xl">👁️</span>
               <div>
                 <p className="text-blue-400 font-black uppercase text-[10px] tracking-widest">Mode Consultant Actif</p>
@@ -108,14 +108,14 @@ function DetailMatch() {
         )}
         
         <div className="glass-card overflow-hidden">
-          <div className="p-8 flex flex-col md:flex-row justify-between items-center bg-white/5 border-b border-white/5">
-            <div>
-              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">
+          <div className="p-5 sm:p-8 flex flex-col md:flex-row justify-between items-center bg-white/5 border-b border-white/5">
+            <div className="text-center md:text-left min-w-0">
+              <h1 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter text-white break-words">
                 {match.equipe_domicile_nom} <span className="text-primary-orange mx-2">VS</span> {match.equipe_exterieur_nom}
               </h1>
               <p className="text-gray-500 font-bold text-xs uppercase tracking-widest mt-1">{match.tournoi_nom}</p>
             </div>
-            <div className="flex gap-4 mt-6 md:mt-0">
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-6 md:mt-0">
                <div className={`px-4 py-2 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 ${match.statut === 'en_cours' ? 'bg-red-500 animate-pulse' : 'bg-white/10'}`}>
                 {match.statut === 'en_cours' ? '🔴 LIVE' : match.statut === 'termine' ? '✅ TERMINE' : '⏳ A VENIR'}
                </div>
@@ -140,40 +140,40 @@ function DetailMatch() {
           </div>
 
           {/* Score Board */}
-          <div className="p-10 flex justify-center items-center gap-12 sm:gap-24 relative">
-             <div className="text-center">
-                <div className="text-8xl sm:text-9xl font-black italic tracking-tighter text-white mb-2">{match.score_domicile}</div>
-                <div className="text-xs font-black uppercase tracking-widest text-primary-orange italic">{match.equipe_domicile_nom}</div>
+          <div className="p-6 sm:p-10 flex justify-center items-center gap-4 sm:gap-24 relative overflow-hidden">
+             <div className="text-center min-w-0 flex-1 sm:flex-none">
+                <div className="text-6xl sm:text-8xl lg:text-9xl font-black italic tracking-tighter text-white mb-2">{match.score_domicile}</div>
+                <div className="text-xs font-black uppercase tracking-widest text-primary-orange italic break-words">{match.equipe_domicile_nom}</div>
              </div>
              
              <div className="flex flex-col items-center">
-                <div className="text-3xl font-black text-white/20 italic">FINAL</div>
-                <div className="w-1 h-20 bg-white/5 my-4"></div>
+                <div className="text-lg sm:text-3xl font-black text-white/20 italic">FINAL</div>
+                <div className="w-1 h-12 sm:h-20 bg-white/5 my-4"></div>
              </div>
 
-             <div className="text-center">
-                <div className="text-8xl sm:text-9xl font-black italic tracking-tighter text-white mb-2">{match.score_exterieur}</div>
-                <div className="text-xs font-black uppercase tracking-widest text-primary-orange italic">{match.equipe_exterieur_nom}</div>
+             <div className="text-center min-w-0 flex-1 sm:flex-none">
+                <div className="text-6xl sm:text-8xl lg:text-9xl font-black italic tracking-tighter text-white mb-2">{match.score_exterieur}</div>
+                <div className="text-xs font-black uppercase tracking-widest text-primary-orange italic break-words">{match.equipe_exterieur_nom}</div>
              </div>
 
              {/* Background Decoration */}
              <div className="absolute inset-0 flex items-center justify-center opacity-[0.02] pointer-events-none">
-                <div className="text-[250px] font-black italic uppercase tracking-tighter">BASKET</div>
+                <div className="text-[120px] sm:text-[250px] font-black italic uppercase tracking-tighter">BASKET</div>
              </div>
           </div>
 
           {/* MVP Spotlight */}
           {match.mvp && (
-            <div className="mx-8 mb-8 pebbled-bg rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6 shadow-2xl shadow-primary-orange/20 border-b-4 border-b-black/40">
+            <div className="mx-4 sm:mx-8 mb-6 sm:mb-8 pebbled-bg rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row items-center gap-6 shadow-2xl shadow-primary-orange/20 border-b-4 border-b-black/40">
                <div className="text-5xl">👑</div>
                <div className="flex-1 text-center md:text-left">
                   <h3 className="text-black font-black italic text-sm uppercase tracking-widest opacity-60">MVP du Match Selection</h3>
                   <div className="flex flex-col md:flex-row md:items-baseline gap-2">
-                    <span className="text-3xl font-black text-black uppercase italic tracking-tighter">{match.mvp.nom}</span>
+                    <span className="text-2xl sm:text-3xl font-black text-black uppercase italic tracking-tighter break-words">{match.mvp.nom}</span>
                     <span className="text-xs font-black text-black/60 uppercase tracking-widest">#{match.mvp.numero} — {match.mvp.equipe}</span>
                   </div>
                </div>
-               <div className="grid grid-cols-4 gap-4 bg-black/10 p-4 rounded-2xl flex-shrink-0">
+               <div className="grid grid-cols-4 gap-3 sm:gap-4 bg-black/10 p-3 sm:p-4 rounded-2xl flex-shrink-0">
                   <div className="text-center"><span className="block text-[8px] font-black text-black/40 uppercase">EVAL</span><span className="text-xl font-black text-black">{match.mvp.evaluation}</span></div>
                   <div className="text-center"><span className="block text-[8px] font-black text-black/40 uppercase">PTS</span><span className="text-xl font-black text-black">{match.mvp.stats.pts}</span></div>
                   <div className="text-center"><span className="block text-[8px] font-black text-black/40 uppercase">AST</span><span className="text-xl font-black text-black">{match.mvp.stats.ast}</span></div>
@@ -183,7 +183,7 @@ function DetailMatch() {
           )}
 
           {!statsInitialisees && isOwner && (
-            <div className="p-20 text-center border-t border-white/5">
+            <div className="p-8 sm:p-20 text-center border-t border-white/5">
               <button
                 onClick={handleInitialiserStats}
                 className="btn-basketball text-lg px-12 py-5"
@@ -194,7 +194,7 @@ function DetailMatch() {
             </div>
           )}
           {!statsInitialisees && !isOwner && (
-            <div className="p-20 text-center border-t border-white/5 italic opacity-40">
+            <div className="p-8 sm:p-20 text-center border-t border-white/5 italic opacity-40">
               Les statistiques détaillées ne sont pas encore disponibles pour ce match.
             </div>
           )}
