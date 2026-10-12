@@ -42,11 +42,11 @@ function Register() {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="glass-card max-w-md w-full p-10 border-primary-orange/20 relative overflow-hidden">
+      <div className="glass-card max-w-md w-full p-6 sm:p-10 border-primary-orange/20 relative overflow-hidden">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-orange/20 rounded-full blur-3xl"></div>
         
         <div className="relative z-10">
-          <h2 className="text-4xl font-black text-white mb-2 italic uppercase tracking-tighter">
+          <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 italic uppercase tracking-tighter">
             JOIN <span className="text-primary-orange">THE LAB</span>
           </h2>
           <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">Devenir organisateur</p>

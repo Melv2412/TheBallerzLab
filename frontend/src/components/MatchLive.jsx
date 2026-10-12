@@ -301,7 +301,7 @@ function MatchLive() {
 
       {/* Contenu principal */}
       <div className="relative z-10">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
           <Link
             to={`/match/${id}`}
             className="text-gray-400 hover:text-white transition-colors font-bold text-xs uppercase tracking-widest"
@@ -319,34 +319,34 @@ function MatchLive() {
         </div>
         
         {!isOwner && match && (
-          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between animate-pulse">
-            <div className="flex items-center gap-4">
+          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               <span className="text-2xl">👁️</span>
               <div>
                 <p className="text-blue-400 font-black uppercase text-[10px] tracking-widest">Mode Consultant Actif</p>
                 <p className="text-gray-400 text-xs">Analyse en temps réel du tournoi de <span className="text-white font-bold">{match.organisateur_nom || 'l\'organisateur'}</span>.</p>
               </div>
             </div>
-            <div className="text-[10px] font-black text-blue-500/50 uppercase tracking-tighter">Lecture seule</div>
+            <div className="hidden sm:block text-[10px] font-black text-blue-500/50 uppercase tracking-tighter">Lecture seule</div>
           </div>
         )}
 
         {/* Interface Scoreboard */}
         <div className="max-w-6xl mx-auto">
           {/* Header avec chronomètre et période */}
-          <div className="glass-card p-8 mb-6">
-            <div className="flex items-center justify-between mb-8">
+          <div className="glass-card p-4 sm:p-8 mb-6">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
               {/* Bouton Settings */}
-              <button className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+              <button className="hidden lg:flex w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
                 <span className="text-2xl">🏀</span>
               </button>
 
               {/* Chronomètre */}
-              <div className="flex flex-col items-center">
-                <div className="flex items-center gap-8 mb-4">
+              <div className="flex flex-col items-center w-full lg:w-auto">
+                <div className="flex items-center gap-4 sm:gap-8 mb-4">
                   {/* Flèche Possession Gauche */}
                   <div
-                    className={`text-4xl transition-all ${match.possession_fleche === "domicile" ? "text-primary-orange scale-125" : "text-white/5"}`}
+                    className={`text-3xl sm:text-4xl transition-all ${match.possession_fleche === "domicile" ? "text-primary-orange scale-125" : "text-white/5"}`}
                   >
                     ◄
                   </div>
@@ -354,7 +354,7 @@ function MatchLive() {
                   {isOwner && (
                     <button
                       onClick={handleToggleChrono}
-                      className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${match.chrono_en_cours ? "bg-red-500/20 text-red-500 border-2 border-red-500/50" : "bg-green-500/20 text-green-500 border-2 border-green-500/50"}`}
+                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all ${match.chrono_en_cours ? "bg-red-500/20 text-red-500 border-2 border-red-500/50" : "bg-green-500/20 text-green-500 border-2 border-green-500/50"}`}
                     >
                       <span className="text-4xl">
                         {match.chrono_en_cours ? "⏸️" : "▶️"}
@@ -363,28 +363,28 @@ function MatchLive() {
                   )}
                   
                   {!isOwner && (
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center bg-white/5 border-2 border-white/10 opacity-30">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center bg-white/5 border-2 border-white/10 opacity-30">
                       <span className="text-2xl">{match.chrono_en_cours ? "⚡" : "⏸️"}</span>
                     </div>
                   )}
 
                   {/* Flèche Possession Droite */}
                   <div
-                    className={`text-4xl transition-all ${match.possession_fleche === "exterieur" ? "text-primary-orange scale-125" : "text-white/5"}`}
+                    className={`text-3xl sm:text-4xl transition-all ${match.possession_fleche === "exterieur" ? "text-primary-orange scale-125" : "text-white/5"}`}
                   >
                     ►
                   </div>
                 </div>
 
-                <div className="flex items-end gap-6 mb-4">
+                <div className="flex items-end gap-3 sm:gap-6 mb-4">
                   <div
-                    className="text-8xl font-black text-red-500 digital-font leading-none"
+                    className="text-6xl sm:text-7xl lg:text-8xl font-black text-red-500 digital-font leading-none"
                   >
                     {formatTime(match.temps_restant_secondes)}
                   </div>
                   {/* Shot Clock Display */}
                   <div
-                    className={`text-6xl font-black digital-font leading-none pb-1 ${match.shot_clock_secondes <= 5 ? "text-yellow-500 animate-pulse" : "text-red-600"}`}
+                    className={`text-3xl sm:text-5xl lg:text-6xl font-black digital-font leading-none pb-1 ${match.shot_clock_secondes <= 5 ? "text-yellow-500 animate-pulse" : "text-red-600"}`}
                   >
                     {match.shot_clock_secondes.toString().padStart(2, "0")}
                   </div>
@@ -392,7 +392,7 @@ function MatchLive() {
 
                 <div className="flex items-center gap-4 mb-6">
                   <div
-                    className="text-2xl font-black text-white/40 uppercase tracking-widest italic"
+                    className="text-lg sm:text-2xl font-black text-white/40 uppercase tracking-widest italic"
                   >
                     {match.periode_actuelle === 1 && "1er Quart"}
                     {match.periode_actuelle === 2 && "2e Quart"}
@@ -408,19 +408,19 @@ function MatchLive() {
                   <div className="flex flex-wrap justify-center gap-3">
                     <button
                       onClick={() => handleResetShotClock(24)}
-                      className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white/10"
+                      className="px-3 sm:px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white/10"
                     >
                       Reset 24s
                     </button>
                     <button
                       onClick={() => handleResetShotClock(14)}
-                      className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white/10"
+                      className="px-3 sm:px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white/10"
                     >
                       Reset 14s
                     </button>
                     <button
                       onClick={handleTogglePossession}
-                      className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white/10"
+                      className="px-3 sm:px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white/10"
                     >
                       Alternance
                     </button>
@@ -501,31 +501,31 @@ function MatchLive() {
             </div>
 
             {/* Scores et contrôles */}
-            <div className="grid grid-cols-3 gap-8 items-center">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-8 items-start md:items-center">
               {/* Équipe Domicile */}
               <div className="text-center">
-                <h2 className="text-2xl font-black text-white mb-4 uppercase">
+                <h2 className="text-lg sm:text-2xl font-black text-white mb-4 uppercase break-words">
                   {match.equipe_domicile_nom}
                 </h2>
 
                 {/* Boutons +1/+2/+3 */}
                 {isOwner && (
-                  <div className="flex justify-center gap-2 mb-4">
+                  <div className="flex flex-wrap justify-center gap-2 mb-4">
                     <button
                       onClick={() => handleQuickStat("home", "points", 1)}
-                      className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
+                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-base sm:text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
                     >
                       +1
                     </button>
                     <button
                       onClick={() => handleQuickStat("home", "points", 2)}
-                      className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
+                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-base sm:text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
                     >
                       +2
                     </button>
                     <button
                       onClick={() => handleQuickStat("home", "points", 3)}
-                      className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
+                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-base sm:text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
                     >
                       +3
                     </button>
@@ -534,28 +534,28 @@ function MatchLive() {
 
                 {/* Autres Stats Rapides */}
                 {isOwner && (
-                  <div className="flex justify-center gap-2 mb-6">
+                  <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-6">
                     <button
                       onClick={() => handleQuickStat("home", "rebonds", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[10px] font-black text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[10px] font-black text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
                     >
                       REB
                     </button>
                     <button
                       onClick={() => handleQuickStat("home", "passes", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-[10px] font-black text-purple-400 hover:bg-purple-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-[10px] font-black text-purple-400 hover:bg-purple-500 hover:text-white transition-all"
                     >
                       AST
                     </button>
                     <button
                       onClick={() => handleQuickStat("home", "contres", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-[10px] font-black text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-[10px] font-black text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all"
                     >
                       BLK
                     </button>
                     <button
                       onClick={() => handleQuickStat("home", "fautes", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] font-black text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] font-black text-red-400 hover:bg-red-500 hover:text-white transition-all"
                     >
                       FOU
                     </button>
@@ -563,13 +563,13 @@ function MatchLive() {
                 )}
 
                 {/* Score */}
-                <div className="text-9xl font-black text-green-400 digital-font mb-4">
+                <div className="text-6xl sm:text-8xl lg:text-9xl font-black text-green-400 digital-font mb-4">
                   {match.score_domicile}
                 </div>
 
                 {/* Fautes */}
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <button className="text-red-500 text-2xl">◀</button>
+                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
+                  <button className="text-red-500 text-xl sm:text-2xl">◀</button>
                   <div className="text-center">
                     <div className="text-xs text-gray-400 font-bold uppercase mb-1">
                       Fautes
@@ -593,7 +593,7 @@ function MatchLive() {
                       )}
                     </div>
                   </div>
-                  <button className="text-red-500 text-2xl">▶</button>
+                  <button className="text-red-500 text-xl sm:text-2xl">▶</button>
                 </div>
 
                 {/* Joueur sélectionné (HUD Actif) */}
@@ -603,7 +603,7 @@ function MatchLive() {
                   >
                     <button
                       onClick={() => setSelectedPlayerHome(null)}
-                      className="absolute top-1 right-1 w-5 h-5 bg-white/10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all z-20"
+                      className="absolute top-1 right-1 w-6 h-6 bg-white/10 rounded-full flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 hover:bg-red-500 transition-all z-20"
                     >
                       <span className="text-[10px]">✕</span>
                     </button>
@@ -615,7 +615,7 @@ function MatchLive() {
                         </span>
                       </div>
                     )}
-                    <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden border border-white/20 flex items-center justify-center">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-white/10 overflow-hidden border border-white/20 flex items-center justify-center">
                       {getImageUrl(selectedPlayerHome.joueur_photo) ? (
                         <img
                           src={getImageUrl(selectedPlayerHome.joueur_photo)}
@@ -626,11 +626,11 @@ function MatchLive() {
                         <span className="text-xl">👤</span>
                       )}
                     </div>
-                    <div className="text-left">
+                    <div className="text-left min-w-0">
                       <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                         Joueur ciblé
                       </div>
-                      <div className="font-black text-white text-sm">
+                      <div className="font-black text-white text-sm truncate">
                         #{selectedPlayerHome.joueur_numero}{" "}
                         {selectedPlayerHome.joueur_nom}
                       </div>
@@ -661,7 +661,7 @@ function MatchLive() {
               </div>
 
               {/* Séparateur VS */}
-              <div className="flex flex-col items-center">
+              <div className="hidden md:flex flex-col items-center">
                 <div className="text-6xl font-black text-white/20 italic mb-4">
                   VS
                 </div>
@@ -670,28 +670,28 @@ function MatchLive() {
 
               {/* Équipe Extérieur */}
               <div className="text-center">
-                <h2 className="text-2xl font-black text-white mb-4 uppercase">
+                <h2 className="text-lg sm:text-2xl font-black text-white mb-4 uppercase break-words">
                   {match.equipe_exterieur_nom}
                 </h2>
 
                 {/* Boutons +1/+2/+3 */}
                 {isOwner && (
-                  <div className="flex justify-center gap-2 mb-4">
+                  <div className="flex flex-wrap justify-center gap-2 mb-4">
                     <button
                       onClick={() => handleQuickStat("away", "points", 1)}
-                      className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
+                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-base sm:text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
                     >
                       +1
                     </button>
                     <button
                       onClick={() => handleQuickStat("away", "points", 2)}
-                      className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
+                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-base sm:text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
                     >
                       +2
                     </button>
                     <button
                       onClick={() => handleQuickStat("away", "points", 3)}
-                      className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
+                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 border-2 border-white/20 text-white font-black text-base sm:text-lg hover:bg-primary-orange hover:border-primary-orange transition-all"
                     >
                       +3
                     </button>
@@ -700,28 +700,28 @@ function MatchLive() {
 
                 {/* Autres Stats Rapides */}
                 {isOwner && (
-                  <div className="flex justify-center gap-2 mb-6">
+                  <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-6">
                     <button
                       onClick={() => handleQuickStat("away", "rebonds", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[10px] font-black text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[10px] font-black text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
                     >
                       REB
                     </button>
                     <button
                       onClick={() => handleQuickStat("away", "passes", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-[10px] font-black text-purple-400 hover:bg-purple-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-[10px] font-black text-purple-400 hover:bg-purple-500 hover:text-white transition-all"
                     >
                       AST
                     </button>
                     <button
                       onClick={() => handleQuickStat("away", "contres", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-[10px] font-black text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-[10px] font-black text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all"
                     >
                       BLK
                     </button>
                     <button
                       onClick={() => handleQuickStat("away", "fautes", 1)}
-                      className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] font-black text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                      className="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] font-black text-red-400 hover:bg-red-500 hover:text-white transition-all"
                     >
                       FOU
                     </button>
@@ -729,13 +729,13 @@ function MatchLive() {
                 )}
 
                 {/* Score */}
-                <div className="text-9xl font-black text-green-400 digital-font mb-4">
+                <div className="text-6xl sm:text-8xl lg:text-9xl font-black text-green-400 digital-font mb-4">
                   {match.score_exterieur}
                 </div>
 
                 {/* Fautes */}
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <button className="text-red-500 text-2xl">◀</button>
+                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
+                  <button className="text-red-500 text-xl sm:text-2xl">◀</button>
                   <div className="text-center">
                     <div className="text-xs text-gray-400 font-bold uppercase mb-1">
                       Fautes
@@ -759,7 +759,7 @@ function MatchLive() {
                       )}
                     </div>
                   </div>
-                  <button className="text-red-500 text-2xl">▶</button>
+                  <button className="text-red-500 text-xl sm:text-2xl">▶</button>
                 </div>
 
                 {/* Joueur sélectionné (HUD Actif) */}
@@ -769,7 +769,7 @@ function MatchLive() {
                   >
                     <button
                       onClick={() => setSelectedPlayerAway(null)}
-                      className="absolute top-1 right-1 w-5 h-5 bg-white/10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all z-20"
+                      className="absolute top-1 right-1 w-6 h-6 bg-white/10 rounded-full flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 hover:bg-red-500 transition-all z-20"
                     >
                       <span className="text-[10px]">✕</span>
                     </button>
@@ -781,7 +781,7 @@ function MatchLive() {
                         </span>
                       </div>
                     )}
-                    <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden border border-white/20 flex items-center justify-center">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-white/10 overflow-hidden border border-white/20 flex items-center justify-center">
                       {getImageUrl(selectedPlayerAway.joueur_photo) ? (
                         <img
                           src={getImageUrl(selectedPlayerAway.joueur_photo)}
@@ -792,11 +792,11 @@ function MatchLive() {
                         <span className="text-xl">👤</span>
                       )}
                     </div>
-                    <div className="text-left">
+                    <div className="text-left min-w-0">
                       <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                         Joueur ciblé
                       </div>
-                      <div className="font-black text-white text-sm">
+                      <div className="font-black text-white text-sm truncate">
                         #{selectedPlayerAway.joueur_numero}{" "}
                         {selectedPlayerAway.joueur_nom}
                       </div>
@@ -829,7 +829,7 @@ function MatchLive() {
           </div>
 
           {/* Sélecteur de joueur rapide */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="glass-card p-4">
               <h3 className="text-sm font-black text-gray-400 uppercase mb-3">
                 {match.equipe_domicile_nom} - Sélectionner joueur
@@ -854,9 +854,9 @@ function MatchLive() {
                         EXCLU
                       </div>
                     )}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden border border-white/10 flex items-center justify-center">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 overflow-hidden border border-white/10 flex items-center justify-center">
                           {getImageUrl(stat.joueur_photo) ? (
                             <img
                               src={getImageUrl(stat.joueur_photo)}
@@ -867,7 +867,7 @@ function MatchLive() {
                             <span className="text-sm">👤</span>
                           )}
                         </div>
-                        <div>
+                        <div className="min-w-0 truncate">
                           <span className="font-black text-sm">
                             #{stat.joueur_numero}
                           </span>
@@ -876,7 +876,7 @@ function MatchLive() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2 text-[8px] font-black">
+                      <div className="flex gap-2 text-[8px] font-black shrink-0">
                         <div className="flex flex-col items-center min-w-[24px]">
                           <span className="text-gray-500 uppercase text-[6px]">
                             Pts
@@ -940,9 +940,9 @@ function MatchLive() {
                         EXCLU
                       </div>
                     )}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden border border-white/10 flex items-center justify-center">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 overflow-hidden border border-white/10 flex items-center justify-center">
                           {getImageUrl(stat.joueur_photo) ? (
                             <img
                               src={getImageUrl(stat.joueur_photo)}
@@ -953,7 +953,7 @@ function MatchLive() {
                             <span className="text-sm">👤</span>
                           )}
                         </div>
-                        <div>
+                        <div className="min-w-0 truncate">
                           <span className="font-black text-sm">
                             #{stat.joueur_numero}
                           </span>
@@ -962,7 +962,7 @@ function MatchLive() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2 text-[8px] font-black">
+                      <div className="flex gap-2 text-[8px] font-black shrink-0">
                         <div className="flex flex-col items-center min-w-[24px]">
                           <span className="text-gray-500 uppercase text-[6px]">
                             Pts
@@ -1007,7 +1007,7 @@ function MatchLive() {
       {/* Modal de sélection de joueur */}
       {showPlayerSelector.show && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="glass-card max-w-md w-full p-6">
+          <div className="glass-card max-w-md w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <h3 className="text-2xl font-black text-white mb-4">
               Action:{" "}
               <span className="text-primary-orange uppercase">
@@ -1121,7 +1121,7 @@ function MatchLive() {
       {/* Modal Ajustement Temps */}
       {showTimeModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[60] p-4">
-          <div className="glass-card max-w-sm w-full p-8 text-center border-primary-orange/50">
+          <div className="glass-card max-w-sm w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 text-center border-primary-orange/50">
             <h3 className="text-2xl font-black text-white mb-8 uppercase italic tracking-tighter">
               Ajuster le Chrono
             </h3>
@@ -1197,7 +1197,7 @@ function MatchLive() {
       {/* Modal Ajustement Période */}
       {showPeriodModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[60] p-4">
-          <div className="glass-card max-w-sm w-full p-8 text-center border-primary-orange/50">
+          <div className="glass-card max-w-sm w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 text-center border-primary-orange/50">
             <h3 className="text-2xl font-black text-white mb-8 uppercase italic tracking-tighter">
               Changer la Période
             </h3>
@@ -1230,7 +1230,7 @@ function MatchLive() {
       {/* Modal Correction Statistique Joueur */}
       {showCorrectionModal.show && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[70] p-4">
-          <div className="glass-card max-w-sm w-full p-8 text-center border-red-500/50">
+          <div className="glass-card max-w-sm w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 text-center border-red-500/50">
             <div className="flex flex-col items-center mb-6">
               <div className="w-20 h-20 rounded-full border-2 border-red-500 overflow-hidden mb-4">
                 {getImageUrl(showCorrectionModal.stat.joueur_photo) ? (
