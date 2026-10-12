@@ -1,10 +1,17 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
+import PopupConnexion, { popupConnexionMasque } from './PopupConnexion'
 
 function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [popupOuvert, setPopupOuvert] = useState(false)
+
+  const handleConnexion = () => {
+    if (popupConnexionMasque()) navigate('/login')
+    else setPopupOuvert(true)
+  }
 
   const handleLogout = () => {
     logout()
@@ -42,16 +49,17 @@ function Navbar() {
                 </button>
               </div>
             ) : (
-              <Link
-                to="/login"
+              <button
+                onClick={handleConnexion}
                 className="text-xs font-black uppercase tracking-widest text-white bg-primary-orange px-4 sm:px-6 py-2.5 rounded-xl whitespace-nowrap hover:bg-orange-600 transition-all shadow-lg shadow-primary-orange/20"
               >
                 Connexion
-              </Link>
+              </button>
             )}
           </div>
         </div>
       </div>
+      {popupOuvert && <PopupConnexion onFermer={() => setPopupOuvert(false)} />}
     </nav>
   )
 }
