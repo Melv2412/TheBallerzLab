@@ -4,29 +4,23 @@ import { getMatch, updateMatch, updateStatistique, getImageUrl } from "../api";
 import { useAuth } from "../AuthContext";
 import { usePolling } from "../usePolling";
 
-// Calcule l'état du chrono après `secondes` écoulées (chrono en marche)
-const avancerChrono = (m, secondes) => {
-  if (m.temps_restant_secondes === 0) {
-    // Fin de période : on passe à la suivante, chrono arrêté
-    return {
-      chrono_en_cours: false,
-      periode_actuelle: m.periode_actuelle + 1,
-      temps_restant_secondes: m.duree_periode_secondes,
-      shot_clock_secondes: 24,
-    };
-  }
-
-  const updates = {
-    temps_restant_secondes: Math.max(0, m.temps_restant_secondes - secondes),
+// Le serveur renvoie l'état du chrono au moment de la réponse ; on décompte localement depuis sa réception.
+// Une seule requête par démarrage / pause au lieu d'une par seconde.
+const calculerChrono = (m, maintenant) => {
+  const ecoule = m.chrono_en_cours ? Math.max(0, (maintenant - m._recuA) / 1000) : 0;
+  const temps = Math.max(0, m.temps_restant_secondes - ecoule);
+  const shotActif = m.shot_clock_secondes > 0;
+  const shot = shotActif ? Math.max(0, m.shot_clock_secondes - ecoule) : m.shot_clock_secondes;
+  return {
+    // Arrondi supérieur : 9.4 s restantes s'affichent 10, comme sur un vrai tableau
+    temps: Math.ceil(temps),
+    shot: Math.ceil(shot),
+    // Fin de période ou violation des 24 s : le serveur a déjà arrêté le chrono, on recharge
+    aZero: m.chrono_en_cours && (temps === 0 || (shotActif && shot === 0)),
   };
-  if (m.shot_clock_secondes > 0) {
-    updates.shot_clock_secondes = Math.max(0, m.shot_clock_secondes - secondes);
-    if (updates.shot_clock_secondes === 0) {
-      updates.chrono_en_cours = false; // Violation des 24 secondes
-    }
-  }
-  return updates;
 };
+
+const avecHeureReception = (data) => ({ ...data, _recuA: Date.now() });
 
 function MatchLive() {
   const { user } = useAuth();
@@ -59,13 +53,9 @@ function MatchLive() {
 
   const isOwner = user && match && match.organisateur_nom === user.username;
 
-  // Seul l'organisateur fait avancer le chrono ; les autres le lisent via le polling
-  const chronoPilote = Boolean(isOwner && match?.chrono_en_cours);
-  const chronoPiloteRef = useRef(false);
-  chronoPiloteRef.current = chronoPilote;
   const matchRef = useRef(null);
   matchRef.current = match;
-  // File d'envoi : les PATCH partent dans l'ordre, un tick ne peut pas écraser une action plus récente
+  // File d'envoi : les PATCH partent dans l'ordre, dans l'ordre des clics
   const fileEnvoiRef = useRef(Promise.resolve());
 
   const envoyerMatch = (updates) => {
@@ -77,56 +67,38 @@ function MatchLive() {
   // Modifie le match et met l'écran à jour avec la réponse du serveur
   const patchMatch = async (updates) => {
     const response = await envoyerMatch(updates);
-    matchRef.current = response.data;
-    setMatch(response.data);
+    setMatch(avecHeureReception(response.data));
   };
 
   usePolling(
-    // Pendant que l'organisateur pilote le chrono, son état local fait foi
-    () => (chronoPiloteRef.current ? null : loadMatch()),
+    () => loadMatch(),
     () => {
       const m = matchRef.current;
       const enDirect = m?.statut === "en_cours" || m?.chrono_en_cours;
-      if (!enDirect) return 10000; // match à venir ou terminé : pas besoin de rafraîchir souvent
-      return isOwner ? 2000 : 3000;
+      return enDirect ? 3000 : 10000; // match à venir ou terminé : pas besoin de rafraîchir souvent
     },
     [id],
   );
 
+  // Rafraîchit l'affichage du chrono (calcul local, aucune requête)
+  const [maintenant, setMaintenant] = useState(Date.now());
+  const chronoEnCours = Boolean(match?.chrono_en_cours);
   useEffect(() => {
-    if (!chronoPilote) return;
-
-    // On se base sur le temps réellement écoulé : pas de dérive si le navigateur ralentit les timers
-    let dernierTop = Date.now();
-    const interval = setInterval(() => {
-      const secondes = Math.floor((Date.now() - dernierTop) / 1000);
-      if (secondes < 1) return;
-      dernierTop += secondes * 1000;
-
-      const updates = avancerChrono(matchRef.current, secondes);
-      const suivant = { ...matchRef.current, ...updates };
-      matchRef.current = suivant;
-      setMatch(suivant);
-      envoyerMatch(updates).catch(() => {});
-    }, 250);
-
+    if (!chronoEnCours) return;
+    const interval = setInterval(() => setMaintenant(Date.now()), 250);
     return () => clearInterval(interval);
-  }, [chronoPilote, id]);
+  }, [chronoEnCours]);
+
+  const chrono = match ? calculerChrono(match, maintenant) : null;
+  const chronoAZero = Boolean(chrono?.aZero);
+  useEffect(() => {
+    if (chronoAZero) loadMatch();
+  }, [chronoAZero]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMatch = async () => {
     try {
       const response = await getMatch(id);
-      setMatch((precedent) =>
-        // Ne pas faire reculer le chrono local avec un état serveur en retard d'un tick
-        chronoPiloteRef.current && precedent && response.data.chrono_en_cours
-          ? {
-              ...response.data,
-              temps_restant_secondes: precedent.temps_restant_secondes,
-              shot_clock_secondes: precedent.shot_clock_secondes,
-              periode_actuelle: precedent.periode_actuelle,
-            }
-          : response.data,
-      );
+      setMatch(avecHeureReception(response.data));
 
       // Sélectionner automatiquement le premier joueur si aucun n'est sélectionné
       if (response.data.statistiques && response.data.statistiques.length > 0) {
@@ -384,13 +356,13 @@ function MatchLive() {
                   <div
                     className="text-6xl sm:text-7xl lg:text-8xl font-black text-red-500 digital-font leading-none"
                   >
-                    {formatTime(match.temps_restant_secondes)}
+                    {formatTime(chrono.temps)}
                   </div>
                   {/* Shot Clock Display */}
                   <div
-                    className={`text-3xl sm:text-5xl lg:text-6xl font-black digital-font leading-none pb-1 ${match.shot_clock_secondes <= 5 ? "text-yellow-500 animate-pulse" : "text-red-600"}`}
+                    className={`text-3xl sm:text-5xl lg:text-6xl font-black digital-font leading-none pb-1 ${chrono.shot <= 5 ? "text-yellow-500 animate-pulse" : "text-red-600"}`}
                   >
-                    {match.shot_clock_secondes.toString().padStart(2, "0")}
+                    {chrono.shot.toString().padStart(2, "0")}
                   </div>
                 </div>
 

@@ -25,19 +25,25 @@ source venv/bin/activate  # Sur Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Effectuer les migrations :
+3. Activer le mode développement (sinon Django refuse de démarrer sans `DJANGO_SECRET_KEY`) : créer un fichier `.env` à la racine contenant :
+
+```
+DJANGO_DEBUG=True
+```
+
+4. Effectuer les migrations :
 
 ```bash
 python manage.py migrate
 ```
 
-4. Créer un superutilisateur (optionnel, pour l'admin Django) :
+5. Créer un superutilisateur (optionnel, pour l'admin Django) :
 
 ```bash
 python manage.py createsuperuser
 ```
 
-5. Lancer le serveur Django :
+6. Lancer le serveur Django :
 
 ```bash
 python manage.py runserver
@@ -133,7 +139,7 @@ Les mêmes tests, plus la compilation du frontend, tournent automatiquement sur 
 
 ## Configuration (production)
 
-Le même code tourne en local et en prod : tout se règle par variables d'environnement (ou un fichier `.env`, jamais commité). Sans aucune variable, on obtient la configuration locale (SQLite, médias dans `/media`, DEBUG).
+Le même code tourne en local et en prod : tout se règle par variables d'environnement (ou un fichier `.env`, jamais commité). En local, `DJANGO_DEBUG=True` suffit : SQLite, médias dans `/media`. Sans `DJANGO_DEBUG=True`, `DJANGO_SECRET_KEY` est obligatoire (elle signe aussi les jetons de connexion).
 
 La liste complète est dans [.env.example](.env.example). En résumé :
 
@@ -173,7 +179,7 @@ Remove-Item Env:DATABASE_URL   # revenir à SQLite en local
 
 À refaire à chaque nouvelle migration, avant de déployer le code qui en dépend.
 
-Protections actives en prod (`DJANGO_DEBUG=False`) : HTTPS obligatoire, cookies sécurisés, HSTS, connexion limitée à 10 tentatives/min et inscription à 20/heure par IP, images limitées à 2 Mo. Sur Vercel, les compteurs de limitation sont propres à chaque instance de la fonction : c'est une protection de base, pas une garantie stricte.
+Protections actives en prod (`DJANGO_DEBUG=False`) : HTTPS obligatoire, cookies sécurisés, HSTS, connexion limitée à 10 tentatives/min et inscription à 20/heure par IP, images limitées à 2 Mo. Jetons de connexion : accès valable 15 min (renouvelé automatiquement), refresh token renouvelé à chaque usage et révoqué à la déconnexion. Sur Vercel, les compteurs de limitation sont propres à chaque instance de la fonction : c'est une protection de base, pas une garantie stricte.
 
 ### Migrer les données locales vers Supabase
 

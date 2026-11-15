@@ -1,10 +1,11 @@
 import base64
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -176,6 +177,66 @@ class MiseAJourStatistiqueTests(BaseAPITestCase):
         reponse = self.client.patch(self.url, {'champ': 'points', 'action': 'increment', 'valeur': 2})
         self.assertEqual(reponse.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_score_non_modifiable_directement(self):
+        self.client.patch(f'/api/matchs/{self.match.id}/', {'score_domicile': 99, 'score_exterieur': 42})
+        self.match.refresh_from_db()
+        self.assertEqual((self.match.score_domicile, self.match.score_exterieur), (0, 0))
+
+
+class ChronoTests(BaseAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.url = f'/api/matchs/{self.match.id}/'
+        self.client.force_authenticate(self.orga)
+
+    def demarrer_il_y_a(self, secondes, **champs):
+        Match.objects.filter(pk=self.match.pk).update(
+            chrono_en_cours=True, chrono_demarre_a=timezone.now() - timedelta(seconds=secondes), **champs,
+        )
+
+    def test_le_chrono_decompte_sans_ecriture(self):
+        self.demarrer_il_y_a(10)
+        data = self.client.get(self.url).data
+        self.assertTrue(data['chrono_en_cours'])
+        self.assertAlmostEqual(data['temps_restant_secondes'], 590, delta=1)
+        self.assertAlmostEqual(data['shot_clock_secondes'], 14, delta=1)
+
+    def test_pause_fige_le_temps_ecoule(self):
+        self.demarrer_il_y_a(10)
+        data = self.client.patch(self.url, {'chrono_en_cours': False}).data
+        self.assertFalse(data['chrono_en_cours'])
+        self.match.refresh_from_db()
+        self.assertAlmostEqual(self.match.temps_restant_secondes, 590, delta=1)
+        self.assertIsNone(self.match.chrono_demarre_a)
+
+    def test_reprise_enregistre_l_heure_de_depart(self):
+        self.client.patch(self.url, {'chrono_en_cours': True})
+        self.match.refresh_from_db()
+        self.assertTrue(self.match.chrono_en_cours)
+        self.assertIsNotNone(self.match.chrono_demarre_a)
+
+    def test_violation_des_24_secondes_arrete_le_chrono(self):
+        self.demarrer_il_y_a(30)
+        data = self.client.get(self.url).data
+        self.assertFalse(data['chrono_en_cours'])
+        self.assertEqual(data['shot_clock_secondes'], 0)
+        self.assertAlmostEqual(data['temps_restant_secondes'], 576, delta=0.01)
+
+    def test_fin_de_periode_passe_a_la_suivante(self):
+        self.demarrer_il_y_a(20, temps_restant_secondes=5)
+        data = self.client.get(self.url).data
+        self.assertFalse(data['chrono_en_cours'])
+        self.assertEqual(data['periode_actuelle'], 2)
+        self.assertEqual(data['temps_restant_secondes'], 600)
+
+    def test_reset_du_shot_clock_pendant_que_le_chrono_tourne(self):
+        self.demarrer_il_y_a(10)
+        self.client.patch(self.url, {'shot_clock_secondes': 24})
+        self.match.refresh_from_db()
+        self.assertTrue(self.match.chrono_en_cours)
+        self.assertEqual(self.match.shot_clock_secondes, 24)
+        self.assertAlmostEqual(self.match.temps_restant_secondes, 590, delta=1)
+
 
 class ClassementTests(BaseAPITestCase):
     def test_classement_par_slug_et_par_id(self):
@@ -201,6 +262,26 @@ class LimitationTentativesTests(BaseAPITestCase):
         for _ in range(10):
             self.assertEqual(self.client.post('/api/token/', identifiants).status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.client.post('/api/token/', identifiants).status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+class JetonsTests(BaseAPITestCase):
+    def setUp(self):
+        super().setUp()
+        reponse = self.client.post('/api/token/', {'username': 'orga', 'password': 'motdepasse-solide-42'})
+        self.refresh = reponse.data['refresh']
+
+    def test_rafraichir_donne_un_nouveau_refresh_et_revoque_l_ancien(self):
+        reponse = self.client.post('/api/token/refresh/', {'refresh': self.refresh})
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(reponse.data['refresh'], self.refresh)
+        rejoue = self.client.post('/api/token/refresh/', {'refresh': self.refresh})
+        self.assertEqual(rejoue.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_deconnexion_revoque_le_refresh(self):
+        reponse = self.client.post('/api/token/blacklist/', {'refresh': self.refresh})
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK)
+        apres = self.client.post('/api/token/refresh/', {'refresh': self.refresh})
+        self.assertEqual(apres.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TailleImageTests(BaseAPITestCase):

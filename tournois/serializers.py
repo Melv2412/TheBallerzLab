@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.conf import settings
+from django.utils import timezone
 
 
 def valider_taille_image(image):
@@ -167,6 +168,31 @@ class MatchSerializer(serializers.ModelSerializer):
             'timeouts_domicile', 'timeouts_exterieur', 'fautes_domicile', 'fautes_exterieur',
             'created_at', 'updated_at'
         ]
+        # Le score découle uniquement des statistiques des joueurs (voir Match.calculer_scores_depuis_stats)
+        read_only_fields = ['score_domicile', 'score_exterieur']
+
+    CHAMPS_CHRONO = ('temps_restant_secondes', 'shot_clock_secondes', 'periode_actuelle', 'chrono_en_cours')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Valeurs réelles à cet instant : le client décompte à partir de là
+        etat = instance.etat_chrono()
+        for champ in self.CHAMPS_CHRONO:
+            data[champ] = round(etat[champ], 3) if isinstance(etat[champ], float) else etat[champ]
+        return data
+
+    def create(self, validated_data):
+        if validated_data.get('chrono_en_cours'):
+            validated_data['chrono_demarre_a'] = timezone.now()
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        maintenant = timezone.now()
+        # Fige le temps écoulé, applique la modification, puis repart de maintenant si le chrono tourne
+        instance.figer_chrono(maintenant)
+        en_cours = validated_data.get('chrono_en_cours', instance.chrono_en_cours)
+        validated_data['chrono_demarre_a'] = maintenant if en_cours else None
+        return super().update(instance, validated_data)
 
     def get_mvp(self, obj):
         """Calcule le MVP du match (meilleure évaluation)."""

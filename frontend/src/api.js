@@ -38,6 +38,8 @@ const rafraichirToken = () => {
     )
       .then((response) => {
         localStorage.setItem('token', response.data.access)
+        // Rotation : l'ancien refresh token est révoqué, on garde le nouveau
+        if (response.data.refresh) localStorage.setItem('refresh', response.data.refresh)
         return response.data.access
       })
       .finally(() => {
@@ -77,6 +79,8 @@ api.interceptors.response.use(
 export const login = (credentials) => api.post('/token/', credentials)
 export const register = (userData) => api.post('/users/', userData)
 export const getMe = () => api.get('/users/me/')
+// Révoque le refresh token côté serveur (best effort : la déconnexion locale a lieu quoi qu'il arrive)
+export const revoquerSession = (refresh) => axios.post(`${API_BASE_URL}/token/blacklist/`, { refresh })
 
 // Premier message d'erreur renvoyé par l'API (ex. « Un tournoi ne peut pas dépasser 32 équipes. »)
 export const messageErreur = (error, defaut = 'Une erreur est survenue.') => {

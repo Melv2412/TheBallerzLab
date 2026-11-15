@@ -11,6 +11,8 @@ jobs:
   backend:
     name: Tests backend (Django)
     runs-on: ubuntu-latest
+    env:
+      DJANGO_DEBUG: "True"
     steps:
       - uses: actions/checkout@v4
 

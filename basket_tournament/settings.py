@@ -3,10 +3,12 @@ Django settings for basket_tournament project.
 """
 
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 
 # Toute la configuration de prod passe par des variables d'environnement (voir .env.example).
 # Sans variable définie, on obtient la configuration de développement local.
@@ -15,14 +17,20 @@ from decouple import config, Csv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+EN_TEST = 'test' in sys.argv
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-dev-key-change-in-production')
+# Désactivé par défaut : en local, mettre DJANGO_DEBUG=True dans .env
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
+# Signe aussi les jetons JWT : une clé connue permettrait de se faire passer pour n'importe qui
+SECRET_KEY = config('DJANGO_SECRET_KEY', default='')
+if not SECRET_KEY:
+    if not (DEBUG or EN_TEST):
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY doit être définie hors du mode DEBUG "
+            "(en local : DJANGO_DEBUG=True dans .env)."
+        )
+    SECRET_KEY = 'django-insecure-dev-uniquement'
 
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
@@ -32,7 +40,7 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 # Derrière le proxy HTTPS de l'hébergeur
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-if not DEBUG:
+if not DEBUG and not EN_TEST:
     # Prod : HTTPS obligatoire et cookies jamais envoyés en clair
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
     SESSION_COOKIE_SECURE = True
@@ -51,6 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'tournois',
 ]
@@ -122,7 +131,7 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
 ]
 
-if 'test' in sys.argv:
+if EN_TEST:
     # Tests : hachage rapide (non sécurisé, uniquement pour la base de test jetable)
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
@@ -220,11 +229,12 @@ REST_FRAMEWORK = {
     },
 }
 
-from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    # Jeton d'accès court : un jeton volé ne sert pas longtemps (le frontend le renouvelle seul)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': False,
+    # Chaque rafraîchissement donne un nouveau refresh token et révoque l'ancien
+    'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,

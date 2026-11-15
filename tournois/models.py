@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import Sum
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -125,14 +126,17 @@ class Match(models.Model):
     score_exterieur = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     date_match = models.DateTimeField(null=True, blank=True)
     
-    # Gestion du chronomètre et des périodes
-    temps_restant_secondes = models.IntegerField(default=600, validators=[MinValueValidator(0)])  # 10 minutes par défaut
+    # Gestion du chronomètre et des périodes.
+    # Quand le chrono tourne, temps_restant_secondes et shot_clock_secondes sont les valeurs
+    # à l'instant chrono_demarre_a : le temps réel se calcule (voir etat_chrono), sans écriture chaque seconde.
+    temps_restant_secondes = models.FloatField(default=600, validators=[MinValueValidator(0)])  # 10 minutes par défaut
     periode_actuelle = models.IntegerField(default=1, validators=[MinValueValidator(1)])  # Quart-temps actuel
     duree_periode_secondes = models.IntegerField(default=600, validators=[MinValueValidator(1)])  # 10 min par période
     chrono_en_cours = models.BooleanField(default=False)  # Le chrono tourne-t-il ?
-    
+    chrono_demarre_a = models.DateTimeField(null=True, blank=True)
+
     # Shot Clock (24 secondes)
-    shot_clock_secondes = models.IntegerField(default=24, validators=[MinValueValidator(0)])
+    shot_clock_secondes = models.FloatField(default=24, validators=[MinValueValidator(0)])
     
     # Flèche de possession (domicile, exterieur ou neutre)
     POSSESSION_CHOICES = [
@@ -156,6 +160,48 @@ class Match(models.Model):
 
     def __str__(self):
         return f"{self.equipe_domicile.nom} vs {self.equipe_exterieur.nom} ({self.tournoi.nom})"
+
+    def etat_chrono(self, maintenant=None):
+        """
+        État réel du chrono à `maintenant`, sans rien enregistrer.
+        Le chrono s'arrête quand le shot clock tombe à 0 (violation des 24 s) ; en fin de période,
+        on passe à la période suivante, chrono arrêté.
+        """
+        etat = {
+            'temps_restant_secondes': self.temps_restant_secondes,
+            'shot_clock_secondes': self.shot_clock_secondes,
+            'periode_actuelle': self.periode_actuelle,
+            'chrono_en_cours': self.chrono_en_cours,
+        }
+        if not self.chrono_en_cours or self.chrono_demarre_a is None:
+            return etat
+
+        maintenant = maintenant or timezone.now()
+        ecoule = max(0.0, (maintenant - self.chrono_demarre_a).total_seconds())
+        temps, shot = self.temps_restant_secondes, self.shot_clock_secondes
+        shot_actif = shot > 0
+
+        if shot_actif and shot < temps and ecoule >= shot:
+            # Violation des 24 secondes avant la fin de la période
+            etat.update(temps_restant_secondes=temps - shot, shot_clock_secondes=0, chrono_en_cours=False)
+        elif ecoule >= temps:
+            etat.update(
+                periode_actuelle=self.periode_actuelle + 1,
+                temps_restant_secondes=self.duree_periode_secondes,
+                shot_clock_secondes=24,
+                chrono_en_cours=False,
+            )
+        else:
+            etat['temps_restant_secondes'] = temps - ecoule
+            if shot_actif:
+                etat['shot_clock_secondes'] = shot - ecoule
+        return etat
+
+    def figer_chrono(self, maintenant):
+        """Enregistre en mémoire le temps écoulé depuis chrono_demarre_a (avant une modification)."""
+        for champ, valeur in self.etat_chrono(maintenant).items():
+            setattr(self, champ, valeur)
+        self.chrono_demarre_a = maintenant if self.chrono_en_cours else None
 
     def calculer_scores_depuis_stats(self):
         """Calcule les scores des équipes à partir des statistiques des joueurs."""
