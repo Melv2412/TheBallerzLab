@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     TournoiViewSet, EquipeViewSet, JoueurViewSet,
-    MatchViewSet, StatistiqueJoueurViewSet, UserViewSet
+    MatchViewSet, StatistiqueJoueurViewSet, UserViewSet, health
 )
 
 router = DefaultRouter()
@@ -14,6 +14,7 @@ router.register(r'statistiques', StatistiqueJoueurViewSet, basename='statistique
 router.register(r'users', UserViewSet, basename='user')
 
 urlpatterns = [
+    path('health/', health, name='health'),
     path('', include(router.urls)),
 ]
 

@@ -1,8 +1,9 @@
 from rest_framework import viewsets, mixins, status, permissions, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
+from django.db import connection, DatabaseError
 from django.db.models import Count, F, Sum
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
@@ -16,6 +17,19 @@ from .serializers import (
     UpdateStatistiqueSerializer
 )
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
+
+
+@api_view(['GET'])
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+def health(request):
+    """Vérifie que l'API répond et que la base est joignable (appelé par le cron keep-alive)."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+    except DatabaseError:
+        return Response({'status': 'erreur', 'database': False}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response({'status': 'ok', 'database': True})
 
 
 def get_tournoi(obj):

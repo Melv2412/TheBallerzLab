@@ -37,6 +37,13 @@ class BaseAPITestCase(APITestCase):
         self.autre_equipe = Equipe.objects.create(nom='C', tournoi=self.autre_tournoi)
 
 
+class HealthTests(APITestCase):
+    def test_health_accessible_sans_connexion(self):
+        response = self.client.get('/api/health/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'status': 'ok', 'database': True})
+
+
 class UtilisateursTests(BaseAPITestCase):
     def test_inscription_possible(self):
         reponse = self.client.post('/api/users/', {
