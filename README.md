@@ -95,17 +95,24 @@ Basket4.0/
 │   ├── models.py         # Modèles (Tournoi, Equipe, Joueur, Match, StatistiqueJoueur)
 │   ├── serializers.py    # Serializers DRF
 │   ├── views.py          # ViewSets DRF
+│   ├── classement.py     # Classement et départage FIBA
+│   ├── pagination.py     # Pagination des listes de l'API
 │   └── urls.py           # URLs de l'API
 ├── frontend/             # Application React
 │   ├── src/
-│   │   ├── components/   # Composants React
+│   │   ├── components/   # Pages (DetailTournoi, MatchLive...)
+│   │   │   ├── tournoi/     # Onglets, modales et données de la page tournoi
+│   │   │   └── match-live/  # Chrono, panneaux d'équipe et modales du match en direct
 │   │   ├── api.js        # Fonctions API
+│   │   ├── permissions.js # Qui peut modifier un tournoi (même règle que le serveur)
 │   │   └── App.jsx       # Composant principal
 │   └── package.json
 └── requirements.txt       # Dépendances Python
 ```
 
 ## API Endpoints
+
+Les listes sont paginées : `{count, next, previous, results}`, 50 éléments par page (`?page=2`), jusqu'à 500 avec `?page_size=500`.
 
 - `GET /api/tournois/` - Liste des tournois
 - `GET /api/equipes/?tournoi={id}` - Liste des équipes d'un tournoi
@@ -114,6 +121,7 @@ Basket4.0/
 - `GET /api/matchs/{id}/` - Détail d'un match avec statistiques
 - `POST /api/matchs/{id}/initialiser_stats/` - Initialiser les stats pour un match
 - `PATCH /api/matchs/{id}/stats/{stat_id}/update/` - Mettre à jour une statistique
+- `GET /api/tournois/{slug}/classement/` - Classement (victoire 2 pts, défaite 1 pt ; égalités départagées selon la FIBA : confrontation directe, puis différence de points). Un match ne peut pas être terminé sur une égalité.
 
 ## Fonctionnalités
 

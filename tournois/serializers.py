@@ -150,6 +150,8 @@ class MatchSerializer(serializers.ModelSerializer):
     tournoi_nom = serializers.CharField(source='tournoi.nom', read_only=True)
     tournoi_slug = serializers.CharField(source='tournoi.slug', read_only=True)
     organisateur_nom = serializers.CharField(source='tournoi.organisateur.username', read_only=True)
+    # Permet au frontend de reconnaître l'organisateur par son id (et non son nom)
+    organisateur_id = serializers.IntegerField(source='tournoi.organisateur_id', read_only=True)
     statistiques = StatistiqueJoueurSerializer(many=True, read_only=True, source='statistiques_joueurs')
 
     mvp = serializers.SerializerMethodField()
@@ -160,7 +162,7 @@ class MatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Match
         fields = [
-            'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'organisateur_nom', 'tournoi_limite_fautes', 'phase', 'equipe_domicile', 'equipe_domicile_nom',
+            'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'organisateur_nom', 'organisateur_id', 'tournoi_limite_fautes', 'phase', 'equipe_domicile', 'equipe_domicile_nom',
             'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'score_domicile',
             'score_exterieur', 'date_match', 'statistiques', 'mvp', 
             'temps_restant_secondes', 'periode_actuelle', 'duree_periode_secondes', 'chrono_en_cours',
@@ -233,6 +235,13 @@ class MatchSerializer(serializers.ModelSerializer):
         for equipe in (domicile, exterieur):
             if equipe and tournoi and equipe.tournoi_id != tournoi.pk:
                 raise serializers.ValidationError(f"L'équipe {equipe.nom} ne fait pas partie de ce tournoi.")
+        if attrs.get('statut') == 'termine':
+            score_dom = getattr(self.instance, 'score_domicile', 0)
+            score_ext = getattr(self.instance, 'score_exterieur', 0)
+            if score_dom == score_ext:
+                raise serializers.ValidationError(
+                    {'statut': "Un match ne peut pas se terminer sur une égalité : jouez une prolongation."}
+                )
         return attrs
 
     def _fautes(self, obj, equipe_id):

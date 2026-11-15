@@ -222,6 +222,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    # Les listes renvoient des pages (voir tournois/pagination.py) plutôt que toute la base
+    'DEFAULT_PAGINATION_CLASS': 'tournois.pagination.Pagination',
     # Limite les tentatives de connexion et les inscriptions (par adresse IP)
     'DEFAULT_THROTTLE_RATES': {
         'connexion': config('THROTTLE_CONNEXION', default='10/min'),

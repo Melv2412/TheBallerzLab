@@ -92,11 +92,9 @@ export const messageErreur = (error, defaut = 'Une erreur est survenue.') => {
   return typeof premier === 'string' ? premier : defaut
 }
 
-// Tournois
-export const getTournois = (search = '') => {
-  const url = search ? `/tournois/?search=${encodeURIComponent(search)}` : '/tournois/'
-  return api.get(url)
-}
+// Tournois (liste paginée : 50 par page, `next` indique s'il en reste)
+export const getTournois = (search = '', page = 1) =>
+  api.get('/tournois/', { params: { ...(search ? { search } : {}), page } })
 export const getTournoi = (slug) => api.get(`/tournois/${slug}/`)
 export const createTournoi = (data) => api.post('/tournois/', data)
 export const updateTournoi = (slug, data) => api.patch(`/tournois/${slug}/`, data)
@@ -110,34 +108,38 @@ export const getTournamentMVP = (idOrSlug, type = '') => {
   return api.get(url)
 }
 
-// Équipes
-export const getEquipes = (tournoiId = null) => {
-  const url = tournoiId ? `/equipes/?tournoi=${tournoiId}` : '/equipes/'
-  return api.get(url)
+// Charge toutes les pages d'une liste paginée et renvoie { data: [...] }.
+// Avec 500 éléments par page, les équipes, joueurs ou matchs d'un tournoi tiennent presque toujours en une requête.
+const toutesLesPages = async (url, params = {}) => {
+  const resultats = []
+  for (let page = 1; ; page++) {
+    const { data } = await api.get(url, { params: { ...params, page, page_size: 500 } })
+    resultats.push(...(data.results || []))
+    if (!data.next) return { data: resultats }
+  }
 }
+
+// Équipes
+export const getEquipes = (tournoiId = null) =>
+  toutesLesPages('/equipes/', tournoiId ? { tournoi: tournoiId } : {})
 export const createEquipe = (data) => api.post('/equipes/', data)
 export const updateEquipe = (id, data) => api.patch(`/equipes/${id}/`, data)
 export const deleteEquipe = (id) => api.delete(`/equipes/${id}/`)
 
 // Joueurs
-export const getJoueurs = (equipeId = null) => {
-  const url = equipeId ? `/joueurs/?equipe=${equipeId}` : '/joueurs/'
-  return api.get(url)
-}
-export const getJoueursTournoi = (tournoi) => api.get(`/joueurs/?tournoi=${encodeURIComponent(tournoi)}`)
+export const getJoueurs = (equipeId = null) =>
+  toutesLesPages('/joueurs/', equipeId ? { equipe: equipeId } : {})
+export const getJoueursTournoi = (tournoi) => toutesLesPages('/joueurs/', { tournoi })
 export const createJoueur = (data) => api.post('/joueurs/', data)
 export const updateJoueur = (id, data) => api.patch(`/joueurs/${id}/`, data)
 export const deleteJoueur = (id) => api.delete(`/joueurs/${id}/`)
 
 // Matchs
-export const getMatchs = (tournoiId = null, statut = null) => {
-  let url = '/matchs/'
-  const params = new URLSearchParams()
-  if (tournoiId) params.append('tournoi', tournoiId)
-  if (statut) params.append('statut', statut)
-  if (params.toString()) url += `?${params.toString()}`
-  return api.get(url)
-}
+export const getMatchs = (tournoiId = null, statut = null) =>
+  toutesLesPages('/matchs/', {
+    ...(tournoiId ? { tournoi: tournoiId } : {}),
+    ...(statut ? { statut } : {}),
+  })
 export const getMatch = (id) => api.get(`/matchs/${id}/`)
 export const createMatch = (data) => api.post('/matchs/', data)
 export const updateMatch = (id, data) => api.patch(`/matchs/${id}/`, data)

@@ -17,6 +17,7 @@ from .serializers import (
     UpdateStatistiqueSerializer
 )
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
+from .classement import calculer_classement
 
 
 @api_view(['GET'])
@@ -163,46 +164,11 @@ class TournoiViewSet(viewsets.ModelViewSet):
             matchs_termines = matchs_termines.exclude(phase='poule')
 
         # 2 requêtes au total (équipes + matchs), le calcul se fait en mémoire
-        classement = {
-            equipe.id: {
-                'id': equipe.id,
-                'nom': equipe.nom,
-                'joues': 0,
-                'gagnes': 0,
-                'perdus': 0,
-                'points_pour': 0,
-                'points_contre': 0,
-                'points': 0  # 2 pts par victoire, 1 pt par défaite
-            }
-            for equipe in tournoi.equipes.all()
-        }
-
+        equipes = tournoi.equipes.values_list('id', 'nom')
         scores = matchs_termines.values_list(
             'equipe_domicile_id', 'equipe_exterieur_id', 'score_domicile', 'score_exterieur'
         )
-        for domicile, exterieur, score_dom, score_ext in scores:
-            for equipe_id, pour, contre in ((domicile, score_dom, score_ext), (exterieur, score_ext, score_dom)):
-                stats = classement.get(equipe_id)
-                if stats is None:
-                    continue
-                stats['joues'] += 1
-                stats['points_pour'] += pour
-                stats['points_contre'] += contre
-                if pour > contre:
-                    stats['gagnes'] += 1
-                    stats['points'] += 2
-                else:
-                    stats['perdus'] += 1
-                    stats['points'] += 1
-
-        classement_data = list(classement.values())
-        for stats in classement_data:
-            stats['difference'] = stats['points_pour'] - stats['points_contre']
-
-        # Trier le classement par points, puis par différence
-        classement_data.sort(key=lambda x: (x['points'], x['difference']), reverse=True)
-
-        return Response(classement_data)
+        return Response(calculer_classement(equipes, scores))
 
     @action(detail=True, methods=['get'])
     def mvp(self, request, slug=None):

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, getImageUrl } from '../api'
+import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, getImageUrl, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 import { usePolling } from '../usePolling'
+import { peutModifier } from '../permissions'
 
 function DetailMatch() {
   const { user } = useAuth()
@@ -11,7 +12,7 @@ function DetailMatch() {
   const [loading, setLoading] = useState(true)
   const [statsInitialisees, setStatsInitialisees] = useState(false)
 
-  const isOwner = user && match && match.organisateur_nom === user.username;
+  const isOwner = Boolean(match) && peutModifier(user, match.organisateur_id);
 
   // Toutes les 3 s pendant le match, toutes les 30 s sinon (terminé ou à venir)
   usePolling(() => loadMatch(), () => (match?.statut === 'en_cours' ? 3000 : 30000), [id])
@@ -53,6 +54,8 @@ function DetailMatch() {
       loadMatch()
     } catch (error) {
       console.error('Erreur:', error)
+      // ex. « Un match ne peut pas se terminer sur une égalité »
+      alert(messageErreur(error, 'Impossible de changer le statut du match.'))
     }
   }
 

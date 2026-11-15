@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getTournois, createTournoi, deleteTournoi, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
+import { peutModifier } from '../permissions'
 
 function ListeTournois() {
   const { user, rafraichirProfil } = useAuth()
@@ -20,6 +21,8 @@ function ListeTournois() {
     }
   }
   const [tournois, setTournois] = useState([])
+  const [pageSuivante, setPageSuivante] = useState(null)
+  const [chargementSuite, setChargementSuite] = useState(false)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -44,14 +47,28 @@ function ListeTournois() {
 
   const loadTournois = async (search = '') => {
     try {
-      const response = await getTournois(search)
-      const data = Array.isArray(response.data) ? response.data : (response.data.results || [])
-      setTournois(data)
+      const { data } = await getTournois(search)
+      setTournois(data.results || [])
+      setPageSuivante(data.next ? 2 : null)
     } catch (error) {
       console.error('Erreur lors du chargement des tournois:', error)
       setTournois([])
+      setPageSuivante(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const chargerPlus = async () => {
+    setChargementSuite(true)
+    try {
+      const { data } = await getTournois(searchTerm, pageSuivante)
+      setTournois((precedents) => [...precedents, ...(data.results || [])])
+      setPageSuivante(data.next ? pageSuivante + 1 : null)
+    } catch (error) {
+      console.error('Erreur lors du chargement des tournois:', error)
+    } finally {
+      setChargementSuite(false)
     }
   }
 
@@ -195,7 +212,7 @@ function ListeTournois() {
                       {tournoi.organisateur_nom || 'Public'}
                     </div>
                   </div>
-                  {user && tournoi.organisateur_nom === user.username && (
+                  {peutModifier(user, tournoi.organisateur) && (
                     <button
                       onClick={() => handleDelete(tournoi.slug)}
                       className="text-gray-600 hover:text-red-500 transition-colors p-1"
@@ -236,6 +253,18 @@ function ListeTournois() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {pageSuivante && (
+        <div className="flex justify-center mt-10">
+          <button
+            onClick={chargerPlus}
+            disabled={chargementSuite}
+            className="px-8 py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-xs tracking-widest disabled:opacity-50"
+          >
+            {chargementSuite ? 'Chargement...' : 'Voir plus de tournois'}
+          </button>
         </div>
       )}
 
