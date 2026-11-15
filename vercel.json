@@ -8,5 +8,11 @@
       "maxDuration": 30,
       "excludeFiles": "{frontend/**,video/**,Tests/**,tournois/tests/**,local_docs/**,media/**,venv/**,*.sqlite3}"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/health/",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

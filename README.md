@@ -159,6 +159,7 @@ Deux projets Vercel, branchés sur le même dépôt GitHub :
 - **Frontend** : [frontend/vercel.json](frontend/vercel.json) renvoie toutes les routes vers `index.html` (sinon 404 au rechargement d'une page).
 - Mettre l'URL du frontend dans `CORS_ALLOWED_ORIGINS` côté backend, et le domaine du backend dans `DJANGO_ALLOWED_HOSTS`.
 - Sans les variables `STORAGE_*`, les images envoyées ne seraient pas conservées (le disque d'une fonction Vercel est temporaire).
+- **Keep-alive Supabase** : sur le plan gratuit, Supabase met le projet en pause après 7 jours sans activité. Un cron Vercel ([vercel.json](vercel.json)) appelle chaque jour `/api/health/`, qui exécute un `SELECT 1` sur la base. Il ne tourne que sur le déploiement de production (visible dans Vercel > Settings > Cron Jobs).
 
 Vercel ne lance pas les migrations : on les lance depuis son PC, en pointant temporairement sur Supabase. Pour ces commandes, utiliser la connexion **Session pooler** de Supabase (port 5432) :
 
