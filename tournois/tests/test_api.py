@@ -407,6 +407,6 @@ class PerformanceRequetesTests(BaseAPITestCase):
         self.assertEqual(len(reponse.data['results']), 48)
 
     def test_detail_du_match_ne_depend_pas_du_nombre_de_joueurs(self):
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):  # match, stats (+ joueurs, équipes), historique récent
             reponse = self.client.get(f'/api/matchs/{self.match.id}/')
         self.assertEqual(reponse.data['fautes_domicile'], 0)

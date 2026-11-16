@@ -11,11 +11,13 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
+from . import journal
 from . import reglement as regles
 from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
 from .phases_finales import generer_phases_finales, resume_phases_finales
 from .serializers import (
+    ActionMatchSerializer,
     EquipeSerializer,
     JoueurSerializer,
     MatchListSerializer,
@@ -332,6 +334,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             match.chrono_en_cours = False
             match.chrono_demarre_a = None
             match.save()
+            journal.enregistrer(match, 'temps_mort', auteur=request.user, cote=cote)
         return self._reponse_match(match)
 
     @action(detail=True, methods=['post'])
@@ -347,6 +350,22 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             match.chrono_en_cours = False
             match.chrono_demarre_a = None
             match.save()
+            journal.enregistrer(match, 'periode', auteur=request.user)
+        return self._reponse_match(match)
+
+    @action(detail=True, methods=['get'])
+    def actions(self, request, pk=None):
+        """Historique du match, de la plus récente à la plus ancienne action."""
+        match = self.get_object()
+        return Response(ActionMatchSerializer(match.actions.all(), many=True).data)
+
+    @action(detail=True, methods=['post'])
+    def annuler_derniere_action(self, request, pk=None):
+        """Annule la dernière stat ou le dernier temps mort (l'action reste dans l'historique, marquée annulée)."""
+        self.get_object()  # permissions
+        with transaction.atomic():
+            match = self._match_verrouille(pk)
+            journal.annuler_derniere_action(match)
         return self._reponse_match(match)
 
     @action(detail=True, methods=['patch'], url_path='stats/(?P<stat_id>[^/.]+)/update')
@@ -374,10 +393,15 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             StatistiqueJoueur.objects.filter(pk=stat.pk).update(**{champ: nouvelle_valeur, 'updated_at': timezone.now()})
             stat.refresh_from_db()
 
+            cote = 'domicile' if stat.joueur.equipe_id == match.equipe_domicile_id else 'exterieur'
+            variation = getattr(stat, champ) - avant
             if champ == 'fautes':
-                cote = 'domicile' if stat.joueur.equipe_id == match.equipe_domicile_id else 'exterieur'
-                self._compter_faute_equipe(match, cote, stat.fautes - avant)
+                self._compter_faute_equipe(match, cote, variation)
             match.calculer_scores_depuis_stats()
+            if variation:
+                journal.enregistrer(
+                    match, 'stat', auteur=request.user, cote=cote, statistique=stat, champ=champ, valeur=variation,
+                )
 
         return Response({
             'statistique': StatistiqueJoueurSerializer(stat).data,

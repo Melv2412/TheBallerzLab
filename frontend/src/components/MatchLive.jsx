@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { updateStatistique, tempsMort, periodeSuivante, messageErreur } from "../api";
+import { updateStatistique, tempsMort, periodeSuivante, annulerDerniereAction, messageErreur } from "../api";
 import { useAuth } from "../AuthContext";
 import { peutModifier } from "../permissions";
 import { useMatchLive } from "./match-live/useMatchLive";
@@ -12,6 +12,7 @@ import { ListeJoueursEquipe } from "./match-live/ListeJoueursEquipe";
 import { ModalSelectionJoueur } from "./match-live/ModalSelectionJoueur";
 import { ModalCorrection } from "./match-live/ModalCorrection";
 import { ModalReglesMatch } from "./match-live/ModalReglesMatch";
+import { DerouleMatch, decrireAction } from "./match-live/DerouleMatch";
 
 const ALTERNANCE = { neutre: "domicile", domicile: "exterieur", exterieur: "domicile" };
 
@@ -204,6 +205,19 @@ function MatchLive() {
               <MvpLive mvp={meilleurJoueur(statistiques)} />
 
               <div className="flex gap-4 items-center">
+                {isOwner && match.derniere_action && match.statut !== "termine" && (
+                  <button
+                    onClick={() => essayer(() => actionMatch(() => annulerDerniereAction(id)))}
+                    title="Annuler la dernière action"
+                    className="flex flex-col items-center justify-center p-3 rounded-xl border-2 bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-primary-orange transition-all max-w-[9rem]"
+                  >
+                    <span className="text-xl">↩</span>
+                    <span className="text-[8px] font-black uppercase mt-1 text-center leading-tight">
+                      Annuler {decrireAction(match.derniere_action, match.reglement.nb_periodes)}
+                      {match.derniere_action.joueur_libelle && ` · ${match.derniere_action.joueur_libelle}`}
+                    </span>
+                  </button>
+                )}
                 {isOwner && (
                   <button
                     onClick={() => setIsCorrectionMode(!isCorrectionMode)}
@@ -252,6 +266,8 @@ function MatchLive() {
               />
             ))}
           </div>
+
+          <DerouleMatch match={match} />
         </div>
 
         {actionEnAttente && (

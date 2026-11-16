@@ -5,7 +5,8 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from . import reglement as regles
-from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .journal import TYPES_ANNULABLES
+from .models import ActionMatch, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .phases_finales import avancer_phases_finales, phase_suivante_commencee
 from .services import mvp_du_match
 
@@ -184,6 +185,17 @@ class StatistiqueJoueurSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class ActionMatchSerializer(serializers.ModelSerializer):
+    """Une ligne de l'historique du match."""
+
+    class Meta:
+        model = ActionMatch
+        fields = [
+            'id', 'type', 'cote', 'joueur_libelle', 'champ', 'valeur', 'periode', 'temps_restant_secondes',
+            'annulee', 'created_at',
+        ]
+
+
 class MatchSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle Match."""
     equipe_domicile_nom = serializers.CharField(source='equipe_domicile.nom', read_only=True)
@@ -232,6 +244,12 @@ class MatchSerializer(serializers.ModelSerializer):
             # En bonus : la prochaine faute d'équipe donnera des lancers francs
             data[f'bonus_{cote}'] = fautes >= reglement['fautes_bonus'] - 1
             data[f'temps_morts_{cote}'] = instance.temps_morts_restants(cote, periode)
+
+        # Historique : dernière action annulable, et repère pour recharger le déroulé quand il change
+        recentes = list(instance.actions.order_by('-id')[:30])
+        data['actions_version'] = f"{recentes[0].id}-{sum(a.annulee for a in recentes)}" if recentes else None
+        derniere = next((a for a in recentes if not a.annulee and a.type in TYPES_ANNULABLES), None)
+        data['derniere_action'] = ActionMatchSerializer(derniere).data if derniere else None
         return data
 
     def create(self, validated_data):

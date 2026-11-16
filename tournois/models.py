@@ -309,3 +309,40 @@ class StatistiqueJoueur(models.Model):
         super().delete(*args, **kwargs)
         match.calculer_scores_depuis_stats()
 
+
+
+class ActionMatch(models.Model):
+    """
+    Historique du match, action par action : déroulé du match, annulation de la dernière action,
+    et base de la feuille de match. Une action annulée reste visible (marquée annulée).
+    """
+    TYPES = [
+        ('stat', 'Statistique'),
+        ('temps_mort', 'Temps mort'),
+        ('periode', 'Changement de période'),
+    ]
+    COTES = [('domicile', 'Domicile'), ('exterieur', 'Extérieur')]
+
+    match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name='actions')
+    type = models.CharField(max_length=20, choices=TYPES)
+    cote = models.CharField(max_length=10, choices=COTES, blank=True)
+    # Statistique concernée (vide pour un temps mort ou un changement de période)
+    statistique = models.ForeignKey(
+        StatistiqueJoueur, on_delete=models.SET_NULL, null=True, blank=True, related_name='actions',
+    )
+    joueur_libelle = models.CharField(max_length=220, blank=True)  # « #7 Paul MARTIN », figé au moment de l'action
+    champ = models.CharField(max_length=20, blank=True)  # points, passes, rebonds, contres, fautes
+    valeur = models.IntegerField(default=0)  # variation réellement appliquée (négative pour une correction)
+    periode = models.PositiveIntegerField()
+    temps_restant_secondes = models.FloatField()
+    annulee = models.BooleanField(default=False)
+    auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Action de match"
+        verbose_name_plural = "Actions de match"
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"{self.match_id} P{self.periode} {self.type} {self.champ} {self.valeur:+d} {self.joueur_libelle}"

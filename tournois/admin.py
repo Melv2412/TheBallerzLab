@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group, User
 
-from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .models import ActionMatch, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import GROUPE_ORGANISATEURS
 
 admin.site.unregister(User)
@@ -77,5 +77,20 @@ class StatistiqueJoueurAdmin(admin.ModelAdmin):
     list_display = ['joueur', 'match', 'points', 'passes', 'rebonds', 'contres', 'fautes']
     list_filter = ['match__tournoi', 'match']
     search_fields = ['joueur__prenom', 'joueur__nom']
+
+
+@admin.register(ActionMatch)
+class ActionMatchAdmin(admin.ModelAdmin):
+    """Historique des matchs, en lecture seule (trace de qui a saisi quoi)."""
+    list_display = ['match', 'periode', 'type', 'cote', 'joueur_libelle', 'champ', 'valeur', 'annulee', 'auteur', 'created_at']
+    list_filter = ['type', 'annulee', 'match__tournoi']
+    search_fields = ['joueur_libelle']
+    list_select_related = ['match__equipe_domicile', 'match__equipe_exterieur', 'match__tournoi', 'auteur']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 

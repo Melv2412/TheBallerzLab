@@ -147,6 +147,9 @@ export const deleteMatch = (id) => api.delete(`/matchs/${id}/`)
 export const initialiserStatsMatch = (id) => api.post(`/matchs/${id}/initialiser_stats/`)
 export const tempsMort = (id, equipe) => api.post(`/matchs/${id}/temps_mort/`, { equipe })
 export const periodeSuivante = (id) => api.post(`/matchs/${id}/periode_suivante/`)
+// Historique du match et annulation de la dernière action (stat ou temps mort)
+export const getActions = (id) => api.get(`/matchs/${id}/actions/`)
+export const annulerDerniereAction = (id) => api.post(`/matchs/${id}/annuler_derniere_action/`)
 
 // Préréglages du règlement (FIBA, NBA, 3x3) : chargés une seule fois
 let presetsEnCache = null
