@@ -210,6 +210,26 @@ Remove-Item Env:DATABASE_URL   # revenir à SQLite en local
 
 Protections actives en prod (`DJANGO_DEBUG=False`) : HTTPS obligatoire, cookies sécurisés, HSTS, connexion limitée à 10 tentatives/min et inscription à 20/heure par IP, images limitées à 2 Mo. Jetons de connexion : accès valable 15 min (renouvelé automatiquement), refresh token renouvelé à chaque usage et révoqué à la déconnexion. Sur Vercel, les compteurs de limitation sont propres à chaque instance de la fonction : c'est une protection de base, pas une garantie stricte.
 
+### Sauvegardes
+
+Le plan gratuit de Supabase n'a aucune sauvegarde. Le workflow [sauvegarde.yml](.github/workflows/sauvegarde.yml) exporte la base chaque lundi (et à la demande : onglet Actions > Sauvegarde de la base > Run workflow), la **chiffre**, et la garde 90 jours dans les artefacts GitHub (le dépôt est public : jamais de sauvegarde en clair).
+
+Secrets à créer dans GitHub (Settings > Secrets and variables > Actions) :
+
+| Secret | Valeur |
+|---|---|
+| `SUPABASE_DB_URL` | URL du **Session pooler** Supabase (port 5432), mot de passe compris |
+| `BACKUP_PASSPHRASE` | Phrase secrète longue, à conserver hors de GitHub (sans elle, la sauvegarde est illisible) |
+
+Restaurer (Postgres 17 et GnuPG installés) :
+
+```bash
+gpg --decrypt thelab-AAAA-MM-JJ.dump.gpg > thelab.dump
+pg_restore --no-owner --no-privileges --clean --if-exists -d "postgresql://...:5432/postgres" thelab.dump
+```
+
+GitHub met en pause les workflows planifiés d'un dépôt sans commit pendant 60 jours : le relancer depuis l'onglet Actions si besoin. Les images (Supabase Storage) ne sont pas incluses.
+
 ### Migrer les données locales vers Supabase
 
 ```bash

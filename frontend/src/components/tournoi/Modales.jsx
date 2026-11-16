@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createEquipe, updateEquipe, createJoueur, updateJoueur, createMatch, messageErreur } from "../../api";
+import { compresserImage } from "../../images";
 import { ZoneImage } from "./ZoneImage";
 
 function Modal({ titre, centre = false, largeur = "max-w-md", children }) {
@@ -50,7 +51,7 @@ export function ModalEquipe({ tournoi, equipe, onFermer, onEnregistre }) {
     try {
       const formData = new FormData();
       formData.append("nom", nom);
-      if (logo instanceof File) formData.append("logo", logo);
+      if (logo instanceof File) formData.append("logo", await compresserImage(logo));
 
       if (equipe) {
         await updateEquipe(equipe.id, formData);
@@ -103,7 +104,7 @@ export function ModalJoueur({ equipeId, joueur, onFermer, onEnregistre }) {
       formData.append("prenom", form.prenom.trim().toUpperCase());
       formData.append("nom", form.nom.trim().toUpperCase());
       formData.append("numero_maillot", numero);
-      if (photo instanceof File) formData.append("photo", photo);
+      if (photo instanceof File) formData.append("photo", await compresserImage(photo));
 
       if (joueur) {
         await updateJoueur(joueur.id, formData);
