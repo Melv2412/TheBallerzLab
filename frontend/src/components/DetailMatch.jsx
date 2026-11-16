@@ -35,7 +35,7 @@ function DetailMatch() {
       loadMatch()
     } catch (error) {
       console.error('Erreur:', error)
-      alert('Erreur lors de l\'initialisation des stats')
+      alert(messageErreur(error, 'Erreur lors de l\'initialisation des stats'))
     }
   }
 
@@ -45,6 +45,8 @@ function DetailMatch() {
       loadMatch()
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error)
+      // ex. match terminé, joueur exclu
+      alert(messageErreur(error, 'Impossible de modifier cette statistique.'))
     }
   }
 

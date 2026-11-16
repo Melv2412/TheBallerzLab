@@ -28,7 +28,8 @@ def classement_du_tournoi(tournoi, type_classement=None):
     matchs = filtrer_par_type(tournoi.matchs.filter(statut='termine'), type_classement)
     equipes = tournoi.equipes.values_list('id', 'nom')
     scores = matchs.values_list('equipe_domicile_id', 'equipe_exterieur_id', 'score_domicile', 'score_exterieur')
-    return calculer_classement(equipes, scores)
+    reglement = tournoi.reglement
+    return calculer_classement(equipes, scores, reglement['points_victoire'], reglement['points_defaite'])
 
 
 def meilleurs_joueurs(tournoi, type_classement=None, limite=5):

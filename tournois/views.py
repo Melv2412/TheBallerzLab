@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.db import DatabaseError, connection
+from django.db import DatabaseError, connection, transaction
 from django.db.models import Count, F
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
@@ -11,6 +11,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
+from . import reglement as regles
 from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
 from .serializers import (
@@ -37,6 +38,17 @@ def health(request):
     except DatabaseError:
         return Response({'status': 'erreur', 'database': False}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     return Response({'status': 'ok', 'database': True})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def reglements(request):
+    """Préréglages disponibles (FIBA, NBA, 3x3) et bornes des réglages, pour les formulaires."""
+    return Response({
+        'presets': regles.PRESETS,
+        'bornes': regles.BORNES,
+        'modifiables_en_cours': sorted(regles.REGLAGES_MODIFIABLES_EN_COURS),
+    })
 
 
 def get_tournoi(obj):
@@ -257,83 +269,128 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 
         return queryset
 
+    def _refuser_si_termine(self, match):
+        if match.statut == 'termine':
+            raise ValidationError({'detail': "Match terminé : repassez-le « en cours » pour le modifier."})
+
+    def _match_verrouille(self, pk):
+        """Match relu sous verrou : deux actions simultanées ne se marchent pas dessus."""
+        match = Match.objects.select_for_update().get(pk=pk)
+        self._refuser_si_termine(match)
+        return match
+
+    def _reponse_match(self, match):
+        return Response(MatchSerializer(self.get_queryset().get(pk=match.pk)).data)
+
     @action(detail=True, methods=['post'])
     def initialiser_stats(self, request, pk=None):
         """Initialise les statistiques pour tous les joueurs des deux équipes."""
         match = self.get_object()
-
-        # Récupérer tous les joueurs des deux équipes
-        joueurs_domicile = Joueur.objects.filter(equipe=match.equipe_domicile)
-        joueurs_exterieur = Joueur.objects.filter(equipe=match.equipe_exterieur)
+        self._refuser_si_termine(match)
 
         stats_crees = []
-
-        # Créer les stats pour les joueurs de l'équipe domicile
-        for joueur in joueurs_domicile:
-            stat, created = StatistiqueJoueur.objects.get_or_create(
-                joueur=joueur,
-                match=match,
-                defaults={'points': 0, 'passes': 0, 'rebonds': 0, 'contres': 0, 'fautes': 0}
-            )
-            if created:
-                stats_crees.append(stat)
-
-        # Créer les stats pour les joueurs de l'équipe extérieur
-        for joueur in joueurs_exterieur:
-            stat, created = StatistiqueJoueur.objects.get_or_create(
-                joueur=joueur,
-                match=match,
-                defaults={'points': 0, 'passes': 0, 'rebonds': 0, 'contres': 0, 'fautes': 0}
-            )
+        for joueur in Joueur.objects.filter(equipe__in=[match.equipe_domicile_id, match.equipe_exterieur_id]):
+            stat, created = StatistiqueJoueur.objects.get_or_create(joueur=joueur, match=match)
             if created:
                 stats_crees.append(stat)
 
         serializer = StatistiqueJoueurSerializer(stats_crees, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'])
+    def temps_mort(self, request, pk=None):
+        """Accorde un temps mort à une équipe ({"equipe": "domicile"|"exterieur"}) et arrête le chrono."""
+        cote = request.data.get('equipe')
+        if cote not in ('domicile', 'exterieur'):
+            raise ValidationError({'equipe': "Choisir domicile ou exterieur."})
+        self.get_object()  # permissions
+
+        with transaction.atomic():
+            match = self._match_verrouille(pk)
+            match.figer_chrono(timezone.now())
+            periode = match.periode_actuelle
+            if match.temps_morts_restants(cote, periode) <= 0:
+                raise ValidationError({'detail': "Plus de temps mort disponible pour cette équipe."})
+            segment = regles.segment_temps_morts(match.reglement, periode)
+            if segment != match.temps_morts_segment:
+                match.temps_morts_segment = segment
+                match.temps_morts_utilises_domicile = match.temps_morts_utilises_exterieur = 0
+            setattr(match, f'temps_morts_utilises_{cote}', getattr(match, f'temps_morts_utilises_{cote}') + 1)
+            match.chrono_en_cours = False
+            match.chrono_demarre_a = None
+            match.save()
+        return self._reponse_match(match)
+
+    @action(detail=True, methods=['post'])
+    def periode_suivante(self, request, pk=None):
+        """Passe à la période suivante (prolongation au-delà du temps réglementaire), chrono arrêté."""
+        self.get_object()  # permissions
+        with transaction.atomic():
+            match = self._match_verrouille(pk)
+            match.figer_chrono(timezone.now())
+            match.periode_actuelle += 1
+            match.temps_restant_secondes = regles.duree_periode(match.reglement, match.periode_actuelle)
+            match.shot_clock_secondes = regles.shot_clock_initial(match.reglement)
+            match.chrono_en_cours = False
+            match.chrono_demarre_a = None
+            match.save()
+        return self._reponse_match(match)
+
     @action(detail=True, methods=['patch'], url_path='stats/(?P<stat_id>[^/.]+)/update')
     def update_statistique(self, request, pk=None, stat_id=None):
-        """Met à jour une statistique spécifique d'un joueur."""
-        match = self.get_object()
-        stat = get_object_or_404(StatistiqueJoueur, id=stat_id, match=match)
-
+        """Met à jour une statistique d'un joueur (et les fautes d'équipe pour une faute)."""
+        self.get_object()  # permissions
         serializer = UpdateStatistiqueSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         champ = serializer.validated_data['champ']
         valeur = serializer.validated_data['valeur']
+        ajout = serializer.validated_data['action'] == 'increment'
 
-        # Mise à jour atomique en base : deux clics simultanés ne s'écrasent pas
-        if serializer.validated_data['action'] == 'increment':
-            nouvelle_valeur = F(champ) + valeur
-        else:
-            nouvelle_valeur = Greatest(F(champ) - valeur, 0)
-        StatistiqueJoueur.objects.filter(pk=stat.pk).update(
-            **{champ: nouvelle_valeur, 'updated_at': timezone.now()}
-        )
-        stat.refresh_from_db()
-        match.calculer_scores_depuis_stats()
+        with transaction.atomic():
+            match = self._match_verrouille(pk)
+            stat = get_object_or_404(StatistiqueJoueur.objects.select_related('joueur'), id=stat_id, match=match)
 
-        serializer_response = StatistiqueJoueurSerializer(stat)
-        match.refresh_from_db()
+            exclusion = match.reglement['fautes_exclusion']
+            if ajout and exclusion and stat.fautes >= exclusion:
+                raise ValidationError({'detail': f"Joueur exclu ({exclusion} fautes) : il ne peut plus rien enregistrer."})
+
+            avant = getattr(stat, champ)
+            nouvelle_valeur = F(champ) + valeur if ajout else Greatest(F(champ) - valeur, 0)
+            # Mise à jour atomique en base : deux clics simultanés ne s'écrasent pas
+            StatistiqueJoueur.objects.filter(pk=stat.pk).update(**{champ: nouvelle_valeur, 'updated_at': timezone.now()})
+            stat.refresh_from_db()
+
+            if champ == 'fautes':
+                cote = 'domicile' if stat.joueur.equipe_id == match.equipe_domicile_id else 'exterieur'
+                self._compter_faute_equipe(match, cote, stat.fautes - avant)
+            match.calculer_scores_depuis_stats()
 
         return Response({
-            'statistique': serializer_response.data,
-            'match': {
-                'score_domicile': match.score_domicile,
-                'score_exterieur': match.score_exterieur
-            }
+            'statistique': StatistiqueJoueurSerializer(stat).data,
+            'match': {'score_domicile': match.score_domicile, 'score_exterieur': match.score_exterieur},
         }, status=status.HTTP_200_OK)
 
+    @staticmethod
+    def _compter_faute_equipe(match, cote, delta):
+        """Reporte la variation des fautes d'un joueur sur les fautes d'équipe de la portion en cours."""
+        segment = regles.segment_fautes(match.reglement, match.etat_chrono()['periode_actuelle'])
+        if segment != match.fautes_equipe_segment:
+            if delta <= 0:
+                return  # correction d'une faute d'une portion précédente : rien à retirer
+            match.fautes_equipe_segment = segment
+            match.fautes_equipe_domicile = match.fautes_equipe_exterieur = 0
+        champ = f'fautes_equipe_{cote}'
+        setattr(match, champ, max(0, getattr(match, champ) + delta))
+        match.save(update_fields=['fautes_equipe_segment', 'fautes_equipe_domicile', 'fautes_equipe_exterieur'])
 
-class StatistiqueJoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
-    """ViewSet pour gérer les statistiques des joueurs."""
+
+class StatistiqueJoueurViewSet(viewsets.ReadOnlyModelViewSet):
+    """Statistiques des joueurs, en lecture : elles se modifient par les actions du match (règles appliquées)."""
     queryset = StatistiqueJoueur.objects.select_related(
         'joueur__equipe', 'match'
     ).all()
     serializer_class = StatistiqueJoueurSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def get_queryset(self):
         queryset = StatistiqueJoueur.objects.select_related(

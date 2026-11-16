@@ -15,6 +15,11 @@ export function TableauChrono({
   onResetChrono,
   onNextPeriode,
 }) {
+  const reglement = match.reglement;
+  const shotClockActif = reglement.shot_clock_actif;
+  // Temps réglementaire ou prolongation fini avec un vainqueur : le chrono reste à 0
+  const finDuTemps = chrono.temps === 0 && !match.chrono_en_cours && match.periode_actuelle >= reglement.nb_periodes;
+
   return (
     <div className="flex flex-col items-center w-full lg:w-auto">
       <div className="flex items-center gap-4 sm:gap-8 mb-4">
@@ -50,28 +55,35 @@ export function TableauChrono({
         <div className="text-6xl sm:text-7xl lg:text-8xl font-black text-red-500 digital-font leading-none">
           {formaterTemps(chrono.temps)}
         </div>
-        {/* Shot Clock */}
-        <div
-          className={`text-3xl sm:text-5xl lg:text-6xl font-black digital-font leading-none pb-1 ${chrono.shot <= 5 ? "text-yellow-500 animate-pulse" : "text-red-600"}`}
-        >
-          {chrono.shot.toString().padStart(2, "0")}
-        </div>
+        {shotClockActif && (
+          <div
+            className={`text-3xl sm:text-5xl lg:text-6xl font-black digital-font leading-none pb-1 ${chrono.shot <= 5 ? "text-yellow-500 animate-pulse" : "text-red-600"}`}
+          >
+            {chrono.shot.toString().padStart(2, "0")}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4 mb-6">
         <div className="text-lg sm:text-2xl font-black text-white/40 uppercase tracking-widest italic">
-          {nomPeriode(match.periode_actuelle)}
+          {finDuTemps ? "Fin du temps de jeu" : nomPeriode(match.periode_actuelle, reglement.nb_periodes)}
         </div>
       </div>
 
       {isOwner && (
         <div className="flex flex-wrap justify-center gap-3">
-          <button onClick={() => onResetShotClock(24)} className={boutonControle}>
-            Reset 24s
-          </button>
-          <button onClick={() => onResetShotClock(14)} className={boutonControle}>
-            Reset 14s
-          </button>
+          {shotClockActif && (
+            <>
+              <button onClick={() => onResetShotClock(reglement.shot_clock_secondes)} className={boutonControle}>
+                Reset {reglement.shot_clock_secondes}s
+              </button>
+              {reglement.shot_clock_court_secondes !== reglement.shot_clock_secondes && (
+                <button onClick={() => onResetShotClock(reglement.shot_clock_court_secondes)} className={boutonControle}>
+                  Reset {reglement.shot_clock_court_secondes}s
+                </button>
+              )}
+            </>
+          )}
           <button onClick={onTogglePossession} className={boutonControle}>
             Alternance
           </button>

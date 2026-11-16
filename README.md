@@ -96,6 +96,7 @@ Basket4.0/
 │   ├── serializers.py    # Serializers DRF
 │   ├── views.py          # ViewSets DRF
 │   ├── classement.py     # Classement et départage FIBA
+│   ├── reglement.py      # Règlement configurable : préréglages FIBA/NBA/3x3 et validation
 │   ├── services.py       # Calculs métier : classement du tournoi, MVP
 │   ├── pagination.py     # Pagination des listes de l'API
 │   └── urls.py           # URLs de l'API
@@ -121,8 +122,19 @@ Les listes sont paginées : `{count, next, previous, results}`, 50 éléments pa
 - `GET /api/matchs/?tournoi={id}` - Liste des matchs d'un tournoi
 - `GET /api/matchs/{id}/` - Détail d'un match avec statistiques
 - `POST /api/matchs/{id}/initialiser_stats/` - Initialiser les stats pour un match
-- `PATCH /api/matchs/{id}/stats/{stat_id}/update/` - Mettre à jour une statistique
-- `GET /api/tournois/{slug}/classement/` - Classement (victoire 2 pts, défaite 1 pt ; égalités départagées selon la FIBA : confrontation directe, puis différence de points). Un match ne peut pas être terminé sur une égalité.
+- `PATCH /api/matchs/{id}/stats/{stat_id}/update/` - Mettre à jour une statistique (refusé si le match est terminé ou si le joueur est exclu)
+- `POST /api/matchs/{id}/temps_mort/` - Temps mort (`{"equipe": "domicile"}`), selon la dotation du règlement
+- `POST /api/matchs/{id}/periode_suivante/` - Période suivante (prolongation au-delà du temps réglementaire)
+- `GET /api/reglements/` - Préréglages du règlement (FIBA, NBA, 3x3) et bornes des réglages
+- `GET /api/tournois/{slug}/classement/` - Classement (points de victoire et de défaite selon le règlement ; égalités départagées selon la FIBA : confrontation directe, puis différence de points). Un match ne peut pas être terminé sur une égalité.
+
+## Règlement configurable
+
+Chaque tournoi a un règlement : préréglage **FIBA** (par défaut), **NBA**, **3x3**, ou personnalisé ([tournois/reglement.py](tournois/reglement.py)). Réglages : nombre et durée des périodes, durée des prolongations, shot clock (activable, durée, remise courte), fautes avant exclusion (0 = jamais), seuil de bonus des fautes d'équipe et leur remise à zéro (période, mi-temps ou match), temps morts par mi-temps et par prolongation, points de classement.
+
+- Chaque match reçoit une **copie** du règlement à sa création. Modifier le règlement du tournoi met à jour les matchs à venir, jamais les matchs commencés.
+- Un match se règle individuellement depuis son tableau de marque (⚙️) : tout avant le coup d'envoi ; pendant le match, seulement le shot clock, la durée des périodes et les temps morts ; rien une fois terminé.
+- Un match terminé est figé (stats, chrono, temps morts) : le repasser « en cours » pour corriger.
 
 ## Fonctionnalités
 

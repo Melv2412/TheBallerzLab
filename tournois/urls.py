@@ -9,6 +9,7 @@ from .views import (
     TournoiViewSet,
     UserViewSet,
     health,
+    reglements,
 )
 
 router = DefaultRouter()
@@ -21,6 +22,7 @@ router.register(r'users', UserViewSet, basename='user')
 
 urlpatterns = [
     path('health/', health, name='health'),
+    path('reglements/', reglements, name='reglements'),
     path('', include(router.urls)),
 ]
 

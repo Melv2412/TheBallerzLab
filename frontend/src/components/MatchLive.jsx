@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { updateStatistique } from "../api";
+import { updateStatistique, tempsMort, periodeSuivante, messageErreur } from "../api";
 import { useAuth } from "../AuthContext";
 import { peutModifier } from "../permissions";
 import { useMatchLive } from "./match-live/useMatchLive";
@@ -11,18 +11,31 @@ import { PanneauEquipe } from "./match-live/PanneauEquipe";
 import { ListeJoueursEquipe } from "./match-live/ListeJoueursEquipe";
 import { ModalSelectionJoueur } from "./match-live/ModalSelectionJoueur";
 import { ModalCorrection } from "./match-live/ModalCorrection";
+import { ModalReglesMatch } from "./match-live/ModalReglesMatch";
 
 const ALTERNANCE = { neutre: "domicile", domicile: "exterieur", exterieur: "domicile" };
+
+// Exécute une action et affiche le refus du serveur (match terminé, joueur exclu, plus de temps mort...)
+const essayer = async (action) => {
+  try {
+    await action();
+    return true;
+  } catch (error) {
+    alert(messageErreur(error, "Action impossible."));
+    return false;
+  }
+};
 
 function MatchLive() {
   const { user } = useAuth();
   const { id } = useParams();
-  const { match, loading, chrono, loadMatch, patchMatch } = useMatchLive(id);
+  const { match, loading, chrono, loadMatch, patchMatch, actionMatch } = useMatchLive(id);
 
   const [isCorrectionMode, setIsCorrectionMode] = useState(false);
   // Action en attente du choix d'un joueur : { team, field, value, action }
   const [actionEnAttente, setActionEnAttente] = useState(null);
   const [statACorriger, setStatACorriger] = useState(null);
+  const [reglagesOuverts, setReglagesOuverts] = useState(false);
   // Ids des joueurs ciblés : leurs stats sont relues dans le match à jour
   const [cibles, setCibles] = useState({ home: null, away: null });
 
@@ -45,24 +58,20 @@ function MatchLive() {
   const awayStats = statistiques.filter((s) => s.equipe_nom === match.equipe_exterieur_nom);
   const statParId = (statId) => statistiques.find((s) => s.id === statId) || null;
 
-  const handleTimeout = async (team) => {
-    const champ = team === "home" ? "timeouts_domicile" : "timeouts_exterieur";
-    if (match[champ] > 0) {
-      await patchMatch({ [champ]: match[champ] - 1, chrono_en_cours: false });
-    }
-  };
+  const handleTimeout = (team) =>
+    essayer(() => actionMatch(() => tempsMort(id, team === "home" ? "domicile" : "exterieur")));
 
   const ouvrirSelection = (team, field, value) => {
     setActionEnAttente({ team, field, value: Math.abs(value), action: isCorrectionMode ? "decrement" : "increment" });
   };
 
   const handlePlayerSelect = async (stat) => {
-    if (estExclu(stat, match)) {
+    const { field, value, action } = actionEnAttente;
+    if (action === "increment" && estExclu(stat, match)) {
       alert("Ce joueur est exclu pour limite de fautes !");
       return;
     }
-    const { field, value, action } = actionEnAttente;
-    await updateStatistique(id, stat.id, field, action, value);
+    await essayer(() => updateStatistique(id, stat.id, field, action, value));
     setActionEnAttente(null);
     loadMatch();
   };
@@ -70,7 +79,10 @@ function MatchLive() {
   const handleConfirmCorrections = async (corrections) => {
     for (const [champ, delta] of Object.entries(corrections)) {
       if (delta !== 0) {
-        await updateStatistique(id, statACorriger.id, champ, delta > 0 ? "increment" : "decrement", Math.abs(delta));
+        const ok = await essayer(() =>
+          updateStatistique(id, statACorriger.id, champ, delta > 0 ? "increment" : "decrement", Math.abs(delta)),
+        );
+        if (!ok) break;
       }
     }
     setStatACorriger(null);
@@ -88,7 +100,8 @@ function MatchLive() {
       nom: match.equipe_domicile_nom,
       score: match.score_domicile,
       fautes: match.fautes_domicile,
-      timeouts: match.timeouts_domicile,
+      bonus: match.bonus_domicile,
+      timeouts: match.temps_morts_domicile,
       stats: homeStats,
     },
     {
@@ -96,17 +109,19 @@ function MatchLive() {
       nom: match.equipe_exterieur_nom,
       score: match.score_exterieur,
       fautes: match.fautes_exterieur,
-      timeouts: match.timeouts_exterieur,
+      bonus: match.bonus_exterieur,
+      timeouts: match.temps_morts_exterieur,
       stats: awayStats,
     },
   ];
 
-  const panneau = ({ team, nom, score, fautes, timeouts }) => (
+  const panneau = ({ team, nom, score, fautes, bonus, timeouts }) => (
     <PanneauEquipe
       match={match}
       nom={nom}
       score={score}
       fautes={fautes}
+      bonus={bonus}
       timeouts={timeouts}
       joueurCible={statParId(cibles[team])}
       isOwner={isOwner}
@@ -175,21 +190,15 @@ function MatchLive() {
                 match={match}
                 chrono={chrono}
                 isOwner={isOwner}
-                onToggleChrono={() => patchMatch({ chrono_en_cours: !match.chrono_en_cours })}
-                onResetShotClock={(secondes) => patchMatch({ shot_clock_secondes: secondes })}
+                onToggleChrono={() => essayer(() => patchMatch({ chrono_en_cours: !match.chrono_en_cours }))}
+                onResetShotClock={(secondes) => essayer(() => patchMatch({ shot_clock_secondes: secondes }))}
                 onTogglePossession={() =>
-                  patchMatch({ possession_fleche: ALTERNANCE[match.possession_fleche || "neutre"] })
+                  essayer(() => patchMatch({ possession_fleche: ALTERNANCE[match.possession_fleche || "neutre"] }))
                 }
                 onResetChrono={() =>
-                  patchMatch({ temps_restant_secondes: match.duree_periode_secondes, chrono_en_cours: false })
+                  essayer(() => patchMatch({ temps_restant_secondes: match.duree_periode_secondes, chrono_en_cours: false }))
                 }
-                onNextPeriode={() =>
-                  patchMatch({
-                    periode_actuelle: match.periode_actuelle + 1,
-                    temps_restant_secondes: match.duree_periode_secondes,
-                    chrono_en_cours: false,
-                  })
-                }
+                onNextPeriode={() => essayer(() => actionMatch(() => periodeSuivante(id)))}
               />
 
               <MvpLive mvp={meilleurJoueur(statistiques)} />
@@ -206,9 +215,15 @@ function MatchLive() {
                     </span>
                   </button>
                 )}
-                <button className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                  <span className="text-2xl">⚙️</span>
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => setReglagesOuverts(true)}
+                    title="Réglages du match"
+                    className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all"
+                  >
+                    <span className="text-2xl">⚙️</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -246,6 +261,14 @@ function MatchLive() {
             match={match}
             onSelect={handlePlayerSelect}
             onAnnuler={() => setActionEnAttente(null)}
+          />
+        )}
+
+        {reglagesOuverts && (
+          <ModalReglesMatch
+            match={match}
+            onEnregistrer={(reglement) => essayer(() => patchMatch({ reglement }))}
+            onFermer={() => setReglagesOuverts(false)}
           />
         )}
 

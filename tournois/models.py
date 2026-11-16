@@ -5,6 +5,12 @@ from django.db.models import Sum
 from django.utils import timezone
 from django.utils.text import slugify
 
+from . import reglement as regles
+
+
+def reglement_par_defaut():
+    return dict(regles.FIBA)
+
 
 class Tournoi(models.Model):
     """Modèle représentant un tournoi de basket."""
@@ -19,7 +25,8 @@ class Tournoi(models.Model):
     has_quarts = models.BooleanField(default=False)
     has_demis = models.BooleanField(default=False)
     has_finale = models.BooleanField(default=True)
-    limite_fautes = models.IntegerField(default=5, validators=[MinValueValidator(1)])
+    # Règlement (voir tournois/reglement.py) : copié sur chaque match à sa création
+    reglement = models.JSONField(default=reglement_par_defaut)
 
     # Séries éliminatoires (nombre de victoires requises pour remporter la série)
     victoires_requises_8eme = models.IntegerField(default=1, validators=[MinValueValidator(1)])
@@ -130,12 +137,11 @@ class Match(models.Model):
     # Quand le chrono tourne, temps_restant_secondes et shot_clock_secondes sont les valeurs
     # à l'instant chrono_demarre_a : le temps réel se calcule (voir etat_chrono), sans écriture chaque seconde.
     temps_restant_secondes = models.FloatField(default=600, validators=[MinValueValidator(0)])  # 10 minutes par défaut
-    periode_actuelle = models.IntegerField(default=1, validators=[MinValueValidator(1)])  # Quart-temps actuel
-    duree_periode_secondes = models.IntegerField(default=600, validators=[MinValueValidator(1)])  # 10 min par période
+    periode_actuelle = models.IntegerField(default=1, validators=[MinValueValidator(1)])  # Au-delà de nb_periodes : prolongations
     chrono_en_cours = models.BooleanField(default=False)  # Le chrono tourne-t-il ?
     chrono_demarre_a = models.DateTimeField(null=True, blank=True)
 
-    # Shot Clock (24 secondes)
+    # Shot Clock (0 = désactivé)
     shot_clock_secondes = models.FloatField(default=24, validators=[MinValueValidator(0)])
 
     # Flèche de possession (domicile, exterieur ou neutre)
@@ -146,9 +152,19 @@ class Match(models.Model):
     ]
     possession_fleche = models.CharField(max_length=20, choices=POSSESSION_CHOICES, default='neutre')
 
-    # Gestion des timeouts
-    timeouts_domicile = models.IntegerField(default=5, validators=[MinValueValidator(0)])
-    timeouts_exterieur = models.IntegerField(default=5, validators=[MinValueValidator(0)])
+    # Copie du règlement du tournoi (voir tournois/reglement.py)
+    reglement = models.JSONField(default=reglement_par_defaut)
+
+    # Fautes d'équipe de la portion de match en cours (période, mi-temps ou match selon le règlement) :
+    # elles ne comptent que si fautes_equipe_segment est la portion actuelle.
+    fautes_equipe_domicile = models.PositiveIntegerField(default=0)
+    fautes_equipe_exterieur = models.PositiveIntegerField(default=0)
+    fautes_equipe_segment = models.PositiveIntegerField(default=1)
+
+    # Temps morts utilisés dans la portion en cours (mi-temps ou prolongation), même principe
+    temps_morts_utilises_domicile = models.PositiveIntegerField(default=0)
+    temps_morts_utilises_exterieur = models.PositiveIntegerField(default=0)
+    temps_morts_segment = models.PositiveIntegerField(default=1)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -164,8 +180,9 @@ class Match(models.Model):
     def etat_chrono(self, maintenant=None):
         """
         État réel du chrono à `maintenant`, sans rien enregistrer.
-        Le chrono s'arrête quand le shot clock tombe à 0 (violation des 24 s) ; en fin de période,
-        on passe à la période suivante, chrono arrêté.
+        Le chrono s'arrête quand le shot clock tombe à 0 (violation). En fin de période, on passe à la
+        suivante (prolongation si le temps réglementaire est fini à égalité), chrono arrêté ; si le temps
+        réglementaire ou une prolongation se termine avec un vainqueur, le chrono reste à 0.
         """
         etat = {
             'temps_restant_secondes': self.temps_restant_secondes,
@@ -182,15 +199,23 @@ class Match(models.Model):
         shot_actif = shot > 0
 
         if shot_actif and shot < temps and ecoule >= shot:
-            # Violation des 24 secondes avant la fin de la période
+            # Violation du shot clock avant la fin de la période
             etat.update(temps_restant_secondes=temps - shot, shot_clock_secondes=0, chrono_en_cours=False)
         elif ecoule >= temps:
-            etat.update(
-                periode_actuelle=self.periode_actuelle + 1,
-                temps_restant_secondes=self.duree_periode_secondes,
-                shot_clock_secondes=24,
-                chrono_en_cours=False,
+            fin_du_match = (
+                self.periode_actuelle >= self.reglement['nb_periodes']
+                and self.score_domicile != self.score_exterieur
             )
+            if fin_du_match:
+                etat.update(temps_restant_secondes=0, shot_clock_secondes=0, chrono_en_cours=False)
+            else:
+                suivante = self.periode_actuelle + 1
+                etat.update(
+                    periode_actuelle=suivante,
+                    temps_restant_secondes=regles.duree_periode(self.reglement, suivante),
+                    shot_clock_secondes=regles.shot_clock_initial(self.reglement),
+                    chrono_en_cours=False,
+                )
         else:
             etat['temps_restant_secondes'] = temps - ecoule
             if shot_actif:
@@ -202,6 +227,37 @@ class Match(models.Model):
         for champ, valeur in self.etat_chrono(maintenant).items():
             setattr(self, champ, valeur)
         self.chrono_demarre_a = maintenant if self.chrono_en_cours else None
+
+    @property
+    def a_commence(self):
+        """Le match a-t-il démarré (statut, chrono déjà lancé ou période entamée) ?"""
+        return (
+            self.statut != 'a_venir'
+            or self.chrono_en_cours
+            or self.periode_actuelle > 1
+            or self.temps_restant_secondes < regles.duree_periode(self.reglement, 1)
+        )
+
+    def fautes_equipe(self, cote, periode=None):
+        """Fautes d'équipe de la portion de match en cours ('domicile' ou 'exterieur')."""
+        periode = periode or self.etat_chrono()['periode_actuelle']
+        if regles.segment_fautes(self.reglement, periode) != self.fautes_equipe_segment:
+            return 0
+        return getattr(self, f'fautes_equipe_{cote}')
+
+    def temps_morts_restants(self, cote, periode=None):
+        periode = periode or self.etat_chrono()['periode_actuelle']
+        segment = regles.segment_temps_morts(self.reglement, periode)
+        utilises = getattr(self, f'temps_morts_utilises_{cote}') if segment == self.temps_morts_segment else 0
+        return max(0, regles.dotation_temps_morts(self.reglement, segment) - utilises)
+
+    def appliquer_reglement(self):
+        """Remet le chrono au départ selon le règlement (match pas encore commencé)."""
+        self.periode_actuelle = 1
+        self.temps_restant_secondes = regles.duree_periode(self.reglement, 1)
+        self.shot_clock_secondes = regles.shot_clock_initial(self.reglement)
+        self.chrono_en_cours = False
+        self.chrono_demarre_a = None
 
     def calculer_scores_depuis_stats(self):
         """Calcule les scores des équipes à partir des statistiques des joueurs."""
@@ -218,21 +274,6 @@ class Match(models.Model):
         self.score_domicile = stats_domicile
         self.score_exterieur = stats_exterieur
         self.save(update_fields=['score_domicile', 'score_exterieur'])
-
-    def calculer_fautes_equipe(self, equipe):
-        """Calcule le total des fautes d'une équipe à partir des fautes individuelles."""
-        return StatistiqueJoueur.objects.filter(
-            joueur__equipe=equipe,
-            match=self
-        ).aggregate(total=Sum('fautes'))['total'] or 0
-
-    def get_fautes_domicile(self):
-        """Retourne le nombre total de fautes de l'équipe domicile."""
-        return self.calculer_fautes_equipe(self.equipe_domicile)
-
-    def get_fautes_exterieur(self):
-        """Retourne le nombre total de fautes de l'équipe extérieur."""
-        return self.calculer_fautes_equipe(self.equipe_exterieur)
 
 
 class StatistiqueJoueur(models.Model):

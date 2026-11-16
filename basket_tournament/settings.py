@@ -30,7 +30,7 @@ if not SECRET_KEY:
             "DJANGO_SECRET_KEY doit être définie hors du mode DEBUG "
             "(en local : DJANGO_DEBUG=True dans .env)."
         )
-    SECRET_KEY = 'django-insecure-dev-uniquement'
+    SECRET_KEY = 'django-insecure-cle-de-developpement-local-uniquement'
 
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 

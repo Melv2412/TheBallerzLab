@@ -1,7 +1,7 @@
 """
 Classement d'un tournoi selon les règles FIBA (Règlement officiel, annexe D - Classement des équipes).
 
-- Victoire : 2 points, défaite : 1 point.
+- Victoire : 2 points, défaite : 1 point (réglables dans le règlement du tournoi).
 - Équipes à égalité de points, départagées dans cet ordre :
     1. points de classement dans les matchs entre elles ;
     2. différence de points dans les matchs entre elles ;
@@ -16,9 +16,10 @@ Un match nul n'existe pas au basket : un match terminé sur une égalité (donn�
 
 POINTS_VICTOIRE = 2
 POINTS_DEFAITE = 1
+BAREME_FIBA = (POINTS_VICTOIRE, POINTS_DEFAITE)
 
 
-def _bilan(ids, rencontres):
+def _bilan(ids, rencontres, bareme=BAREME_FIBA):
     """Bilan de chaque équipe de `ids` sur les rencontres données."""
     bilan = {
         i: {'joues': 0, 'gagnes': 0, 'perdus': 0, 'points_pour': 0, 'points_contre': 0, 'points': 0}
@@ -34,22 +35,22 @@ def _bilan(ids, rencontres):
             stats['points_contre'] += contre
             if pour > contre:
                 stats['gagnes'] += 1
-                stats['points'] += POINTS_VICTOIRE
+                stats['points'] += bareme[0]
             else:
                 stats['perdus'] += 1
-                stats['points'] += POINTS_DEFAITE
+                stats['points'] += bareme[1]
     for stats in bilan.values():
         stats['difference'] = stats['points_pour'] - stats['points_contre']
     return bilan
 
 
-def _departager(ids, rencontres, general, noms):
+def _departager(ids, rencontres, general, noms, bareme):
     """Ordonne des équipes à égalité de points (critères FIBA, appliqués récursivement)."""
     if len(ids) <= 1:
         return list(ids)
 
     groupe = set(ids)
-    entre_elles = _bilan(ids, [r for r in rencontres if r[0] in groupe and r[1] in groupe])
+    entre_elles = _bilan(ids, [r for r in rencontres if r[0] in groupe and r[1] in groupe], bareme)
     criteres = (
         lambda i: entre_elles[i]['points'],
         lambda i: entre_elles[i]['difference'],
@@ -63,13 +64,13 @@ def _departager(ids, rencontres, general, noms):
         if len(paliers) > 1:
             ordre = []
             for valeur in paliers:
-                ordre += _departager([i for i in ids if valeurs[i] == valeur], rencontres, general, noms)
+                ordre += _departager([i for i in ids if valeurs[i] == valeur], rencontres, general, noms, bareme)
             return ordre
 
     return sorted(ids, key=lambda i: noms[i].lower())
 
 
-def calculer_classement(equipes, scores):
+def calculer_classement(equipes, scores, points_victoire=POINTS_VICTOIRE, points_defaite=POINTS_DEFAITE):
     """
     equipes : itérable de (id, nom)
     scores : itérable de (equipe_domicile_id, equipe_exterieur_id, score_domicile, score_exterieur)
@@ -77,10 +78,11 @@ def calculer_classement(equipes, scores):
     """
     noms = dict(equipes)
     rencontres = [r for r in scores if r[2] != r[3] and r[0] in noms and r[1] in noms]
-    general = _bilan(noms, rencontres)
+    bareme = (points_victoire, points_defaite)
+    general = _bilan(noms, rencontres, bareme)
 
     ordre = []
     for points in sorted({stats['points'] for stats in general.values()}, reverse=True):
-        ordre += _departager([i for i in noms if general[i]['points'] == points], rencontres, general, noms)
+        ordre += _departager([i for i in noms if general[i]['points'] == points], rencontres, general, noms, bareme)
 
     return [{'id': i, 'nom': noms[i], **general[i]} for i in ordre]

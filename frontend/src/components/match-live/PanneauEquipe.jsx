@@ -18,6 +18,7 @@ export function PanneauEquipe({
   nom,
   score,
   fautes,
+  bonus,
   timeouts,
   joueurCible,
   isOwner,
@@ -25,6 +26,7 @@ export function PanneauEquipe({
   onRetirerCible,
   onTimeout,
 }) {
+  const seuilBonus = match.reglement.fautes_bonus;
   return (
     <div className="text-center">
       <h2 className="text-lg sm:text-2xl font-black text-white mb-4 uppercase break-words">{nom}</h2>
@@ -59,8 +61,8 @@ export function PanneauEquipe({
         <button className="text-red-500 text-xl sm:text-2xl">◀</button>
         <div className="text-center">
           <div className="text-xs text-gray-400 font-bold uppercase mb-1">Fautes</div>
-          <div className="flex gap-1 justify-center mb-2">
-            {[...Array(5)].map((_, i) => (
+          <div className="flex gap-1 justify-center mb-2" title={`Lancers francs à partir de la ${seuilBonus}e faute`}>
+            {[...Array(Math.max(seuilBonus - 1, 1))].map((_, i) => (
               <div
                 key={i}
                 className={`w-3 h-3 rounded-full ${i < fautes ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" : "bg-white/20"}`}
@@ -69,7 +71,7 @@ export function PanneauEquipe({
           </div>
           <div className="flex items-center justify-center gap-2">
             <div className="text-2xl font-black text-red-500 digital-font">{fautes}</div>
-            {fautes >= 4 && (
+            {bonus && (
               <span className="bg-red-500 text-white text-[8px] font-black px-1 rounded animate-pulse">BONUS</span>
             )}
           </div>

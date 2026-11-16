@@ -130,11 +130,11 @@ class PermissionsTests(BaseAPITestCase):
         url = '/api/tournois/interpromo/'
 
         self.client.force_authenticate(self.intrus)
-        self.assertEqual(self.client.patch(url, {'limite_fautes': 6}).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.patch(url, {'has_demis': True}).status_code, status.HTTP_403_FORBIDDEN)
 
         self.intrus.is_staff = True
         self.intrus.save()
-        self.assertEqual(self.client.patch(url, {'limite_fautes': 6}).status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.patch(url, {'has_demis': True}).status_code, status.HTTP_200_OK)
 
 
 class ValidationMatchTests(BaseAPITestCase):
@@ -154,10 +154,13 @@ class ValidationMatchTests(BaseAPITestCase):
         })
         self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_stat_pour_un_joueur_hors_du_match_refusee(self):
+    def test_stats_non_modifiables_hors_des_actions_du_match(self):
+        # Création / modification directes interdites : elles contourneraient exclusion, verrou et fautes d'équipe
         etranger = Joueur.objects.create(prenom='E', nom='T', numero_maillot=1, equipe=self.autre_equipe)
         reponse = self.client.post('/api/statistiques/', {'joueur': etranger.id, 'match': self.match.id})
-        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(reponse.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        reponse = self.client.patch(f'/api/statistiques/{self.stat.id}/', {'points': 50})
+        self.assertEqual(reponse.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class MiseAJourStatistiqueTests(BaseAPITestCase):

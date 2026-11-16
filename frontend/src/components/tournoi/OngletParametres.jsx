@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { updateTournoi, resetPlayoffs } from "../../api";
+import { updateTournoi, resetPlayoffs, messageErreur } from "../../api";
+import { FormulaireReglement } from "../reglement/FormulaireReglement";
+import { usePresets } from "../reglement/presets";
 
 const PHASES = [
   { cle: "has_8emes", label: "8èmes", phase: "8eme", victoires: "victoires_requises_8eme", labelVictoires: "8èmes" },
@@ -13,7 +15,7 @@ const formulaireDepuis = (tournoi) => ({
   has_quarts: tournoi.has_quarts,
   has_demis: tournoi.has_demis,
   has_finale: tournoi.has_finale,
-  limite_fautes: tournoi.limite_fautes || 5,
+  reglement: tournoi.reglement,
   victoires_requises_8eme: tournoi.victoires_requises_8eme || 1,
   victoires_requises_quart: tournoi.victoires_requises_quart || 1,
   victoires_requises_demi: tournoi.victoires_requises_demi || 1,
@@ -23,6 +25,7 @@ const formulaireDepuis = (tournoi) => ({
 export function OngletParametres({ tournoi, matchs, recharger }) {
   const [form, setForm] = useState(() => formulaireDepuis(tournoi));
   const [enregistrement, setEnregistrement] = useState(false);
+  const presets = usePresets();
 
   useEffect(() => {
     setForm(formulaireDepuis(tournoi));
@@ -85,7 +88,7 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
       recharger();
     } catch (err) {
       console.error("Erreur lors de la mise à jour du tournoi:", err);
-      alert("Erreur lors de l'enregistrement des paramètres");
+      alert(messageErreur(err, "Erreur lors de l'enregistrement des paramètres"));
     } finally {
       setEnregistrement(false);
     }
@@ -96,22 +99,16 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
       <h2 className="text-2xl sm:text-4xl font-black italic mb-8 card-title-accent uppercase">⚙️ Paramètres du Tournoi</h2>
       <form onSubmit={enregistrer} className="space-y-8">
         <div className="border-b border-white/5 pb-6">
-          <h3 className="text-lg font-black uppercase text-primary-orange mb-4 tracking-wider">Configuration Générale</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">
-                Limite de Fautes par Joueur
-              </label>
-              <input
-                type="number"
-                min="1"
-                required
-                value={form.limite_fautes}
-                onChange={(e) => setForm({ ...form, limite_fautes: parseInt(e.target.value) || 5 })}
-                className="w-full px-5 py-4 glass-input rounded-2xl focus:outline-none"
-              />
-            </div>
-          </div>
+          <h3 className="text-lg font-black uppercase text-primary-orange mb-2 tracking-wider">Règlement</h3>
+          <p className="text-xs text-gray-500 mb-6 italic">
+            * S'applique aux matchs à venir. Les matchs en cours ou terminés gardent leur règlement, et chaque match
+            peut être ajusté depuis son tableau de marque.
+          </p>
+          <FormulaireReglement
+            reglement={form.reglement}
+            donnees={presets}
+            onChange={(reglement) => setForm({ ...form, reglement })}
+          />
         </div>
 
         <div className="border-b border-white/5 pb-6">

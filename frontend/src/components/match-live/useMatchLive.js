@@ -32,6 +32,12 @@ export function useMatchLive(id) {
     setMatch(avecHeureReception(response.data));
   };
 
+  // Action du match (temps mort, période suivante...) qui renvoie le match à jour
+  const actionMatch = async (appel) => {
+    const response = await appel();
+    setMatch(avecHeureReception(response.data));
+  };
+
   usePolling(
     () => loadMatch(),
     () => {
@@ -57,5 +63,5 @@ export function useMatchLive(id) {
     if (chronoAZero) loadMatch();
   }, [chronoAZero]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { match, loading, chrono, loadMatch, patchMatch };
+  return { match, loading, chrono, loadMatch, patchMatch, actionMatch };
 }

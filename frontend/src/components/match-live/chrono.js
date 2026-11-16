@@ -24,10 +24,13 @@ export const formaterTemps = (secondes) => {
   return `${minutes}:${reste.toString().padStart(2, "0")}`;
 };
 
-export const nomPeriode = (periode) => {
-  if (periode === 1) return "1er Quart";
-  if (periode <= 4) return `${periode}e Quart`;
-  return `Prolongation ${periode - 4}`;
+// Nom de la période selon le nombre de périodes du règlement
+export const nomPeriode = (periode, nbPeriodes = 4) => {
+  if (periode > nbPeriodes) return `Prolongation ${periode - nbPeriodes}`;
+  if (nbPeriodes === 1) return "Temps réglementaire";
+  const nom = nbPeriodes === 2 ? "Mi-temps" : nbPeriodes === 4 ? "Quart" : "Période";
+  const ordinal = periode === 1 ? (nom === "Mi-temps" || nom === "Période" ? "1re" : "1er") : `${periode}e`;
+  return `${ordinal} ${nom}`;
 };
 
 // Évaluation simplifiée (même formule que le serveur)
@@ -39,4 +42,10 @@ export const meilleurJoueur = (stats) =>
     ? null
     : stats.reduce((meilleur, stat) => (evaluation(stat) > evaluation(meilleur) ? stat : meilleur));
 
-export const estExclu = (stat, match) => stat.fautes >= (match.tournoi_limite_fautes || 5);
+// Fautes personnelles avant exclusion (0 = jamais exclu)
+export const limiteFautes = (match) => match.reglement?.fautes_exclusion ?? 5;
+
+export const estExclu = (stat, match) => {
+  const limite = limiteFautes(match);
+  return limite > 0 && stat.fautes >= limite;
+};

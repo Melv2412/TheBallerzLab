@@ -1,5 +1,5 @@
 import React from "react";
-import { estExclu } from "./chrono";
+import { estExclu, limiteFautes } from "./chrono";
 import { PhotoJoueur } from "./PhotoJoueur";
 
 function GrosseStat({ label, classeLabel, valeur, classeValeur = "text-white" }) {
@@ -51,7 +51,7 @@ export function ModalSelectionJoueur({ action, stats, match, onSelect, onAnnuler
                       <span className={`ml-4 text-lg font-bold ${exclu ? "text-red-500" : "text-white"}`}>
                         {stat.joueur_nom}
                       </span>
-                      {stat.fautes === match.tournoi_limite_fautes - 1 && (
+                      {limiteFautes(match) > 0 && stat.fautes === limiteFautes(match) - 1 && (
                         <span className="ml-2 text-[10px] text-yellow-500 font-black animate-pulse">! FOUL TROUBLE</span>
                       )}
                     </div>

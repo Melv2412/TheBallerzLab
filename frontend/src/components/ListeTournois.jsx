@@ -3,6 +3,19 @@ import { Link } from 'react-router-dom'
 import { getTournois, createTournoi, deleteTournoi, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 import { peutModifier } from '../permissions'
+import { FormulaireReglement } from './reglement/FormulaireReglement'
+import { NOMS_PRESETS, typeReglement, usePresets } from './reglement/presets'
+
+const FORMULAIRE_VIDE = {
+  nom: '',
+  date_debut: '',
+  date_fin: '',
+  has_8emes: false,
+  has_quarts: false,
+  has_demis: false,
+  has_finale: true,
+  reglement: null, // null = FIBA (défaut du serveur)
+}
 
 function ListeTournois() {
   const { user, rafraichirProfil } = useAuth()
@@ -26,16 +39,10 @@ function ListeTournois() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [formData, setFormData] = useState({
-    nom: '',
-    date_debut: '',
-    date_fin: '',
-    has_8emes: false,
-    has_quarts: false,
-    has_demis: false,
-    has_finale: true,
-    limite_fautes: 5,
-  })
+  const [formData, setFormData] = useState(FORMULAIRE_VIDE)
+  const [personnaliser, setPersonnaliser] = useState(false)
+  const presets = usePresets()
+  const reglementChoisi = formData.reglement || presets?.presets.fiba
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -75,9 +82,11 @@ function ListeTournois() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      await createTournoi(formData)
+      const { reglement, ...donnees } = formData
+      await createTournoi(reglement ? formData : donnees)
       setShowModal(false)
-      setFormData({ nom: '', date_debut: '', date_fin: '' })
+      setFormData(FORMULAIRE_VIDE)
+      setPersonnaliser(false)
       rafraichirProfil()
       setTimeout(() => {
         loadTournois()
@@ -335,25 +344,40 @@ function ListeTournois() {
                   ))}
                 </div>
               </div>
-              {/* Rules Selection */}
+              {/* Règlement */}
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-                <label className="block text-[10px] font-black text-primary-orange mb-4 uppercase tracking-[0.2em]">Règles du Jeu</label>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-widest text-gray-500">Limite de Fautes p/ Joueur</span>
-                  <div className="flex items-center gap-4">
-                    <button 
-                      type="button" 
-                      onClick={() => setFormData({...formData, limite_fautes: Math.max(1, formData.limite_fautes - 1)})}
-                      className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-primary-orange transition-colors font-black"
-                    >-</button>
-                    <span className="text-xl font-black text-white w-6 text-center">{formData.limite_fautes}</span>
-                    <button 
-                      type="button" 
-                      onClick={() => setFormData({...formData, limite_fautes: formData.limite_fautes + 1})}
-                      className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-primary-orange transition-colors font-black"
-                    >+</button>
+                <label className="block text-[10px] font-black text-primary-orange mb-4 uppercase tracking-[0.2em]">Règlement</label>
+                {!personnaliser ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {presets && Object.keys(presets.presets).map((nom) => (
+                      <button
+                        key={nom}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, reglement: { ...presets.presets[nom] } })}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${typeReglement(reglementChoisi, presets.presets) === nom ? 'bg-primary-orange text-white' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                      >
+                        {NOMS_PRESETS[nom]}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, reglement: { ...reglementChoisi } })
+                        setPersonnaliser(true)
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-white/5 text-gray-400 hover:text-white"
+                    >
+                      Personnaliser…
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <FormulaireReglement
+                    reglement={formData.reglement}
+                    donnees={presets}
+                    onChange={(reglement) => setFormData({ ...formData, reglement })}
+                  />
+                )}
+                <p className="text-[10px] text-gray-600 mt-3">Modifiable ensuite dans l'onglet Paramètres du tournoi.</p>
               </div>
 
               <div className="flex gap-4 pt-4">

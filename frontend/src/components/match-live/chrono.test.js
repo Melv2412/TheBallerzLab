@@ -40,14 +40,16 @@ describe("affichage", () => {
     expect(formaterTemps(5)).toBe("0:05");
   });
 
-  it("nomme les périodes et prolongations", () => {
-    expect([1, 2, 4, 5, 6].map(nomPeriode)).toEqual([
+  it("nomme les périodes selon le règlement", () => {
+    expect([1, 2, 4, 5, 6].map((p) => nomPeriode(p, 4))).toEqual([
       "1er Quart",
       "2e Quart",
       "4e Quart",
       "Prolongation 1",
       "Prolongation 2",
     ]);
+    expect([1, 2, 3].map((p) => nomPeriode(p, 2))).toEqual(["1re Mi-temps", "2e Mi-temps", "Prolongation 1"]);
+    expect([1, 2].map((p) => nomPeriode(p, 1))).toEqual(["Temps réglementaire", "Prolongation 1"]);
   });
 });
 
@@ -60,9 +62,11 @@ describe("joueurs", () => {
     expect(meilleurJoueur([])).toBeNull();
   });
 
-  it("exclut un joueur à la limite de fautes du tournoi", () => {
-    expect(estExclu(stat(1, { fautes: 5 }), { tournoi_limite_fautes: 5 })).toBe(true);
-    expect(estExclu(stat(1, { fautes: 4 }), { tournoi_limite_fautes: 5 })).toBe(false);
-    expect(estExclu(stat(1, { fautes: 5 }), {})).toBe(true); // 5 fautes par défaut
+  it("exclut un joueur à la limite de fautes du règlement", () => {
+    const match = (limite) => ({ reglement: { fautes_exclusion: limite } });
+    expect(estExclu(stat(1, { fautes: 5 }), match(5))).toBe(true);
+    expect(estExclu(stat(1, { fautes: 4 }), match(5))).toBe(false);
+    expect(estExclu(stat(1, { fautes: 5 }), match(6))).toBe(false);
+    expect(estExclu(stat(1, { fautes: 12 }), match(0))).toBe(false); // 0 = jamais exclu
   });
 });
