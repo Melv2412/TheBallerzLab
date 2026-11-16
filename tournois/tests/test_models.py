@@ -3,7 +3,7 @@ from datetime import date
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from tournois.models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
+from tournois.models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 
 
 def creer_tournoi(nom='Interpromo', organisateur=None):

@@ -96,6 +96,7 @@ Basket4.0/
 │   ├── serializers.py    # Serializers DRF
 │   ├── views.py          # ViewSets DRF
 │   ├── classement.py     # Classement et départage FIBA
+│   ├── services.py       # Calculs métier : classement du tournoi, MVP
 │   ├── pagination.py     # Pagination des listes de l'API
 │   └── urls.py           # URLs de l'API
 ├── frontend/             # Application React
@@ -137,13 +138,21 @@ Les listes sont paginées : `{count, next, previous, results}`, 50 éléments pa
 - ✅ Interface responsive avec Tailwind CSS
 - ✅ Design moderne (Jaune, Violet, Noir)
 
-## Tests
+## Tests et lint
 
 ```bash
+# Backend
+pip install -r requirements-dev.txt
 python manage.py test tournois
+ruff check .
+
+# Frontend
+cd frontend
+npm test
+npm run lint
 ```
 
-Les mêmes tests, plus la compilation du frontend, tournent automatiquement sur GitHub à chaque push ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Certains tests vérifient le nombre de requêtes SQL des pages lourdes (classement, MVP, listes) : si une modification les ralentit, ils échouent.
+Tout cela, plus la compilation du frontend, tourne automatiquement sur GitHub à chaque push ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Certains tests vérifient le nombre de requêtes SQL des pages lourdes (classement, MVP, listes) : si une modification les ralentit, ils échouent. Les calculs métier (classement FIBA, MVP) sont dans [tournois/services.py](tournois/services.py) et [tournois/classement.py](tournois/classement.py), testables sans passer par l'API.
 
 ## Configuration (production)
 

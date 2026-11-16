@@ -37,24 +37,19 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    try {
-      const response = await loginApi(credentials);
-      const { access, refresh } = response.data;
-      
-      // En théorie on devrait décoder le JWT pour avoir les infos user
-      // Pour l'instant on fait simple en stockant le username
-      const userData = { username: credentials.username };
-      
-      localStorage.setItem('token', access);
-      localStorage.setItem('refresh', refresh);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      setUser(userData);
-      await rafraichirProfil();
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await loginApi(credentials);
+    const { access, refresh } = response.data;
+
+    // Profil minimal, complété juste après par /users/me/
+    const userData = { username: credentials.username };
+
+    localStorage.setItem('token', access);
+    localStorage.setItem('refresh', refresh);
+    localStorage.setItem('user', JSON.stringify(userData));
+
+    setUser(userData);
+    await rafraichirProfil();
+    return response.data;
   };
 
   const logout = () => {

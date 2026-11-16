@@ -1,5 +1,5 @@
-# Vérifie à chaque push et pull request que le backend passe ses tests
-# et que le frontend compile. Un échec apparaît en rouge sur GitHub.
+# Vérifie à chaque push et pull request que le backend passe le lint et ses tests,
+# et que le frontend passe le lint, ses tests et compile. Un échec apparaît en rouge sur GitHub.
 name: CI
 
 on:
@@ -22,7 +22,10 @@ jobs:
           cache: pip
 
       - name: Installer les dépendances
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
 
       - name: Vérifier les migrations
         run: python manage.py makemigrations --check --dry-run
@@ -47,6 +50,12 @@ jobs:
 
       - name: Installer les dépendances
         run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Tests (Vitest)
+        run: npm test
 
       - name: Compiler
         run: npm run build

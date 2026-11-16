@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, getImageUrl, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'

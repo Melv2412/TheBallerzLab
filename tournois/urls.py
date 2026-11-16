@@ -1,8 +1,14 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from .views import (
-    TournoiViewSet, EquipeViewSet, JoueurViewSet,
-    MatchViewSet, StatistiqueJoueurViewSet, UserViewSet, health
+    EquipeViewSet,
+    JoueurViewSet,
+    MatchViewSet,
+    StatistiqueJoueurViewSet,
+    TournoiViewSet,
+    UserViewSet,
+    health,
 )
 
 router = DefaultRouter()

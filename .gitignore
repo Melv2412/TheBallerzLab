@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.pytest_cache/
+.ruff_cache/
 venv/
 env/
 ENV/

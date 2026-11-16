@@ -1,7 +1,7 @@
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Sum
-from django.core.validators import MinValueValidator
-from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -13,20 +13,20 @@ class Tournoi(models.Model):
     organisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tournois_crees', null=True, blank=True)
     date_debut = models.DateField()
     date_fin = models.DateField()
-    
+
     # Configuration des phases du tournoi
     has_8emes = models.BooleanField(default=False)
     has_quarts = models.BooleanField(default=False)
     has_demis = models.BooleanField(default=False)
     has_finale = models.BooleanField(default=True)
     limite_fautes = models.IntegerField(default=5, validators=[MinValueValidator(1)])
-    
+
     # Séries éliminatoires (nombre de victoires requises pour remporter la série)
     victoires_requises_8eme = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     victoires_requises_quart = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     victoires_requises_demi = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     victoires_requises_finale = models.IntegerField(default=1, validators=[MinValueValidator(1)])
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -112,20 +112,20 @@ class Match(models.Model):
     tournoi = models.ForeignKey(Tournoi, on_delete=models.CASCADE, related_name='matchs')
     phase = models.CharField(max_length=20, choices=PHASE_CHOICES, default='poule')
     equipe_domicile = models.ForeignKey(
-        Equipe, 
-        on_delete=models.CASCADE, 
+        Equipe,
+        on_delete=models.CASCADE,
         related_name='matchs_domicile'
     )
     equipe_exterieur = models.ForeignKey(
-        Equipe, 
-        on_delete=models.CASCADE, 
+        Equipe,
+        on_delete=models.CASCADE,
         related_name='matchs_exterieur'
     )
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='a_venir')
     score_domicile = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     score_exterieur = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     date_match = models.DateTimeField(null=True, blank=True)
-    
+
     # Gestion du chronomètre et des périodes.
     # Quand le chrono tourne, temps_restant_secondes et shot_clock_secondes sont les valeurs
     # à l'instant chrono_demarre_a : le temps réel se calcule (voir etat_chrono), sans écriture chaque seconde.
@@ -137,7 +137,7 @@ class Match(models.Model):
 
     # Shot Clock (24 secondes)
     shot_clock_secondes = models.FloatField(default=24, validators=[MinValueValidator(0)])
-    
+
     # Flèche de possession (domicile, exterieur ou neutre)
     POSSESSION_CHOICES = [
         ('domicile', 'Domicile'),
@@ -149,7 +149,7 @@ class Match(models.Model):
     # Gestion des timeouts
     timeouts_domicile = models.IntegerField(default=5, validators=[MinValueValidator(0)])
     timeouts_exterieur = models.IntegerField(default=5, validators=[MinValueValidator(0)])
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -218,18 +218,18 @@ class Match(models.Model):
         self.score_domicile = stats_domicile
         self.score_exterieur = stats_exterieur
         self.save(update_fields=['score_domicile', 'score_exterieur'])
-    
+
     def calculer_fautes_equipe(self, equipe):
         """Calcule le total des fautes d'une équipe à partir des fautes individuelles."""
         return StatistiqueJoueur.objects.filter(
             joueur__equipe=equipe,
             match=self
         ).aggregate(total=Sum('fautes'))['total'] or 0
-    
+
     def get_fautes_domicile(self):
         """Retourne le nombre total de fautes de l'équipe domicile."""
         return self.calculer_fautes_equipe(self.equipe_domicile)
-    
+
     def get_fautes_exterieur(self):
         """Retourne le nombre total de fautes de l'équipe extérieur."""
         return self.calculer_fautes_equipe(self.equipe_exterieur)

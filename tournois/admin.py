@@ -2,9 +2,8 @@ from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group, User
 
-from .models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
+from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import GROUPE_ORGANISATEURS
-
 
 admin.site.unregister(User)
 

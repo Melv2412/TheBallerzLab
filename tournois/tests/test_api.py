@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from tournois.models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
+from tournois.models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 
 
 class BaseAPITestCase(APITestCase):
@@ -351,10 +351,10 @@ class PerformanceRequetesTests(BaseAPITestCase):
         for equipe in equipes:
             for n in range(1, 7):
                 Joueur.objects.get_or_create(equipe=equipe, numero_maillot=n, defaults={'prenom': 'P', 'nom': f'N{n}'})
-        for dom, ext in zip(equipes[::2], equipes[1::2]):
+        for dom, ext in zip(equipes[::2], equipes[1::2], strict=True):
             match = Match.objects.create(tournoi=self.tournoi, equipe_domicile=dom, equipe_exterieur=ext, statut='termine')
             for joueur in Joueur.objects.filter(equipe__in=[dom, ext]):
-                # +1 point pour l'?quipe ? domicile : pas de match nul
+                # +1 point pour l'équipe à domicile : pas de match nul
                 bonus = 1 if joueur.equipe_id == dom.id and joueur.numero_maillot == 1 else 0
                 StatistiqueJoueur.objects.create(
                     joueur=joueur, match=match, points=joueur.numero_maillot + bonus, passes=1,

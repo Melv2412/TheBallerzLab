@@ -1,23 +1,29 @@
-from rest_framework import viewsets, mixins, status, permissions, filters
-from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
-from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
-from django.db import connection, DatabaseError
-from django.db.models import Count, F, Sum
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.db import DatabaseError, connection
+from django.db.models import Count, F
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.conf import settings
-from django.contrib.auth.models import User
-from .models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
-from .serializers import (
-    UserSerializer, TournoiSerializer, EquipeSerializer, JoueurSerializer,
-    MatchSerializer, MatchListSerializer, StatistiqueJoueurSerializer,
-    UpdateStatistiqueSerializer
-)
+from rest_framework import filters, mixins, permissions, status, viewsets
+from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+
+from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
-from .classement import calculer_classement
+from .serializers import (
+    EquipeSerializer,
+    JoueurSerializer,
+    MatchListSerializer,
+    MatchSerializer,
+    StatistiqueJoueurSerializer,
+    TournoiSerializer,
+    UpdateStatistiqueSerializer,
+    UserSerializer,
+)
+from .services import classement_du_tournoi, meilleurs_joueurs
 
 
 @api_view(['GET'])
@@ -152,65 +158,13 @@ class TournoiViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def classement(self, request, slug=None):
-        """Calcule le classement des équipes du tournoi."""
-        tournoi = self.get_object()
-            
-        matchs_termines = tournoi.matchs.filter(statut='termine')
-
-        type_param = request.query_params.get('type', None)
-        if type_param == 'poule':
-            matchs_termines = matchs_termines.filter(phase='poule')
-        elif type_param == 'elimination':
-            matchs_termines = matchs_termines.exclude(phase='poule')
-
-        # 2 requêtes au total (équipes + matchs), le calcul se fait en mémoire
-        equipes = tournoi.equipes.values_list('id', 'nom')
-        scores = matchs_termines.values_list(
-            'equipe_domicile_id', 'equipe_exterieur_id', 'score_domicile', 'score_exterieur'
-        )
-        return Response(calculer_classement(equipes, scores))
+        """Classement des équipes du tournoi (?type=poule ou ?type=elimination)."""
+        return Response(classement_du_tournoi(self.get_object(), request.query_params.get('type')))
 
     @action(detail=True, methods=['get'])
     def mvp(self, request, slug=None):
-        """Trouve le MVP du tournoi (meilleure évaluation moyenne)."""
-        tournoi = self.get_object()
-            
-        stats = StatistiqueJoueur.objects.filter(joueur__equipe__tournoi=tournoi, match__statut='termine')
-
-        type_param = request.query_params.get('type', None)
-        if type_param == 'poule':
-            stats = stats.filter(match__phase='poule')
-        elif type_param == 'elimination':
-            stats = stats.exclude(match__phase='poule')
-
-        # Une seule requête : la base additionne les stats de chaque joueur
-        totaux = (
-            stats.values(
-                'joueur_id', 'joueur__prenom', 'joueur__nom', 'joueur__numero_maillot', 'joueur__equipe__nom',
-            )
-            .annotate(
-                nb_matchs=Count('id'),
-                total_eval=Sum(F('points') + F('passes') + F('rebonds') + F('contres') - F('fautes')),
-                total_points=Sum('points'),
-            )
-            .order_by('joueur__equipe', 'joueur__numero_maillot')
-        )
-
-        mvp_data = [
-            {
-                'id': t['joueur_id'],
-                'nom': f"{t['joueur__prenom']} {t['joueur__nom']}",
-                'numero': t['joueur__numero_maillot'],
-                'equipe': t['joueur__equipe__nom'],
-                'moyenne_eval': round(t['total_eval'] / t['nb_matchs'], 1),
-                'total_points': t['total_points'],
-                'nb_matchs': t['nb_matchs'],
-            }
-            for t in totaux
-        ]
-
-        mvp_data.sort(key=lambda x: x['moyenne_eval'], reverse=True)
-        return Response(mvp_data[:5])  # Top 5 des joueurs
+        """Top 5 des joueurs à la meilleure évaluation moyenne (?type=poule ou ?type=elimination)."""
+        return Response(meilleurs_joueurs(self.get_object(), request.query_params.get('type')))
 
     @action(detail=True, methods=['post'])
     def reset_playoffs(self, request, slug=None):
@@ -219,7 +173,7 @@ class TournoiViewSet(viewsets.ModelViewSet):
 
         phase = request.data.get('phase', None)
         phases_ordre = ['8eme', 'quart', 'demi', 'finale']
-        
+
         if phase and phase in phases_ordre:
             idx = phases_ordre.index(phase)
             phases_a_supprimer = phases_ordre[idx:]
@@ -289,10 +243,10 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         # La liste n'affiche pas les stats des joueurs : inutile de les charger
         if self.action != 'list':
             queryset = queryset.prefetch_related('statistiques_joueurs__joueur__equipe')
-        
+
         tournoi_param = self.request.query_params.get('tournoi', None)
         statut = self.request.query_params.get('statut', None)
-        
+
         if tournoi_param:
             if tournoi_param.isdigit():
                 queryset = queryset.filter(tournoi_id=tournoi_param)
@@ -300,20 +254,20 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
                 queryset = queryset.filter(tournoi__slug=tournoi_param)
         if statut:
             queryset = queryset.filter(statut=statut)
-        
+
         return queryset
 
     @action(detail=True, methods=['post'])
     def initialiser_stats(self, request, pk=None):
         """Initialise les statistiques pour tous les joueurs des deux équipes."""
         match = self.get_object()
-        
+
         # Récupérer tous les joueurs des deux équipes
         joueurs_domicile = Joueur.objects.filter(equipe=match.equipe_domicile)
         joueurs_exterieur = Joueur.objects.filter(equipe=match.equipe_exterieur)
-        
+
         stats_crees = []
-        
+
         # Créer les stats pour les joueurs de l'équipe domicile
         for joueur in joueurs_domicile:
             stat, created = StatistiqueJoueur.objects.get_or_create(
@@ -323,7 +277,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             )
             if created:
                 stats_crees.append(stat)
-        
+
         # Créer les stats pour les joueurs de l'équipe extérieur
         for joueur in joueurs_exterieur:
             stat, created = StatistiqueJoueur.objects.get_or_create(
@@ -333,7 +287,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             )
             if created:
                 stats_crees.append(stat)
-        
+
         serializer = StatistiqueJoueurSerializer(stats_crees, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -342,7 +296,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         """Met à jour une statistique spécifique d'un joueur."""
         match = self.get_object()
         stat = get_object_or_404(StatistiqueJoueur, id=stat_id, match=match)
-        
+
         serializer = UpdateStatistiqueSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -363,7 +317,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 
         serializer_response = StatistiqueJoueurSerializer(stat)
         match.refresh_from_db()
-        
+
         return Response({
             'statistique': serializer_response.data,
             'match': {
@@ -385,10 +339,10 @@ class StatistiqueJoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         queryset = StatistiqueJoueur.objects.select_related(
             'joueur__equipe', 'match'
         ).all()
-        
+
         match_id = self.request.query_params.get('match', None)
         if match_id:
             queryset = queryset.filter(match_id=match_id)
-        
+
         return queryset
 

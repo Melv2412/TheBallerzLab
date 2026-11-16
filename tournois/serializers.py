@@ -1,8 +1,11 @@
-from rest_framework import serializers
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from django.conf import settings
 from django.utils import timezone
+from rest_framework import serializers
+
+from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .services import mvp_du_match
 
 
 def valider_taille_image(image):
@@ -12,7 +15,6 @@ def valider_taille_image(image):
             f"L'image ne doit pas dépasser {settings.TAILLE_MAX_IMAGE_MO} Mo."
         )
     return image
-from .models import Tournoi, Equipe, Joueur, Match, StatistiqueJoueur
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -45,8 +47,8 @@ class TournoiSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournoi
         fields = [
-            'id', 'nom', 'slug', 'organisateur', 'organisateur_nom', 'date_debut', 'date_fin', 
-            'equipes_count', 'matchs_count', 
+            'id', 'nom', 'slug', 'organisateur', 'organisateur_nom', 'date_debut', 'date_fin',
+            'equipes_count', 'matchs_count',
             'has_8emes', 'has_quarts', 'has_demis', 'has_finale', 'limite_fautes',
             'victoires_requises_8eme', 'victoires_requises_quart', 'victoires_requises_demi', 'victoires_requises_finale',
             'created_at', 'updated_at'
@@ -82,11 +84,11 @@ class EquipeSerializer(serializers.ModelSerializer):
 
     def validate_tournoi(self, tournoi):
         # Seulement à la création ou au changement de tournoi
-        if self.instance is None or self.instance.tournoi_id != tournoi.pk:
-            if tournoi.equipes.count() >= settings.LIMITE_EQUIPES_PAR_TOURNOI:
-                raise serializers.ValidationError(
-                    f"Un tournoi ne peut pas dépasser {settings.LIMITE_EQUIPES_PAR_TOURNOI} équipes."
-                )
+        change_de_tournoi = self.instance is None or self.instance.tournoi_id != tournoi.pk
+        if change_de_tournoi and tournoi.equipes.count() >= settings.LIMITE_EQUIPES_PAR_TOURNOI:
+            raise serializers.ValidationError(
+                f"Un tournoi ne peut pas dépasser {settings.LIMITE_EQUIPES_PAR_TOURNOI} équipes."
+            )
         return tournoi
 
     def get_joueurs_count(self, obj):
@@ -109,11 +111,11 @@ class JoueurSerializer(serializers.ModelSerializer):
         extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
 
     def validate_equipe(self, equipe):
-        if self.instance is None or self.instance.equipe_id != equipe.pk:
-            if equipe.joueurs.count() >= settings.LIMITE_JOUEURS_PAR_EQUIPE:
-                raise serializers.ValidationError(
-                    f"Une équipe ne peut pas dépasser {settings.LIMITE_JOUEURS_PAR_EQUIPE} joueurs."
-                )
+        change_d_equipe = self.instance is None or self.instance.equipe_id != equipe.pk
+        if change_d_equipe and equipe.joueurs.count() >= settings.LIMITE_JOUEURS_PAR_EQUIPE:
+            raise serializers.ValidationError(
+                f"Une équipe ne peut pas dépasser {settings.LIMITE_JOUEURS_PAR_EQUIPE} joueurs."
+            )
         return equipe
 
 
@@ -164,7 +166,7 @@ class MatchSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'organisateur_nom', 'organisateur_id', 'tournoi_limite_fautes', 'phase', 'equipe_domicile', 'equipe_domicile_nom',
             'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'score_domicile',
-            'score_exterieur', 'date_match', 'statistiques', 'mvp', 
+            'score_exterieur', 'date_match', 'statistiques', 'mvp',
             'temps_restant_secondes', 'periode_actuelle', 'duree_periode_secondes', 'chrono_en_cours',
             'shot_clock_secondes', 'possession_fleche',
             'timeouts_domicile', 'timeouts_exterieur', 'fautes_domicile', 'fautes_exterieur',
@@ -197,35 +199,9 @@ class MatchSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def get_mvp(self, obj):
-        """Calcule le MVP du match (meilleure évaluation)."""
-        stats = obj.statistiques_joueurs.all()
-        if not stats:
-            return None
-        
-        best_player = None
-        max_eval = -999
+        """MVP du match (meilleure évaluation), à partir des stats déjà chargées."""
+        return mvp_du_match(obj.statistiques_joueurs.all())
 
-        for stat in stats:
-            # Formule d'évaluation simplifiée
-            evaluation = stat.points + stat.passes + stat.rebonds + stat.contres - stat.fautes
-            if evaluation > max_eval:
-                max_eval = evaluation
-                best_player = {
-                    'nom': f"{stat.joueur.prenom} {stat.joueur.nom}",
-                    'numero': stat.joueur.numero_maillot,
-                    'equipe': stat.joueur.equipe.nom,
-                    'evaluation': evaluation,
-                    'stats': {
-                        'pts': stat.points,
-                        'ast': stat.passes,
-                        'reb': stat.rebonds,
-                        'blk': stat.contres,
-                        'fouls': stat.fautes
-                    }
-                }
-        
-        return best_player if max_eval > 0 else None
-    
     def validate(self, attrs):
         tournoi = attrs.get('tournoi', getattr(self.instance, 'tournoi', None))
         domicile = attrs.get('equipe_domicile', getattr(self.instance, 'equipe_domicile', None))

@@ -1,0 +1,11 @@
+# Linter Python (https://docs.astral.sh/ruff/) : `ruff check .` en local et dans la CI
+target-version = "py312"
+line-length = 120
+extend-exclude = ["venv", "frontend", "video", "local_docs", "not_to_commit", "*/migrations/*"]
+
+[lint]
+# E/W : style, F : erreurs (imports inutilisés, noms non définis...), I : ordre des imports,
+# B : bugs fréquents, SIM : simplifications
+select = ["E", "W", "F", "I", "B", "SIM"]
+# Les longues lignes (listes de champs DRF, messages) restent lisibles : pas de limite stricte
+ignore = ["E501"]

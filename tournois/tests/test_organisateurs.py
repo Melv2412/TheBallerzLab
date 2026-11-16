@@ -6,7 +6,7 @@ from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from tournois.models import Tournoi, Equipe, Joueur
+from tournois.models import Equipe, Joueur, Tournoi
 from tournois.organisateurs import GROUPE_ORGANISATEURS
 
 

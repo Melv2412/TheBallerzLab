@@ -7,7 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
-from decouple import config, Csv
+from decouple import Csv, config
 from django.core.exceptions import ImproperlyConfigured
 
 # Toute la configuration de prod passe par des variables d'environnement (voir .env.example).

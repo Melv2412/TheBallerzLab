@@ -1,0 +1,3 @@
+# Outils de développement (non installés en prod) : pip install -r requirements-dev.txt
+-r requirements.txt
+ruff==0.17.5
