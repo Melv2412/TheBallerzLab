@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import DatabaseError, connection, transaction
@@ -7,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
@@ -28,6 +30,14 @@ from .serializers import (
     UserSerializer,
 )
 from .services import classement_du_tournoi, meilleurs_joueurs
+
+try:
+    from botocore.exceptions import BotoCoreError, ClientError
+    ERREURS_STOCKAGE = (BotoCoreError, ClientError)
+except ImportError:
+    ERREURS_STOCKAGE = ()
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -105,11 +115,30 @@ class OrganisateurRequisMixin:
 
     def perform_create(self, serializer):
         self.verifier_organisateur(serializer)
-        serializer.save()
+        enregistrer_avec_fichiers(serializer)
 
     def perform_update(self, serializer):
         self.verifier_organisateur(serializer)
-        serializer.save()
+        enregistrer_avec_fichiers(serializer)
+
+
+class StockageIndisponible(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_code = 'stockage_indisponible'
+
+
+def enregistrer_avec_fichiers(serializer):
+    """Enregistre l'objet ; un échec du stockage des images (Supabase Storage en prod) devient une 503 lisible."""
+    try:
+        with transaction.atomic():
+            serializer.save()
+    except (OSError, *ERREURS_STOCKAGE) as erreur:
+        logger.exception("Échec de l'enregistrement d'un fichier dans le stockage")
+        code = getattr(erreur, 'response', {}).get('Error', {}).get('Code') or type(erreur).__name__
+        raise StockageIndisponible(
+            f"Impossible d'enregistrer l'image pour le moment (stockage indisponible, code : {code}). "
+            "Réessaie plus tard ou enregistre sans image."
+        ) from erreur
 
 
 class UserViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):

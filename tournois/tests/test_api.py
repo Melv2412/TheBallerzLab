@@ -1,5 +1,6 @@
 import base64
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -340,6 +341,18 @@ class TailleImageTests(BaseAPITestCase):
         )
         self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('logo', reponse.data)
+
+    def test_stockage_en_panne_renvoie_503_lisible(self):
+        gif = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
+        logo = SimpleUploadedFile('logo.gif', gif, content_type='image/gif')
+        with patch('django.core.files.storage.FileSystemStorage._save', side_effect=OSError('lecture seule')), \
+                self.assertLogs('tournois.views', level='ERROR'):
+            reponse = self.client.post(
+                '/api/equipes/', {'nom': 'D', 'tournoi': self.tournoi.id, 'logo': logo}, format='multipart',
+            )
+        self.assertEqual(reponse.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('stockage indisponible', reponse.data['detail'])
+        self.assertFalse(Equipe.objects.filter(nom='D').exists())
 
 
 class PerformanceRequetesTests(BaseAPITestCase):
