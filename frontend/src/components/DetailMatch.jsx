@@ -128,6 +128,12 @@ function DetailMatch() {
                >
                  🏀 Tableau de marque
                </Link>
+               <Link
+                 to={`/match/${id}/feuille`}
+                 className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"
+               >
+                 📄 Feuille de match
+               </Link>
                 {isOwner && (
                   <select
                     value={match.statut}

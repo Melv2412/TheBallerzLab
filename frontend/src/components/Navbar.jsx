@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import PopupConnexion, { popupConnexionMasque } from './PopupConnexion'
+import { IconeTerrain } from './IconeTerrain'
 
 function Navbar() {
   const { user, logout } = useAuth()
@@ -28,10 +29,11 @@ function Navbar() {
           <div className="flex items-center gap-3 sm:gap-8 min-w-0">
             <Link
               to="/"
-              className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary-orange transition-all flex items-center gap-2 whitespace-nowrap"
+              className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary-orange transition-all flex items-center gap-2 whitespace-nowrap group"
               aria-label="Mon terrain"
             >
-              <span className="text-lg">🏟️</span> <span className="hidden sm:inline">Mon terrain</span>
+              <IconeTerrain className="w-7 h-5 text-primary-orange group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Mon terrain</span>
             </Link>
 
             {user ? (

@@ -154,12 +154,29 @@ function MatchLive() {
           >
             ← Voir les stats détaillées
           </Link>
-          <Link
-            to={`/tournoi/${match.tournoi_slug}`}
-            className="text-primary-orange hover:text-white transition-colors font-bold text-xs uppercase tracking-widest"
-          >
-            Tableau du Tournoi 🏆
-          </Link>
+          <div className="flex flex-wrap gap-4">
+            <a
+              href={`/match/${id}/ecran`}
+              target="_blank"
+              rel="noreferrer"
+              title="Ouvre le tableau de marque en grand, pour une télé ou un projecteur"
+              className="text-gray-400 hover:text-white transition-colors font-bold text-xs uppercase tracking-widest"
+            >
+              📺 Écran de salle
+            </a>
+            <Link
+              to={`/match/${id}/feuille`}
+              className="text-gray-400 hover:text-white transition-colors font-bold text-xs uppercase tracking-widest"
+            >
+              📄 Feuille de match
+            </Link>
+            <Link
+              to={`/tournoi/${match.tournoi_slug}`}
+              className="text-primary-orange hover:text-white transition-colors font-bold text-xs uppercase tracking-widest"
+            >
+              Tableau du Tournoi 🏆
+            </Link>
+          </div>
         </div>
 
         {!isOwner && (
