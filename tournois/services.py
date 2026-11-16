@@ -1,6 +1,8 @@
 """
 Calculs métier du tournoi (classement, MVP), séparés des vues pour être testables et réutilisables.
 """
+from collections import Counter
+
 from django.db.models import Count, F, Sum
 
 from .classement import calculer_classement
@@ -33,17 +35,29 @@ def classement_du_tournoi(tournoi, type_classement=None):
 
 
 def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
-    """Joueurs à la meilleure évaluation moyenne sur les matchs terminés (1 requête)."""
+    """
+    Joueurs à la meilleure évaluation moyenne sur les matchs terminés (2 requêtes).
+    Pour éviter qu'un seul gros match suffise, un joueur doit avoir joué au moins la moitié des matchs de son équipe.
+    """
     stats = filtrer_par_type(
         StatistiqueJoueur.objects.filter(joueur__equipe__tournoi=tournoi, match__statut='termine'),
         type_classement,
         champ_phase='match__phase',
     )
     totaux = (
-        stats.values('joueur_id', 'joueur__prenom', 'joueur__nom', 'joueur__numero_maillot', 'joueur__equipe__nom')
+        stats.values(
+            'joueur_id', 'joueur__prenom', 'joueur__nom', 'joueur__numero_maillot',
+            'joueur__equipe_id', 'joueur__equipe__nom',
+        )
         .annotate(nb_matchs=Count('id'), total_eval=Sum(EVALUATION), total_points=Sum('points'))
         .order_by('joueur__equipe', 'joueur__numero_maillot')
     )
+    matchs_par_equipe = Counter()
+    for domicile, exterieur in filtrer_par_type(tournoi.matchs.filter(statut='termine'), type_classement).values_list(
+        'equipe_domicile_id', 'equipe_exterieur_id'
+    ):
+        matchs_par_equipe.update((domicile, exterieur))
+
     joueurs = [
         {
             'id': t['joueur_id'],
@@ -55,6 +69,7 @@ def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
             'nb_matchs': t['nb_matchs'],
         }
         for t in totaux
+        if t['nb_matchs'] * 2 >= matchs_par_equipe[t['joueur__equipe_id']]
     ]
     joueurs.sort(key=lambda j: j['moyenne_eval'], reverse=True)
     return joueurs[:limite]

@@ -1,96 +1,42 @@
 import React, { useState } from "react";
-import { createMatch, getClassement, resetPlayoffs } from "../../api";
+import { genererPhasesFinales, messageErreur, resetPlayoffs } from "../../api";
 import { MatchCard } from "./MatchCard";
-
-const PHASES = [
-  { id: "8eme", label: "8èmes de finale", actif: "has_8emes", equipes: 16 },
-  { id: "quart", label: "Quarts de finale", actif: "has_quarts", equipes: 8 },
-  { id: "demi", label: "Demi-finales", actif: "has_demis", equipes: 4 },
-  { id: "finale", label: "La Grande Finale", actif: "has_finale", equipes: 2 },
-];
+import { CarteSerie, formatSerie, usePhasesFinales } from "./Series";
 
 export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMatch, onSupprimerMatch, recharger }) {
   const [enCours, setEnCours] = useState(false);
+  const phases = usePhasesFinales(tournoi.slug, matchs);
 
   const matchsPoule = matchs.filter((m) => m.phase === "poule");
-  const pouleTerminee = matchsPoule.length > 0 && matchsPoule.every((m) => m.statut === "termine");
+  const restantsPoule = matchsPoule.filter((m) => m.statut !== "termine").length;
   const aDesMatchsEliminatoires = matchs.some((m) => m.phase !== "poule");
-  const phasesActives = PHASES.filter((p) => tournoi[p.actif]);
+  const matchParId = Object.fromEntries(matchs.map((m) => [m.id, m]));
 
-  const genererTableau = async () => {
-    const depart = phasesActives[0];
-    if (!depart) {
-      alert("Aucune phase finale configurée pour ce tournoi.");
-      return;
-    }
-
-    let classementPoule = [];
-    try {
-      const res = await getClassement(tournoi.slug, "poule");
-      classementPoule = res.data || [];
-    } catch (e) {
-      console.error(e);
-      alert("Erreur lors de la récupération du classement de poule.");
-      return;
-    }
-
-    if (classementPoule.length < depart.equipes) {
-      alert(
-        `Il y a seulement ${classementPoule.length} équipes, mais la phase de ${depart.id} nécessite au moins ${depart.equipes} équipes.`,
-      );
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `Générer automatiquement les matchs de ${depart.id} avec les ${depart.equipes} premières équipes du classement ?`,
-      )
-    ) {
-      return;
-    }
-
+  const executer = async (action, confirmation) => {
+    if (confirmation && !window.confirm(confirmation)) return;
     setEnCours(true);
     try {
-      // 1er contre dernier qualifié, 2e contre avant-dernier...
-      for (let i = 0; i < depart.equipes / 2; i++) {
-        await createMatch({
-          tournoi: parseInt(tournoi.id),
-          phase: depart.id,
-          equipe_domicile: classementPoule[i].id,
-          equipe_exterieur: classementPoule[depart.equipes - 1 - i].id,
-          statut: "a_venir",
-        });
-      }
-      alert(`Les matchs de ${depart.id} ont été générés avec succès !`);
+      await action();
       recharger();
-    } catch (error) {
-      console.error("Erreur lors de la génération automatique :", error);
-      alert("Erreur lors de la génération automatique des matchs.");
+    } catch (erreur) {
+      alert(messageErreur(erreur, "Action impossible."));
     } finally {
       setEnCours(false);
     }
   };
 
-  const reinitialiser = async () => {
-    if (
-      !window.confirm(
-        "Êtes-vous sûr de vouloir réinitialiser TOUTES les phases finales et revenir à la phase de poules ? Tous les matchs éliminatoires seront supprimés.",
-      )
-    ) {
-      return;
-    }
-    setEnCours(true);
-    try {
-      await resetPlayoffs(tournoi.slug);
-      alert("Les phases finales ont été réinitialisées.");
-      recharger();
-    } catch (err) {
-      console.error("Erreur réinitialisation playoffs:", err);
-      alert("Erreur lors de la réinitialisation des playoffs.");
-    } finally {
-      setEnCours(false);
-    }
-  };
+  const premierePhase = phases[0];
+  const generer = () =>
+    executer(
+      () => genererPhasesFinales(tournoi.slug),
+      premierePhase &&
+        `Créer les ${premierePhase.libelle.toLowerCase()} avec les meilleures équipes du classement de poule (1er contre dernier qualifié) ? La suite du tableau se remplira automatiquement.`,
+    );
+  const reinitialiser = () =>
+    executer(
+      () => resetPlayoffs(tournoi.slug),
+      "Réinitialiser TOUTES les phases finales ? Tous les matchs éliminatoires seront supprimés.",
+    );
 
   return (
     <div className="animate-fade-in">
@@ -98,7 +44,7 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
         <h2 className="text-2xl sm:text-4xl font-black italic card-title-accent uppercase flex items-center gap-4">
           🏆 Brackets de la Phase Finale
         </h2>
-        {pouleTerminee && isOwner && aDesMatchsEliminatoires && (
+        {isOwner && aDesMatchsEliminatoires && (
           <button
             onClick={reinitialiser}
             disabled={enCours}
@@ -109,23 +55,20 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
         )}
       </div>
 
-      {!pouleTerminee ? (
+      {phases.length === 0 ? (
+        <div className="glass-card p-10 text-center opacity-60">
+          Aucune phase finale activée. {isOwner && "Activez-les dans l'onglet Paramètres."}
+        </div>
+      ) : restantsPoule > 0 && !aDesMatchsEliminatoires ? (
         <div className="glass-card p-6 sm:p-12 text-center max-w-lg mx-auto">
           <div className="text-6xl mb-4">🔒</div>
           <h3 className="text-2xl font-black uppercase italic text-white mb-2">Phase Finale Verrouillée</h3>
           <p className="text-gray-400 text-sm mb-6">
-            Vous devez d'abord programmer et terminer tous les matchs de la phase de poules avant d'accéder aux phases
-            éliminatoires.
+            Terminez tous les matchs de poule avant de lancer les phases éliminatoires.
           </p>
-          {matchsPoule.length === 0 ? (
-            <span className="text-[10px] font-black text-primary-orange uppercase tracking-widest bg-primary-orange/10 px-3 py-1.5 rounded-full">
-              Aucun match de poule programmé
-            </span>
-          ) : (
-            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1.5 rounded-full">
-              Matchs restants : {matchsPoule.filter((m) => m.statut !== "termine").length}
-            </span>
-          )}
+          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1.5 rounded-full">
+            Matchs restants : {restantsPoule}
+          </span>
         </div>
       ) : (
         <div className="flex flex-col gap-12 max-w-5xl mx-auto">
@@ -134,11 +77,12 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
               <div className="text-5xl mb-4">🏆</div>
               <h3 className="text-2xl font-black uppercase italic text-white mb-2">Prêt pour la Phase Finale</h3>
               <p className="text-gray-400 text-sm mb-6">
-                Tous les matchs de la phase de poule sont terminés. Vous pouvez maintenant générer automatiquement les
-                rencontres éliminatoires basées sur le classement officiel.
+                Le premier tour est créé d'après le classement de poule
+                {matchsPoule.length === 0 && " (sans match de poule : ordre alphabétique)"}. Ensuite, chaque série
+                se poursuit et le tour suivant se crée automatiquement à chaque résultat.
               </p>
               <button
-                onClick={genererTableau}
+                onClick={generer}
                 disabled={enCours}
                 className="btn-basketball px-10 py-4 text-xs font-black uppercase tracking-widest disabled:opacity-50"
               >
@@ -147,36 +91,53 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
             </div>
           )}
 
-          {phasesActives.map((phase) => {
-            const matchsPhase = matchs.filter((m) => m.phase === phase.id);
-            return (
-              <div key={phase.id} className="relative">
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6">
-                  <span className="bg-primary-orange w-8 sm:w-12 h-1 text-white"></span>
-                  <h3 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter">{phase.label}</h3>
-                  {isOwner && (
-                    <button
-                      onClick={() => onCreerMatch(phase.id)}
-                      className="ml-auto bg-white/5 hover:bg-primary-orange p-2 px-4 rounded-xl text-[10px] font-black transition-all"
-                    >
-                      + CRÉER MATCH {phase.id.toUpperCase()}
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {matchsPhase.map((match) => (
-                    <MatchCard key={match.id} match={match} equipes={equipes} onDelete={onSupprimerMatch} isOwner={isOwner} />
-                  ))}
-                  {matchsPhase.length === 0 && (
-                    <div className="md:col-span-2 bg-white/3 border-2 border-dashed border-white/5 rounded-3xl p-8 text-center opacity-30 italic font-bold">
-                      Matchs de {phase.label} non programmés.
-                    </div>
-                  )}
-                </div>
+          {phases.map((phase) => (
+            <div key={phase.phase} className="relative">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6">
+                <span className="bg-primary-orange w-8 sm:w-12 h-1 text-white"></span>
+                <h3 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter">{phase.libelle}</h3>
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  {formatSerie(phase.victoires_requises)}
+                </span>
+                {isOwner && (
+                  <button
+                    onClick={() => onCreerMatch(phase.phase)}
+                    className="ml-auto bg-white/5 hover:bg-primary-orange p-2 px-4 rounded-xl text-[10px] font-black transition-all"
+                  >
+                    + CRÉER MATCH {phase.phase.toUpperCase()}
+                  </button>
+                )}
               </div>
-            );
-          })}
+
+              {phase.series.length === 0 ? (
+                <div className="bg-white/3 border-2 border-dashed border-white/5 rounded-3xl p-8 text-center opacity-30 italic font-bold">
+                  {phase.libelle} : en attente des qualifiés.
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {phase.series.map((serie) => (
+                    <div key={serie.matchs[0]} className="space-y-3">
+                      <CarteSerie serie={serie} victoiresRequises={phase.victoires_requises} />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {serie.matchs
+                          .map((id) => matchParId[id])
+                          .filter(Boolean)
+                          .map((match) => (
+                            <MatchCard
+                              key={match.id}
+                              match={match}
+                              equipes={equipes}
+                              onDelete={onSupprimerMatch}
+                              isOwner={isOwner}
+                            />
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

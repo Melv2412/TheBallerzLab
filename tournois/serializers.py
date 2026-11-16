@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from . import reglement as regles
 from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .phases_finales import avancer_phases_finales, phase_suivante_commencee
 from .services import mvp_du_match
 
 
@@ -260,7 +261,12 @@ class MatchSerializer(serializers.ModelSerializer):
 
         en_cours = validated_data.get('chrono_en_cours', instance.chrono_en_cours)
         validated_data['chrono_demarre_a'] = maintenant if en_cours else None
-        return super().update(instance, validated_data)
+        vient_de_finir = validated_data.get('statut') == 'termine' and instance.statut != 'termine'
+        match = super().update(instance, validated_data)
+        if vient_de_finir and match.phase != 'poule':
+            # Match suivant de la série, ou tour suivant si toutes les séries de la phase sont décidées
+            avancer_phases_finales(match.tournoi)
+        return match
 
     def get_mvp(self, obj):
         """MVP du match (meilleure évaluation), à partir des stats déjà chargées."""
@@ -272,6 +278,11 @@ class MatchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Match terminé : repassez-le « en cours » pour le modifier."
             )
+        rouvert = match and match.statut == 'termine' and attrs.get('statut') in ('a_venir', 'en_cours')
+        if rouvert and match.phase != 'poule' and phase_suivante_commencee(match):
+            raise serializers.ValidationError({'statut': (
+                "La phase suivante a déjà commencé : réinitialisez-la (onglet Phase finale) avant de rouvrir ce match."
+            )})
         if match and 'tournoi' in attrs and attrs['tournoi'].pk != match.tournoi_id:
             raise serializers.ValidationError({'tournoi': "Un match ne peut pas changer de tournoi."})
 

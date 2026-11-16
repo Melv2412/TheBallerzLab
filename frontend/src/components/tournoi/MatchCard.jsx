@@ -63,6 +63,14 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
           >
             Stats
           </Link>
+          {match.statut !== "termine" && (
+            <Link
+              to={`/match/${match.id}/live`}
+              className="px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg bg-red-600 text-white font-black italic uppercase text-[10px] sm:text-[8px] tracking-widest hover:scale-105 transition-all"
+            >
+              Live
+            </Link>
+          )}
           {isOwner && (
             <button
               onClick={() => onDelete(match.id)}

@@ -1,5 +1,6 @@
 import React from "react";
 import { LogoEquipe } from "./LogoEquipe";
+import { ResumeSeries, usePhasesFinales } from "./Series";
 
 function TableauClassement({ classement, equipes, type }) {
   return (
@@ -128,19 +129,29 @@ function LeadersEvaluation({ joueurs, type }) {
           ))
         )}
         <p className="text-[9px] font-bold text-gray-700 uppercase tracking-widest italic text-center text-balance mt-4">
-          * Formule: (PTS + AST + REB + BLK) - FOU
+          * Formule: (PTS + AST + REB + BLK) - FOU · au moins la moitié des matchs de l'équipe joués
         </p>
       </div>
     </div>
   );
 }
 
-// S'affiche dans la grille du tableau de bord (voir DetailTournoi)
-export function OngletClassement({ classement, tournamentMVP, equipes, type }) {
+// S'affiche dans la grille du tableau de bord (voir DetailTournoi).
+// En phases éliminatoires, l'état des séries remplace le tableau de points.
+export function OngletClassement({ classement, tournamentMVP, equipes, type, slug, matchs }) {
   return (
     <>
-      <TableauClassement classement={classement} equipes={equipes} type={type} />
+      {type === "elimination" ? (
+        <SeriesEliminatoires slug={slug} matchs={matchs} />
+      ) : (
+        <TableauClassement classement={classement} equipes={equipes} type={type} />
+      )}
       <LeadersEvaluation joueurs={tournamentMVP} type={type} />
     </>
   );
+}
+
+function SeriesEliminatoires({ slug, matchs }) {
+  const phases = usePhasesFinales(slug, matchs);
+  return <ResumeSeries phases={phases} />;
 }

@@ -122,12 +122,12 @@ function DetailMatch() {
                <div className={`px-4 py-2 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 ${match.statut === 'en_cours' ? 'bg-red-500 animate-pulse' : 'bg-white/10'}`}>
                 {match.statut === 'en_cours' ? '🔴 LIVE' : match.statut === 'termine' ? '✅ TERMINE' : '⏳ A VENIR'}
                </div>
-               {/* <Link
+               <Link
                  to={`/match/${id}/live`}
                  className="px-6 py-2 bg-primary-orange hover:bg-orange-600 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"
                >
-                 🏀 Mode Live
-               </Link> */}
+                 🏀 Tableau de marque
+               </Link>
                 {isOwner && (
                   <select
                     value={match.statut}
@@ -150,7 +150,9 @@ function DetailMatch() {
              </div>
              
              <div className="flex flex-col items-center">
-                <div className="text-lg sm:text-3xl font-black text-white/20 italic">FINAL</div>
+                <div className="text-lg sm:text-3xl font-black text-white/20 italic">
+                  {match.statut === 'termine' ? 'FINAL' : 'VS'}
+                </div>
                 <div className="w-1 h-12 sm:h-20 bg-white/5 my-4"></div>
              </div>
 
@@ -216,6 +218,7 @@ function DetailMatch() {
                   stat={stat}
                   onUpdate={handleUpdateStat}
                   matchStatut={match.statut}
+                  limiteFautes={match.reglement?.fautes_exclusion ?? 5}
                   isOwner={isOwner}
                 />
               ))}
@@ -232,6 +235,7 @@ function DetailMatch() {
                   stat={stat}
                   onUpdate={handleUpdateStat}
                   matchStatut={match.statut}
+                  limiteFautes={match.reglement?.fautes_exclusion ?? 5}
                   isOwner={isOwner}
                 />
               ))}
@@ -244,8 +248,10 @@ function DetailMatch() {
   )
 }
 
-function StatCard({ stat, onUpdate, matchStatut, isOwner }) {
+function StatCard({ stat, onUpdate, matchStatut, limiteFautes, isOwner }) {
   const canEdit = isOwner && matchStatut === 'en_cours'
+  // 0 = pas d'exclusion : la jauge se remplit sur 5 fautes, à titre indicatif
+  const jaugeFautes = limiteFautes || 5
 
   const StatBox = ({ label, value, field, color = "orange" }) => (
     <div className={`p-4 rounded-2xl bg-white/3 border border-white/5 flex flex-col items-center justify-center relative group`}>
@@ -296,9 +302,9 @@ function StatCard({ stat, onUpdate, matchStatut, isOwner }) {
 
       <div className="mt-4 flex items-center gap-4">
          <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
-            <div className="h-full bg-red-500 rounded-full" style={{ width: `${(stat.fautes / 5) * 100}%`, transition: 'width 0.3s ease' }}></div>
+            <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.min(100, (stat.fautes / jaugeFautes) * 100)}%`, transition: 'width 0.3s ease' }}></div>
          </div>
-         <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Fautes: {stat.fautes}/5</span>
+         <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Fautes: {stat.fautes}{limiteFautes ? `/${limiteFautes}` : ''}</span>
          {canEdit && <button onClick={() => onUpdate(stat.id, 'fautes', 'increment', 1)} className="px-3 py-1 bg-red-500/10 text-red-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Add Foul</button>}
       </div>
     </div>

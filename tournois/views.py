@@ -14,6 +14,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from . import reglement as regles
 from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
+from .phases_finales import generer_phases_finales, resume_phases_finales
 from .serializers import (
     EquipeSerializer,
     JoueurSerializer,
@@ -177,6 +178,18 @@ class TournoiViewSet(viewsets.ModelViewSet):
     def mvp(self, request, slug=None):
         """Top 5 des joueurs à la meilleure évaluation moyenne (?type=poule ou ?type=elimination)."""
         return Response(meilleurs_joueurs(self.get_object(), request.query_params.get('type')))
+
+    @action(detail=True, methods=['get'])
+    def phases_finales(self, request, slug=None):
+        """État des séries de chaque phase finale (victoires, vainqueur, matchs)."""
+        return Response(resume_phases_finales(self.get_object()))
+
+    @action(detail=True, methods=['post'])
+    def generer_phases_finales(self, request, slug=None):
+        """Crée le premier tour des phases finales d'après le classement de poule."""
+        tournoi = self.get_object()  # vérifie que l'utilisateur est l'organisateur
+        generer_phases_finales(tournoi)
+        return Response(resume_phases_finales(tournoi), status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def reset_playoffs(self, request, slug=None):

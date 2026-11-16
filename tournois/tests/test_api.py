@@ -370,12 +370,28 @@ class PerformanceRequetesTests(BaseAPITestCase):
         self.assertEqual(sum(e['joues'] for e in reponse.data), 8)
 
     def test_mvp_en_requetes_constantes(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):  # tournoi, stats des joueurs, matchs par équipe
             reponse = self.client.get('/api/tournois/interpromo/mvp/')
         self.assertEqual(len(reponse.data), 5)
         meilleur = reponse.data[0]
         self.assertEqual(meilleur['moyenne_eval'], 7.0)  # 6 points + 1 passe sur 1 match
         self.assertEqual(meilleur['nb_matchs'], 1)
+
+    def test_mvp_exige_la_moitie_des_matchs_de_l_equipe(self):
+        # L'équipe A joue 2 autres matchs sans ce joueur : 1 match sur 3, il sort du classement
+        vedette = Joueur.objects.create(prenom='Star', nom='Unique', numero_maillot=99, equipe=self.dom)
+        match_vedette = Match.objects.filter(equipe_domicile=self.dom, statut='termine').first()
+        StatistiqueJoueur.objects.create(joueur=vedette, match=match_vedette, points=60)
+        self.assertEqual(self.client.get('/api/tournois/interpromo/mvp/').data[0]['id'], vedette.id)
+
+        regulier = Joueur.objects.get(equipe=self.dom, numero_maillot=1)
+        for _ in range(2):
+            match = Match.objects.create(
+                tournoi=self.tournoi, equipe_domicile=self.dom, equipe_exterieur=self.ext, statut='termine',
+            )
+            StatistiqueJoueur.objects.create(joueur=regulier, match=match, points=1)
+        ids = [j['id'] for j in self.client.get('/api/tournois/interpromo/mvp/').data]
+        self.assertNotIn(vedette.id, ids)
 
     def test_liste_des_tournois_en_une_requete(self):
         with self.assertNumQueries(2):  # page + nombre total (pagination)

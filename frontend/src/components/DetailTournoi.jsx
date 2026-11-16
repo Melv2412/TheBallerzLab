@@ -186,6 +186,8 @@ function DetailTournoi() {
               tournamentMVP={tournamentMVP}
               equipes={equipes}
               type={typeClassement}
+              slug={tournoi.slug}
+              matchs={matchs}
             />
           )}
         </div>

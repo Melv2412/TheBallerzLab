@@ -169,6 +169,9 @@ export const updateStatistique = (matchId, statId, champ, action, valeur = 1) =>
 
 // Reset Playoffs
 export const resetPlayoffs = (slug, phase = '') => api.post(`/tournois/${slug}/reset_playoffs/`, { phase })
+// Phases finales : état des séries, et création du premier tour d'après le classement de poule
+export const getPhasesFinales = (slug) => api.get(`/tournois/${slug}/phases_finales/`)
+export const genererPhasesFinales = (slug) => api.post(`/tournois/${slug}/generer_phases_finales/`)
 
 
 
