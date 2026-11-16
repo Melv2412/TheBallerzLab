@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{# Admin aux couleurs de l'application THE LAB : thème sombre et orange de la marque #}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | THE LAB · Administration{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Oswald:wght@500;700&display=swap">
+<style>
+  /* Thème sombre imposé : mêmes valeurs quel que soit le thème choisi par le navigateur */
+  html:root, html[data-theme="light"], html[data-theme="dark"], html[data-theme="auto"] {
+    color-scheme: dark;
+    --primary: #ff6b00;
+    --secondary: #1a1a1b;
+    --accent: #ff6b00;
+    --primary-fg: #ffffff;
+
+    --body-fg: #e5e5e5;
+    --body-bg: #111111;
+    --body-quiet-color: #9ca3af;
+    --body-medium-color: #d1d5db;
+    --body-loud-color: #ffffff;
+
+    --header-color: #ffffff;
+    --header-branding-color: #ffffff;
+    --header-bg: #000000;
+    --header-link-color: #ffffff;
+
+    --breadcrumbs-fg: #9ca3af;
+    --breadcrumbs-link-fg: #ff8a33;
+    --breadcrumbs-bg: #1a1a1b;
+
+    --link-fg: #ff8a33;
+    --link-hover-color: #ffb27a;
+    --link-selected-fg: #ff6b00;
+
+    --hairline-color: #262626;
+    --border-color: #333333;
+
+    --error-fg: #f87171;
+    --message-success-bg: #12301d;
+    --message-warning-bg: #3a2e10;
+    --message-error-bg: #3b1515;
+
+    --darkened-bg: #1a1a1b;
+    --selected-bg: #2b1a0c;
+    --selected-row: #2b1a0c;
+
+    --button-fg: #ffffff;
+    --button-bg: #ff6b00;
+    --button-hover-bg: #e05e00;
+    --default-button-bg: #ff6b00;
+    --default-button-hover-bg: #e05e00;
+    --close-button-bg: #333333;
+    --close-button-hover-bg: #4b4b4b;
+    --delete-button-bg: #b91c1c;
+    --delete-button-hover-bg: #991b1b;
+
+    --object-tools-fg: #ffffff;
+    --object-tools-bg: #333333;
+    --object-tools-hover-bg: #ff6b00;
+
+    --font-family-primary: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  /* Le choix clair / sombre n'a plus d'effet */
+  .theme-toggle { display: none; }
+
+  #header { border-bottom: 3px solid var(--primary); }
+  #site-name, h1, #content h1, .module h2, .module caption, .inline-group h2 {
+    font-family: "Oswald", var(--font-family-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  #site-name a { font-weight: 700; font-style: italic; }
+  #site-name .lab { color: var(--primary); }
+  #site-name .sous-titre { color: var(--body-quiet-color); font-weight: 500; font-style: normal; font-size: 0.75em; }
+
+  .module, .inline-group, #changelist-filter, .login #container {
+    background: var(--secondary);
+    border: 1px solid rgba(255, 107, 0, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .module h2, .module caption, .inline-group h2 {
+    background: #000000;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+  }
+
+  input[type="text"], input[type="password"], input[type="email"], input[type="number"], input[type="url"],
+  input[type="date"], input[type="datetime-local"], input[type="search"], select, textarea, .vTextField {
+    background: #0b0b0b;
+    color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--primary); outline: none; }
+
+  .button, input[type="submit"], input[type="button"], .submit-row input, a.button, .object-tools a {
+    border-radius: 8px;
+    font-weight: 700;
+  }
+
+  #changelist #toolbar, #changelist .actions { background: var(--secondary); border-radius: 8px; }
+  #result_list tbody tr:hover td, #result_list tbody tr:hover th { background: #1f1409; }
+  .paginator { color: var(--body-quiet-color); }
+
+  .login #header { justify-content: center; }
+  .login #container { margin-top: 60px; box-shadow: 0 0 40px rgba(255, 107, 0, 0.12); }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}">THE <span class="lab">LAB</span> <span class="sous-titre">· Administration</span></a>
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

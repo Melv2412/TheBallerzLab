@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { register } from '../api';
 import { useNavigate, Link } from 'react-router-dom';
+import { ChampMotDePasse } from './ChampMotDePasse'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -84,8 +85,8 @@ function Register() {
 
             <div>
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Password</label>
-              <input
-                type="password"
+              <ChampMotDePasse
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
@@ -96,8 +97,8 @@ function Register() {
 
             <div className="pb-4">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Confirm Password</label>
-              <input
-                type="password"
+              <ChampMotDePasse
+                autoComplete="new-password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"

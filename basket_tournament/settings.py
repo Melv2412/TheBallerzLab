@@ -81,7 +81,7 @@ ROOT_URLCONF = 'basket_tournament.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],  # templates/admin : thème de l'admin aux couleurs de l'app
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

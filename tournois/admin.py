@@ -7,6 +7,10 @@ from .organisateurs import GROUPE_ORGANISATEURS
 
 admin.site.unregister(User)
 
+admin.site.site_header = "THE LAB · Administration"
+admin.site.site_title = "THE LAB Admin"
+admin.site.index_title = "Tableau de bord"
+
 
 @admin.register(User)
 class UtilisateurAdmin(UserAdmin):

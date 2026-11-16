@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { ChampMotDePasse } from './ChampMotDePasse'
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -57,8 +58,7 @@ function Login() {
 
             <div>
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Password</label>
-              <input
-                type="password"
+              <ChampMotDePasse
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
