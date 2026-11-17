@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 
 // Champ mot de passe avec un bouton pour afficher / masquer la saisie
-export function ChampMotDePasse({ className = "", autoComplete = "current-password", ...props }) {
+export function ChampMotDePasse({
+  className = "",
+  autoComplete = "current-password",
+  classeOeil = "text-gray-500 hover:text-white",
+  ...props
+}) {
   const [visible, setVisible] = useState(false);
   return (
     <div className="relative">
@@ -16,7 +21,7 @@ export function ChampMotDePasse({ className = "", autoComplete = "current-passwo
         onClick={() => setVisible(!visible)}
         aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
         title={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-        className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-white transition-colors"
+        className={`absolute inset-y-0 right-0 px-4 flex items-center transition-colors ${classeOeil}`}
       >
         {visible ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

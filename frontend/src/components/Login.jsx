@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ChampMotDePasse } from './ChampMotDePasse'
-import { cheminSuite } from './invitation/invitation'
+import { CarteAuth, Champ, LienAuth } from './auth/CarteAuth';
+import { useModeAuth } from './auth/useModeAuth';
+
+const SOUS_TITRES = {
+  orga: 'Connexion organisateur',
+  joueur: 'Connexion joueur : ton équipe et tes stats',
+};
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -11,8 +16,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  // Venu d'un lien d'invitation : on y revient après la connexion
-  const suite = cheminSuite(useLocation().search);
+  const auth = useModeAuth('login');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,7 +24,7 @@ function Login() {
     setLoading(true);
     try {
       await login({ username, password });
-      navigate(suite || '/');
+      navigate(auth.suite || '/'); // venu d'un lien d'invitation : on y revient
     } catch {
       setError('Identifiants invalides. Réessayez.');
     } finally {
@@ -29,67 +33,38 @@ function Login() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="glass-card max-w-md w-full p-6 sm:p-10 border-primary-orange/20 relative overflow-hidden">
-        {/* Glow effect */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-orange/20 rounded-full blur-3xl"></div>
-        
-        <div className="relative z-10">
-          <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 italic uppercase tracking-tighter">
-            THE <span className="text-primary-orange">LAB</span>
-          </h2>
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">{suite ? 'Connexion' : 'Connexion organisateur'}</p>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-xs font-bold mb-6 animate-shake">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Username</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
-                placeholder="Entrez votre nom d'utilisateur"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Password</label>
-              <ChampMotDePasse
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-basketball py-4 text-sm tracking-widest"
-            >
-              {loading ? 'CHARGEMENT...' : 'SE CONNECTER'}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-              Pas encore de compte ?{' '}
-              <Link to={suite ? `/register?suite=${encodeURIComponent(suite)}` : '/register'} className="text-primary-orange hover:underline">
-                Créer un profil
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <CarteAuth
+      auth={auth}
+      titre={<>THE <span className="text-primary-orange">LAB</span></>}
+      sousTitres={SOUS_TITRES}
+      erreur={error}
+      bas={<>Pas encore de compte ? <LienAuth to={auth.lien('register')}>Créer un compte</LienAuth></>}
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Champ
+          theme={auth.theme}
+          label="Pseudo"
+          type="text"
+          autoComplete="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Ton nom d'utilisateur"
+          required
+        />
+        <Champ
+          theme={auth.theme}
+          label="Mot de passe"
+          motDePasse
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          required
+        />
+        <button type="submit" disabled={loading} className="w-full btn-basketball py-4 text-sm tracking-widest">
+          {loading ? 'CHARGEMENT...' : 'SE CONNECTER'}
+        </button>
+      </form>
+    </CarteAuth>
   );
 }
 

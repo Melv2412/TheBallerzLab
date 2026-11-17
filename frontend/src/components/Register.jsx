@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { register } from '../api';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { ChampMotDePasse } from './ChampMotDePasse'
-import { cheminSuite } from './invitation/invitation'
+import { CarteAuth, Champ, LienAuth } from './auth/CarteAuth';
+import { useModeAuth } from './auth/useModeAuth';
+
+const SOUS_TITRES = {
+  orga: 'Créer et gérer tes tournois',
+  joueur: 'Rejoindre ton équipe et suivre tes stats',
+};
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -16,8 +21,8 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
-  // Venu d'un lien d'invitation : connexion automatique puis retour à l'invitation
-  const suite = cheminSuite(useLocation().search);
+  const auth = useModeAuth('register');
+  const changer = (champ) => (e) => setFormData({ ...formData, [champ]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,12 +40,9 @@ function Register() {
         email: formData.email,
         password: formData.password
       });
-      if (suite) {
-        await login({ username: formData.username, password: formData.password });
-        navigate(suite);
-      } else {
-        navigate('/login');
-      }
+      // Connexion directe, puis retour à l'invitation si on en vient
+      await login({ username: formData.username, password: formData.password });
+      navigate(auth.suite || '/');
     } catch (err) {
       // Afficher le premier message renvoyé par le serveur (pseudo pris, mot de passe trop faible…)
       const erreurs = err.response?.data;
@@ -52,91 +54,61 @@ function Register() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="glass-card max-w-md w-full p-6 sm:p-10 border-primary-orange/20 relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-orange/20 rounded-full blur-3xl"></div>
-        
-        <div className="relative z-10">
-          <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 italic uppercase tracking-tighter">
-            JOIN <span className="text-primary-orange">THE LAB</span>
-          </h2>
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">{suite ? 'Rejoindre ton équipe' : 'Organisateur ou joueur'}</p>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-xs font-bold mb-6">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Username</label>
-              <input
-                type="text"
-                value={formData.username}
-                onChange={(e) => setFormData({...formData, username: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
-                placeholder="Votre pseudo"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
-                placeholder="votre@email.com"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Password</label>
-              <ChampMotDePasse
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <div className="pb-4">
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Confirm Password</label>
-              <ChampMotDePasse
-                autoComplete="new-password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-basketball py-4 text-sm tracking-widest"
-            >
-              {loading ? 'INSCRIPTION...' : 'CRÉER MON COMPTE'}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-              Déjà un compte ?{' '}
-              <Link to={suite ? `/login?suite=${encodeURIComponent(suite)}` : '/login'} className="text-primary-orange hover:underline">
-                Se connecter
-              </Link>
-            </p>
-          </div>
+    <CarteAuth
+      auth={auth}
+      titre={<>JOIN <span className="text-primary-orange">THE LAB</span></>}
+      sousTitres={SOUS_TITRES}
+      erreur={error}
+      bas={<>Déjà un compte ? <LienAuth to={auth.lien('login')}>Se connecter</LienAuth></>}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Champ
+          theme={auth.theme}
+          label="Pseudo"
+          type="text"
+          autoComplete="username"
+          value={formData.username}
+          onChange={changer('username')}
+          placeholder="Ton pseudo"
+          required
+        />
+        <Champ
+          theme={auth.theme}
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={formData.email}
+          onChange={changer('email')}
+          placeholder="ton@email.com"
+          required
+        />
+        <Champ
+          theme={auth.theme}
+          label="Mot de passe"
+          motDePasse
+          autoComplete="new-password"
+          value={formData.password}
+          onChange={changer('password')}
+          placeholder="••••••••"
+          required
+        />
+        <div className="pb-4">
+          <Champ
+            theme={auth.theme}
+            label="Confirmer le mot de passe"
+            motDePasse
+            autoComplete="new-password"
+            value={formData.confirmPassword}
+            onChange={changer('confirmPassword')}
+            placeholder="••••••••"
+            required
+          />
         </div>
-      </div>
-    </div>
+        <button type="submit" disabled={loading} className="w-full btn-basketball py-4 text-sm tracking-widest">
+          {loading ? 'INSCRIPTION...' : 'CRÉER MON COMPTE'}
+        </button>
+      </form>
+    </CarteAuth>
   );
 }
 

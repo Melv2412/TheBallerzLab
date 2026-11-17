@@ -14,10 +14,27 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 })
 
-// Intercepteur pour injecter le token JWT
+// Un seul rafraîchissement à la fois, partagé par les requêtes en attente
+let refreshEnCours = null
+
+// Le token d'accès expire-t-il dans moins de 30 s ? (date lue dans le JWT, sans vérifier la signature)
+export const tokenExpire = (token, maintenant = Date.now()) => {
+  try {
+    const { exp } = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof exp !== 'number' || exp * 1000 - maintenant < 30000
+  } catch {
+    return true
+  }
+}
+
+// Intercepteur pour injecter le token JWT : un token expiré est renouvelé avant l'envoi
+// (sinon chaque requête d'une page rechargée échoue d'abord en 401)
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token')
+  async (config) => {
+    let token = localStorage.getItem('token')
+    if (token && tokenExpire(token) && localStorage.getItem('refresh') && !config.url?.startsWith('/token/')) {
+      token = await rafraichirToken().catch(() => token) // échec : le 401 habituel déconnectera
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -25,9 +42,6 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 )
-
-// Un seul rafraîchissement à la fois, partagé par les requêtes en échec
-let refreshEnCours = null
 
 const rafraichirToken = () => {
   if (!refreshEnCours) {
