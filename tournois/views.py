@@ -433,6 +433,10 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             exclusion = match.reglement['fautes_exclusion']
             if ajout and exclusion and stat.fautes >= exclusion:
                 raise ValidationError({'detail': f"Joueur exclu ({exclusion} fautes) : il ne peut plus rien enregistrer."})
+            if ajout and exclusion and champ == 'fautes' and stat.fautes + valeur > exclusion:
+                raise ValidationError({'detail': (
+                    f"Ce joueur n'a plus que {exclusion - stat.fautes} faute(s) avant l'exclusion ({exclusion} fautes)."
+                )})
 
             avant = getattr(stat, champ)
             nouvelle_valeur = F(champ) + valeur if ajout else Greatest(F(champ) - valeur, 0)
@@ -442,6 +446,10 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 
             cote = 'domicile' if stat.joueur.equipe_id == match.equipe_domicile_id else 'exterieur'
             variation = getattr(stat, champ) - avant
+            if variation and match.statut == 'a_venir':
+                # Une stat saisie veut dire que le match se joue : il passe « en cours » tout seul
+                match.statut = 'en_cours'
+                match.save(update_fields=['statut', 'updated_at'])
             if champ == 'fautes':
                 self._compter_faute_equipe(match, cote, variation)
             match.calculer_scores_depuis_stats()
@@ -452,7 +460,9 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 
         return Response({
             'statistique': StatistiqueJoueurSerializer(stat).data,
-            'match': {'score_domicile': match.score_domicile, 'score_exterieur': match.score_exterieur},
+            'match': {
+                'score_domicile': match.score_domicile, 'score_exterieur': match.score_exterieur, 'statut': match.statut,
+            },
         }, status=status.HTTP_200_OK)
 
     @staticmethod

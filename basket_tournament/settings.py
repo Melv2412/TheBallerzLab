@@ -160,7 +160,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'fr-fr'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Paris'  # heures saisies sans fuseau (formulaires) = heure française ; la base reste en UTC
 
 USE_I18N = True
 

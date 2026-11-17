@@ -82,7 +82,7 @@ Le frontend sera accessible sur `http://localhost:3000`
 5. **Gérer les stats en temps réel** :
    - Allez sur la page du match
    - Cliquez sur "Initialiser les statistiques des joueurs"
-   - Changez le statut du match à "En cours"
+   - Le match passe « En cours » tout seul à la première stat saisie
    - Utilisez les boutons +1, +2, +3 pour les points, et +1/-1 pour les autres stats
    - Le score du match se met à jour automatiquement
 
@@ -248,4 +248,4 @@ Les images déjà présentes dans `/media` sont à copier dans le bucket Supabas
 - Chaque tournoi appartient à son organisateur : lui seul peut modifier ses équipes, joueurs, matchs et stats (les autres utilisateurs ont un accès en lecture)
 - Tous les matchs doivent appartenir à un tournoi
 - Les scores sont calculés automatiquement à partir des points des joueurs
-- Les statistiques ne peuvent être modifiées que lorsque le match est "en cours"
+- La première statistique saisie sur un match « à venir » le passe « en cours » automatiquement ; un match « terminé » est figé (le repasser « en cours » pour corriger)

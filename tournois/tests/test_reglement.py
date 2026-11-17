@@ -267,6 +267,23 @@ class DeroulementMatchTests(BaseAPITestCase):
         self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.faute(action='decrement').status_code, status.HTTP_200_OK)  # correction possible
 
+    def test_exclusion_non_depassee_par_un_ajout_de_plusieurs_fautes(self):
+        for _ in range(3):
+            self.faute()
+        reponse = self.client.patch(
+            f'{self.url}stats/{self.stat.id}/update/', {'champ': 'fautes', 'action': 'increment', 'valeur': 4},
+            format='json',
+        )
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('2 faute(s)', reponse.data['detail'])
+        self.stat.refresh_from_db()
+        self.assertEqual(self.stat.fautes, 3)
+        reponse = self.client.patch(
+            f'{self.url}stats/{self.stat.id}/update/', {'champ': 'fautes', 'action': 'increment', 'valeur': 2},
+            format='json',
+        )
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK)  # 5 : exactement la limite
+
     def test_sans_exclusion(self):
         self.changer_reglement(fautes_exclusion=0)
         for _ in range(7):

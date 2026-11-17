@@ -1,5 +1,6 @@
 import base64
 from datetime import date, timedelta
+from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -145,6 +146,17 @@ class ValidationMatchTests(BaseAPITestCase):
         super().setUp()
         self.client.force_authenticate(self.orga)
 
+    def test_heure_du_match_saisie_a_l_heure_francaise(self):
+        # Le formulaire envoie l'heure sans fuseau : 20h00 doit rester 20h00 à Paris (19h00 UTC en hiver)
+        reponse = self.client.post('/api/matchs/', {
+            'tournoi': self.tournoi.id, 'equipe_domicile': self.dom.id, 'equipe_exterieur': self.ext.id,
+            'date_match': '2026-01-01T20:00',
+        })
+        self.assertEqual(reponse.status_code, status.HTTP_201_CREATED, reponse.data)
+        match = Match.objects.get(pk=reponse.data['id'])
+        self.assertEqual(match.date_match.astimezone(dt_timezone.utc).hour, 19)
+        self.assertTrue(reponse.data['date_match'].startswith('2026-01-01T20:00:00+01:00'))
+
     def test_equipe_contre_elle_meme_refusee(self):
         reponse = self.client.post('/api/matchs/', {
             'tournoi': self.tournoi.id, 'equipe_domicile': self.dom.id, 'equipe_exterieur': self.dom.id,
@@ -177,6 +189,18 @@ class MiseAJourStatistiqueTests(BaseAPITestCase):
         self.assertEqual(reponse.status_code, status.HTTP_200_OK)
         self.assertEqual(reponse.data['statistique']['points'], 3)
         self.assertEqual(reponse.data['match']['score_domicile'], 3)
+
+    def test_premiere_stat_passe_le_match_en_cours(self):
+        self.assertEqual(self.match.statut, 'a_venir')
+        self.client.patch(self.url, {'champ': 'rebonds', 'action': 'decrement', 'valeur': 1})  # rien ne change
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.statut, 'a_venir')
+
+        reponse = self.client.patch(self.url, {'champ': 'points', 'action': 'increment', 'valeur': 2})
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK)
+        self.assertEqual(reponse.data['match']['statut'], 'en_cours')
+        self.match.refresh_from_db()
+        self.assertEqual((self.match.statut, self.match.score_domicile), ('en_cours', 2))
 
     def test_decrement_ne_descend_pas_sous_zero(self):
         self.client.patch(self.url, {'champ': 'rebonds', 'action': 'increment', 'valeur': 2})
