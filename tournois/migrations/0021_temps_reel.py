@@ -64,14 +64,14 @@ def _supabase(connection):
 def activer(apps, schema_editor):
     connection = schema_editor.connection
     if connection.vendor == 'postgresql':
-        schema_editor.execute(RLS_TOUTES_LES_TABLES)
+        schema_editor.execute(RLS_TOUTES_LES_TABLES, params=None)
     if _supabase(connection):
-        schema_editor.execute(SIGNAL_MATCH)
+        schema_editor.execute(SIGNAL_MATCH, params=None)
 
 
 def desactiver(apps, schema_editor):
     if _supabase(schema_editor.connection):
-        schema_editor.execute(RETIRER_SIGNAL_MATCH)
+        schema_editor.execute(RETIRER_SIGNAL_MATCH, params=None)
 
 
 class Migration(migrations.Migration):
