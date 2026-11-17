@@ -18,7 +18,8 @@ from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from . import journal
 from . import reglement as regles
 from .athletes import chercher_par_email
-from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .carriere import profil_athlete
+from .models import Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
 from .phases_finales import generer_phases_finales, resume_phases_finales, verrouiller_tournoi
 from .serializers import (
@@ -312,6 +313,18 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             return Response({'detail': "Aucune fiche avec cet email."}, status=status.HTTP_404_NOT_FOUND)
         tournois = fiche.joueurs.values('equipe__tournoi_id').distinct().count()
         return Response({'athlete': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom, 'nb_tournois': tournois})
+
+
+class AthleteViewSet(viewsets.GenericViewSet):
+    """Profil public d'un athlète : stats de carrière, tournois joués, palmarès (jamais l'email)."""
+    queryset = Athlete.objects.all()
+    permission_classes = [permissions.AllowAny]
+
+    def retrieve(self, request, pk=None):
+        athlete = self.get_object()
+        avec_photo = athlete.joueurs.exclude(photo='').exclude(photo__isnull=True).order_by('-created_at').first()
+        photo = request.build_absolute_uri(avec_photo.photo.url) if avec_photo else None
+        return Response(profil_athlete(athlete, photo))
 
 
 class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):

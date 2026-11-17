@@ -254,13 +254,14 @@ class StatistiqueJoueurSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle StatistiqueJoueur."""
     joueur_nom = serializers.SerializerMethodField()
     joueur_numero = serializers.IntegerField(source='joueur.numero_maillot', read_only=True)
+    athlete = serializers.IntegerField(source='joueur.athlete_id', read_only=True)
     joueur_photo = serializers.ImageField(source='joueur.photo', read_only=True)
     equipe_nom = serializers.CharField(source='joueur.equipe.nom', read_only=True)
 
     class Meta:
         model = StatistiqueJoueur
         fields = [
-            'id', 'joueur', 'match', 'joueur_nom', 'joueur_numero', 'joueur_photo', 'equipe_nom',
+            'id', 'joueur', 'athlete', 'match', 'joueur_nom', 'joueur_numero', 'joueur_photo', 'equipe_nom',
             'points', 'passes', 'rebonds', 'contres', 'fautes',
             'created_at', 'updated_at'
         ]

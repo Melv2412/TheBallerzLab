@@ -133,6 +133,8 @@ export const getJoueursTournoi = (tournoi) => toutesLesPages('/joueurs/', { tour
 export const createJoueur = (data) => api.post('/joueurs/', data)
 export const updateJoueur = (id, data) => api.patch(`/joueurs/${id}/`, data)
 export const deleteJoueur = (id) => api.delete(`/joueurs/${id}/`)
+// Profil public d'un athlète : carrière, tournois joués, palmarès
+export const getAthlete = (id) => api.get(`/athletes/${id}/`)
 // Fiche athlète existante (email exact) : { athlete, prenom, nom, nb_tournois }, ou 404
 export const rechercherAthlete = (email) => api.get('/joueurs/recherche_athlete/', { params: { email } })
 

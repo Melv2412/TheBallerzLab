@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { getImageUrl } from "../../api";
 import { LogoEquipe } from "./LogoEquipe";
 
@@ -81,9 +82,12 @@ export function OngletEquipes({
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">
                               <span className="text-primary-orange font-black italic text-xs">#{joueur.numero_maillot}</span>
-                              <span className="font-bold text-sm tracking-tight text-white">
+                              <Link
+                                to={`/athlete/${joueur.athlete}`}
+                                className="font-bold text-sm tracking-tight text-white hover:text-primary-orange transition-colors"
+                              >
                                 {joueur.prenom} {joueur.nom}
-                              </span>
+                              </Link>
                             </div>
                           </div>
                         </div>

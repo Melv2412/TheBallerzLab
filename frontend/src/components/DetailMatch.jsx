@@ -292,7 +292,9 @@ function StatCard({ stat, onUpdate, matchStatut, limiteFautes, isOwner }) {
             )}
           </div>
           <div>
-            <h3 className="text-xl font-black italic uppercase tracking-tighter">{stat.joueur_nom}</h3>
+            <h3 className="text-xl font-black italic uppercase tracking-tighter">
+              <Link to={`/athlete/${stat.athlete}`} className="hover:text-primary-orange transition-colors">{stat.joueur_nom}</Link>
+            </h3>
             <div className="flex gap-4 mt-1">
                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Position: G/F</span>
             </div>
