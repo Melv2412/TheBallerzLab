@@ -280,7 +280,17 @@ class MatchSerializer(serializers.ModelSerializer):
         en_cours = validated_data.get('chrono_en_cours', instance.chrono_en_cours)
         validated_data['chrono_demarre_a'] = maintenant if en_cours else None
         vient_de_finir = validated_data.get('statut') == 'termine' and instance.statut != 'termine'
-        match = super().update(instance, validated_data)
+
+        # N'enregistre que les champs modifiés ici : le score, les fautes d'équipe et les temps morts
+        # sont tenus par les actions du match et ne doivent jamais être réécrits avec une valeur périmée.
+        for champ, valeur in validated_data.items():
+            setattr(instance, champ, valeur)
+        champs = set(validated_data) | set(self.CHAMPS_CHRONO) | {'chrono_demarre_a', 'updated_at'}
+        if nouveau_reglement is not None:
+            champs.add('reglement')
+        instance.save(update_fields=sorted(champs))
+        match = instance
+
         if vient_de_finir and match.phase != 'poule':
             # Match suivant de la série, ou tour suivant si toutes les séries de la phase sont décidées
             avancer_phases_finales(match.tournoi)

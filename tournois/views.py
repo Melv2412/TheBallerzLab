@@ -326,6 +326,17 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     def _reponse_match(self, match):
         return Response(MatchSerializer(self.get_queryset().get(pk=match.pk)).data)
 
+    def update(self, request, *args, **kwargs):
+        """Modification relue sous verrou : elle n'écrase pas une stat ou un temps mort enregistré au même moment."""
+        partial = kwargs.pop('partial', False)
+        self.get_object()  # permissions
+        with transaction.atomic():
+            match = Match.objects.select_for_update().get(pk=self.kwargs['pk'])
+            serializer = self.get_serializer(match, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+        return self._reponse_match(match)
+
     @action(detail=True, methods=['post'])
     def initialiser_stats(self, request, pk=None):
         """Initialise les statistiques pour tous les joueurs des deux équipes."""

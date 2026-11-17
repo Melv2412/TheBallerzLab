@@ -11,6 +11,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from tournois.models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from tournois.serializers import MatchSerializer
+from tournois.views import MatchViewSet
 
 
 class BaseAPITestCase(APITestCase):
@@ -247,6 +249,36 @@ class ChronoTests(BaseAPITestCase):
         self.assertFalse(data['chrono_en_cours'])
         self.assertEqual(data['periode_actuelle'], 2)
         self.assertEqual(data['temps_restant_secondes'], 600)
+
+    def test_pause_n_ecrase_pas_les_actions_enregistrees_en_meme_temps(self):
+        # Le PATCH part d'un match lu avant le panier, la faute et le temps mort
+        perime = Match.objects.get(pk=self.match.pk)
+        url_stat = f'/api/matchs/{self.match.id}/stats/{self.stat.id}/update/'
+        self.client.patch(url_stat, {'champ': 'points', 'action': 'increment', 'valeur': 2})
+        self.client.patch(url_stat, {'champ': 'fautes', 'action': 'increment', 'valeur': 1})
+        self.client.post(f'/api/matchs/{self.match.id}/temps_mort/', {'equipe': 'domicile'})
+
+        with patch.object(MatchViewSet, 'get_object', return_value=perime):
+            reponse = self.client.patch(self.url, {'chrono_en_cours': True})
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK)
+
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.score_domicile, 2)
+        self.assertEqual(self.match.fautes_equipe_domicile, 1)
+        self.assertEqual(self.match.temps_morts_utilises_domicile, 1)
+        self.assertTrue(self.match.chrono_en_cours)
+
+    def test_le_serializer_n_enregistre_que_les_champs_modifies(self):
+        perime = Match.objects.get(pk=self.match.pk)
+        Match.objects.filter(pk=self.match.pk).update(score_domicile=7, fautes_equipe_exterieur=3)
+
+        serializer = MatchSerializer(perime, data={'possession_fleche': 'domicile'}, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.possession_fleche, 'domicile')
+        self.assertEqual((self.match.score_domicile, self.match.fautes_equipe_exterieur), (7, 3))
 
     def test_reset_du_shot_clock_pendant_que_le_chrono_tourne(self):
         self.demarrer_il_y_a(10)
