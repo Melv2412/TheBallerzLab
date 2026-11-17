@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from tournois.models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from tournois.organisateurs import GROUPE_ORGANISATEURS
 from tournois.serializers import MatchSerializer
 from tournois.views import MatchViewSet
 
@@ -139,6 +140,35 @@ class PermissionsTests(BaseAPITestCase):
         self.intrus.is_staff = True
         self.intrus.save()
         self.assertEqual(self.client.patch(url, {'has_demis': True}).status_code, status.HTTP_200_OK)
+
+
+class NomTournoiTests(BaseAPITestCase):
+    def setUp(self):
+        super().setUp()
+        groupe = Group.objects.get(name=GROUPE_ORGANISATEURS)
+        self.orga.groups.add(groupe)
+        self.intrus.groups.add(groupe)
+
+    def creer(self, utilisateur, nom):
+        self.client.force_authenticate(utilisateur)
+        return self.client.post('/api/tournois/', {'nom': nom, 'date_debut': '2026-03-01', 'date_fin': '2026-03-02'})
+
+    def test_meme_nom_possible_pour_deux_organisateurs(self):
+        reponse = self.creer(self.intrus, 'Interpromo')  # déjà utilisé par l'organisateur « orga »
+        self.assertEqual(reponse.status_code, status.HTTP_201_CREATED, reponse.data)
+        self.assertNotEqual(reponse.data['slug'], 'interpromo')  # le slug reste unique
+
+    def test_meme_nom_refuse_pour_le_meme_organisateur(self):
+        reponse = self.creer(self.orga, 'interpromo')  # la casse ne compte pas
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('nom', reponse.data)
+        autre = Tournoi.objects.create(
+            nom='Ete', organisateur=self.orga, date_debut=date(2026, 1, 1), date_fin=date(2026, 1, 2),
+        )
+        reponse = self.client.patch(f'/api/tournois/{autre.slug}/', {'nom': 'Interpromo'})
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        reponse = self.client.patch('/api/tournois/interpromo/', {'nom': 'Interpromo', 'date_fin': '2026-01-03'})
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK)  # son propre nom inchangé
 
 
 class ValidationMatchTests(BaseAPITestCase):

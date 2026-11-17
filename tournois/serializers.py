@@ -67,6 +67,21 @@ class TournoiSerializer(serializers.ModelSerializer):
         # Modification partielle possible : les réglages absents gardent leur valeur actuelle
         return regles.valider_reglement(valeur, base=getattr(self.instance, 'reglement', None))
 
+    def validate_nom(self, nom):
+        """Un organisateur ne peut pas avoir deux tournois du même nom (la casse ne compte pas)."""
+        if self.instance is not None:
+            organisateur = self.instance.organisateur
+        else:
+            requete = self.context.get('request')
+            organisateur = getattr(requete, 'user', None)
+        if organisateur is not None and organisateur.is_authenticated:
+            doublons = Tournoi.objects.filter(organisateur=organisateur, nom__iexact=nom)
+            if self.instance is not None:
+                doublons = doublons.exclude(pk=self.instance.pk)
+            if doublons.exists():
+                raise serializers.ValidationError("Tu as déjà un tournoi avec ce nom.")
+        return nom
+
     def validate(self, attrs):
         debut = attrs.get('date_debut', getattr(self.instance, 'date_debut', None))
         fin = attrs.get('date_fin', getattr(self.instance, 'date_fin', None))

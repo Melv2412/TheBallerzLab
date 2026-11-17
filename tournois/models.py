@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Sum
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -14,7 +15,7 @@ def reglement_par_defaut():
 
 class Tournoi(models.Model):
     """Modèle représentant un tournoi de basket."""
-    nom = models.CharField(max_length=200, unique=True)
+    nom = models.CharField(max_length=200)  # unique par organisateur (voir Meta) ; le slug reste unique
     slug = models.SlugField(max_length=250, unique=True, blank=True)
     organisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tournois_crees', null=True, blank=True)
     date_debut = models.DateField()
@@ -41,6 +42,11 @@ class Tournoi(models.Model):
         verbose_name = "Tournoi"
         verbose_name_plural = "Tournois"
         ordering = ['-date_debut']
+        constraints = [
+            models.UniqueConstraint(
+                Lower('nom'), 'organisateur', name='tournoi_nom_unique_par_organisateur',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.slug:
