@@ -18,23 +18,24 @@ function Interrupteur({ mode, theme, onChange }) {
   );
   return (
     <div role="tablist" aria-label="Je suis" className={`flex gap-1 p-1 rounded-2xl mb-8 ${theme.switch}`}>
-      {bouton("orga", "📋 Organisateur")}
-      {bouton("joueur", "🏀 Joueur")}
+      {bouton("orga", "Organisateur")}
+      {bouton("joueur", "Joueur")}
     </div>
   );
 }
 
-// Carte commune à la connexion et à l'inscription : interrupteur organisateur / joueur, puis le formulaire
-export function CarteAuth({ auth, titre, sousTitres, erreur, children, bas }) {
+// Carte commune à la connexion et à l'inscription. L'interrupteur organisateur / joueur n'existe qu'à
+// l'inscription : à la connexion, les droits viennent du type de compte enregistré, pas d'un choix.
+export function CarteAuth({ auth, titre, sousTitre, interrupteur = true, erreur, children, bas }) {
   const { mode, theme, changerMode } = auth;
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
       <div className={`max-w-md w-full p-6 sm:p-10 relative overflow-hidden transition-colors duration-300 ${theme.carte}`}>
         <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl ${theme.halo}`} />
         <div className="relative z-10">
-          <Interrupteur mode={mode} theme={theme} onChange={changerMode} />
+          {interrupteur && <Interrupteur mode={mode} theme={theme} onChange={changerMode} />}
           <h2 className={`text-3xl sm:text-4xl font-black mb-2 italic uppercase tracking-tighter ${theme.titre}`}>{titre}</h2>
-          <p className={`text-xs font-bold uppercase tracking-widest mb-8 ${theme.sousTitre}`}>{sousTitres[mode]}</p>
+          <p className={`text-xs font-bold uppercase tracking-widest mb-8 ${theme.sousTitre}`}>{sousTitre}</p>
 
           {erreur && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-xs font-bold mb-6">

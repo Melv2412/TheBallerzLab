@@ -2,12 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { CarteAuth, Champ, LienAuth } from './auth/CarteAuth';
+import { THEMES } from './auth/mode';
 import { useModeAuth } from './auth/useModeAuth';
-
-const SOUS_TITRES = {
-  orga: 'Connexion organisateur',
-  joueur: 'Connexion joueur : ton équipe et tes stats',
-};
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -16,7 +12,8 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const auth = useModeAuth('login');
+  // Toujours le thème sombre : la connexion est la même pour tous les comptes
+  const auth = { ...useModeAuth('login'), theme: THEMES.orga };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,7 +33,8 @@ function Login() {
     <CarteAuth
       auth={auth}
       titre={<>THE <span className="text-primary-orange">LAB</span></>}
-      sousTitres={SOUS_TITRES}
+      sousTitre="Connexion"
+      interrupteur={false}
       erreur={error}
       bas={<>Pas encore de compte ? <LienAuth to={auth.lien('register')}>Créer un compte</LienAuth></>}
     >

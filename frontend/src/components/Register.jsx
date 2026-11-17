@@ -58,7 +58,7 @@ function Register() {
     <CarteAuth
       auth={auth}
       titre={<>JOIN <span className="text-primary-orange">THE LAB</span></>}
-      sousTitres={SOUS_TITRES}
+      sousTitre={SOUS_TITRES[auth.mode]}
       erreur={error}
       bas={<>Déjà un compte ? <LienAuth to={auth.lien('login')}>Se connecter</LienAuth></>}
     >
