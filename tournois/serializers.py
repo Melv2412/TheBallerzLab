@@ -7,7 +7,7 @@ from rest_framework import serializers
 from . import reglement as regles
 from .journal import TYPES_ANNULABLES
 from .models import ActionMatch, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
-from .phases_finales import avancer_phases_finales, phase_suivante_commencee
+from .phases_finales import ACTIVATION, LIBELLES, PHASES, avancer_phases_finales, phase_suivante_commencee
 from .services import mvp_du_match
 
 
@@ -81,7 +81,31 @@ class TournoiSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'date_fin': (
                     f"{len(hors_dates)} match(s) sont programmés en dehors de ces dates : déplacez-les d'abord."
                 )})
+        if self.instance is None or any(champ in attrs for champ in ACTIVATION.values()):
+            self.valider_phases_finales(attrs)
         return attrs
+
+    def valider_phases_finales(self, attrs):
+        """Les phases actives doivent se suivre et mener à la finale (sinon le tableau ne s'apparie pas)."""
+        def active(phase):
+            champ = ACTIVATION[phase]
+            if champ in attrs:
+                return attrs[champ]
+            if self.instance is not None:
+                return getattr(self.instance, champ)
+            return Tournoi._meta.get_field(champ).default
+
+        actives = [phase for phase in PHASES if active(phase)]
+        if not actives:
+            return
+        if actives[-1] != 'finale':
+            raise serializers.ValidationError("Les phases finales doivent se terminer par la finale.")
+        attendues = PHASES[PHASES.index(actives[0]):]
+        if actives != attendues:
+            manquantes = ', '.join(LIBELLES[p].lower() for p in attendues if p not in actives)
+            raise serializers.ValidationError(
+                f"Les phases finales doivent se suivre sans trou : activez aussi les {manquantes}."
+            )
 
     def update(self, instance, validated_data):
         nouveau_reglement = validated_data.get('reglement')

@@ -2,13 +2,7 @@ import React, { useState, useEffect } from "react";
 import { updateTournoi, resetPlayoffs, messageErreur } from "../../api";
 import { FormulaireReglement } from "../reglement/FormulaireReglement";
 import { usePresets } from "../reglement/presets";
-
-const PHASES = [
-  { cle: "has_8emes", label: "8èmes", phase: "8eme", victoires: "victoires_requises_8eme", labelVictoires: "8èmes" },
-  { cle: "has_quarts", label: "Quarts", phase: "quart", victoires: "victoires_requises_quart", labelVictoires: "Quarts" },
-  { cle: "has_demis", label: "Demis", phase: "demi", victoires: "victoires_requises_demi", labelVictoires: "Demis" },
-  { cle: "has_finale", label: "Finale", phase: "finale", victoires: "victoires_requises_finale", labelVictoires: "Finale" },
-];
+import { PHASES, erreurPhases } from "./phases";
 
 const formulaireDepuis = (tournoi) => ({
   has_8emes: tournoi.has_8emes,
@@ -79,6 +73,12 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
 
   const enregistrer = async (e) => {
     e.preventDefault();
+    // Vérifié avant la réinitialisation : un refus du serveur ne doit pas effacer les playoffs pour rien
+    const erreur = erreurPhases(form);
+    if (erreur) {
+      alert(erreur);
+      return;
+    }
     if (!(await reinitialiserSiBesoin())) return;
 
     setEnregistrement(true);

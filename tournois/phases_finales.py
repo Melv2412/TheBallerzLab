@@ -116,8 +116,10 @@ def avancer_phases_finales(tournoi):
         suivante = actives[index + 1] if index + 1 < len(actives) else None
         if suivante is None or any(m.phase == suivante for m in tous):
             continue
-        if len(vainqueurs) % 2:
-            return  # tableau construit à la main avec un nombre impair de séries : pas d'appariement automatique
+        if len(vainqueurs) != EQUIPES_PAR_PHASE[suivante]:
+            # Tableau construit à la main, ou phases actives qui ne se suivent pas (ex. quarts puis finale) :
+            # pas d'appariement automatique
+            return
         for i in range(len(vainqueurs) // 2):
             creer_match(tournoi, suivante, vainqueurs[i], vainqueurs[len(vainqueurs) - 1 - i])
         return

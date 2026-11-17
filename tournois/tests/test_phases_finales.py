@@ -111,6 +111,36 @@ class PhasesFinalesTests(APITestCase):
         reponse = self.client.patch(f'/api/matchs/{demi_a.id}/', {'statut': 'en_cours'})
         self.assertEqual(reponse.status_code, status.HTTP_200_OK)
 
+    def test_phases_non_consecutives_refusees(self):
+        reponse = self.client.patch(self.url, {'has_demis': False, 'has_quarts': True}, format='json')
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('suivre', str(reponse.data))
+        reponse = self.client.patch(self.url, {'has_finale': False}, format='json')
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('finale', str(reponse.data))
+
+        reponse = self.client.post('/api/tournois/', {
+            'nom': 'Trou', 'date_debut': '2026-02-01', 'date_fin': '2026-02-02', 'has_quarts': True,
+        }, format='json')  # quarts + finale (par défaut), sans demi-finales
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+
+        reponse = self.client.patch(self.url, {'has_quarts': True}, format='json')
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK, reponse.data)
+        reponse = self.client.patch(self.url, {'nom': 'Coupe 2'}, format='json')
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK, reponse.data)
+
+    def test_ancien_tableau_avec_un_trou_ne_cree_pas_deux_finales(self):
+        """Tournoi enregistré avant la validation : quarts puis finale directement."""
+        Tournoi.objects.filter(pk=self.tournoi.pk).update(has_demis=False, has_quarts=True, victoires_requises_quart=1)
+        self.tournoi.refresh_from_db()
+        for nom in 'EFGH':
+            equipe = Equipe.objects.create(nom=nom, tournoi=self.tournoi)
+            self.joueurs[nom] = Joueur.objects.create(prenom='J', nom=nom, numero_maillot=1, equipe=equipe)
+        self.assertEqual(self.generer().status_code, status.HTTP_201_CREATED)
+        for match in self.matchs('quart'):
+            self.gagner(match, match.equipe_domicile.nom)
+        self.assertEqual(self.matchs('finale'), [])
+
     def test_reserve_a_l_organisateur(self):
         self.client.force_authenticate(User.objects.create_user('intrus', password='motdepasse-solide-42'))
         self.assertEqual(self.generer().status_code, status.HTTP_403_FORBIDDEN)
