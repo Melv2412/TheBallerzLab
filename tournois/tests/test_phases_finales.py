@@ -141,6 +141,22 @@ class PhasesFinalesTests(APITestCase):
             self.gagner(match, match.equipe_domicile.nom)
         self.assertEqual(self.matchs('finale'), [])
 
+    def test_le_tournoi_est_verrouille_avant_de_toucher_au_tableau(self):
+        """SQLite ignore les verrous : on vérifie qu'ils sont demandés (ils agissent en prod, sur Postgres)."""
+        from unittest.mock import patch
+
+        from tournois import phases_finales, views
+
+        original = phases_finales.verrouiller_tournoi
+        with patch.object(phases_finales, 'verrouiller_tournoi', wraps=original) as verrou:
+            self.generer()
+            self.assertEqual(verrou.call_count, 1)
+            with patch.object(views, 'verrouiller_tournoi', wraps=original) as verrou_vue:
+                self.gagner(self.matchs('demi')[0], 'A')
+                self.client.post(f'{self.url}reset_playoffs/', {})
+            self.assertEqual(verrou.call_count, 2)  # avancer_phases_finales
+            self.assertEqual(verrou_vue.call_count, 2)  # match terminé, puis reset_playoffs
+
     def test_reserve_a_l_organisateur(self):
         self.client.force_authenticate(User.objects.create_user('intrus', password='motdepasse-solide-42'))
         self.assertEqual(self.generer().status_code, status.HTTP_403_FORBIDDEN)

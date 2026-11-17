@@ -10,7 +10,7 @@ Phases finales : séries au meilleur des N matchs et progression automatique du 
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
-from .models import Match
+from .models import Match, Tournoi
 
 PHASES = ['8eme', 'quart', 'demi', 'finale']
 LIBELLES = {'8eme': '8èmes de finale', 'quart': 'Quarts de finale', 'demi': 'Demi-finales', 'finale': 'Finale'}
@@ -22,6 +22,15 @@ VICTOIRES_REQUISES = {
     'finale': 'victoires_requises_finale',
 }
 EQUIPES_PAR_PHASE = {'8eme': 16, 'quart': 8, 'demi': 4, 'finale': 2}
+
+
+def verrouiller_tournoi(tournoi):
+    """
+    Verrouille le tournoi jusqu'à la fin de la transaction. Deux matchs terminés au même moment
+    (ou un double clic sur « générer ») ne créent ainsi pas deux fois la même phase : le second
+    attend le premier, puis relit les matchs et voit ceux déjà créés.
+    """
+    Tournoi.objects.select_for_update().filter(pk=tournoi.pk).values_list('pk', flat=True).first()
 
 
 def phases_actives(tournoi):
@@ -67,6 +76,7 @@ def generer_phases_finales(tournoi):
     """Crée le premier tour avec les meilleures équipes du classement de poule (1er contre dernier qualifié...)."""
     from .services import classement_du_tournoi
 
+    verrouiller_tournoi(tournoi)
     actives = phases_actives(tournoi)
     if not actives:
         raise ValidationError({'detail': "Aucune phase finale n'est activée dans les paramètres du tournoi."})
@@ -94,6 +104,7 @@ def avancer_phases_finales(tournoi):
     Fait avancer le tableau après un résultat : match suivant d'une série non décidée, suppression des
     matchs devenus inutiles (série déjà gagnée, jamais commencés), puis création de la phase suivante.
     """
+    verrouiller_tournoi(tournoi)
     actives = phases_actives(tournoi)
     tous = list(tournoi.matchs.exclude(phase='poule').prefetch_related('statistiques_joueurs'))
     for index, phase in enumerate(actives):

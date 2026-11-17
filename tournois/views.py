@@ -17,7 +17,7 @@ from . import journal
 from . import reglement as regles
 from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
-from .phases_finales import generer_phases_finales, resume_phases_finales
+from .phases_finales import generer_phases_finales, resume_phases_finales, verrouiller_tournoi
 from .serializers import (
     ActionMatchSerializer,
     EquipeSerializer,
@@ -226,8 +226,11 @@ class TournoiViewSet(viewsets.ModelViewSet):
     def reset_playoffs(self, request, slug=None):
         """Réinitialise les playoffs pour ce tournoi (soit tout, soit à partir d'une phase)."""
         tournoi = self.get_object()  # vérifie que l'utilisateur est l'organisateur
+        with transaction.atomic():
+            verrouiller_tournoi(tournoi)  # pas de tour suivant créé pendant la suppression
+            return self._reinitialiser_playoffs(tournoi, request.data.get('phase', None))
 
-        phase = request.data.get('phase', None)
+    def _reinitialiser_playoffs(self, tournoi, phase):
         phases_ordre = ['8eme', 'quart', 'demi', 'finale']
 
         if phase and phase in phases_ordre:
@@ -329,8 +332,12 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         """Modification relue sous verrou : elle n'écrase pas une stat ou un temps mort enregistré au même moment."""
         partial = kwargs.pop('partial', False)
-        self.get_object()  # permissions
+        actuel = self.get_object()  # permissions
         with transaction.atomic():
+            if request.data.get('statut') == 'termine':
+                # Le tableau peut avancer : tournoi verrouillé avant le match, dans le même ordre
+                # que reset_playoffs, pour éviter un interblocage
+                verrouiller_tournoi(actuel.tournoi)
             match = Match.objects.select_for_update().get(pk=self.kwargs['pk'])
             serializer = self.get_serializer(match, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
