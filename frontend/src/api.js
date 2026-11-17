@@ -93,6 +93,7 @@ api.interceptors.response.use(
 export const login = (credentials) => api.post('/token/', credentials)
 export const register = (userData) => api.post('/users/', userData)
 export const getMe = () => api.get('/users/me/')
+export const devenirOrganisateur = () => api.post('/users/devenir_organisateur/')
 // Révoque le refresh token côté serveur (best effort : la déconnexion locale a lieu quoi qu'il arrive)
 export const revoquerSession = (refresh) => axios.post(`${API_BASE_URL}/token/blacklist/`, { refresh })
 
@@ -149,6 +150,12 @@ export const updateJoueur = (id, data) => api.patch(`/joueurs/${id}/`, data)
 export const deleteJoueur = (id) => api.delete(`/joueurs/${id}/`)
 // Profil public d'un athlète : carrière, tournois joués, palmarès
 export const getAthlete = (id) => api.get(`/athletes/${id}/`)
+export const envoyerPhotoAthlete = (id, fichier) => {
+  const donnees = new FormData()
+  donnees.append('photo', fichier)
+  return api.post(`/athletes/${id}/photo/`, donnees)
+}
+export const supprimerPhotoAthlete = (id) => api.delete(`/athletes/${id}/photo/`)
 // Fiche athlète existante (email exact) : { athlete, prenom, nom, nb_tournois }, ou 404
 export const rechercherAthlete = (email) => api.get('/joueurs/recherche_athlete/', { params: { email } })
 

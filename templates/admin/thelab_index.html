@@ -1,0 +1,28 @@
+{% extends "admin/index.html" %}
+{# Accueil de l'admin : les chiffres à surveiller, puis la liste habituelle des modèles #}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .tableau-de-bord { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .tableau-de-bord a { display: block; padding: 14px 16px; border-radius: 10px; background: var(--darkened-bg); border: 1px solid var(--border-color); text-decoration: none; color: var(--body-fg); }
+  .tableau-de-bord a:hover { border-color: var(--primary); }
+  .tableau-de-bord .nombre { display: block; font-size: 28px; font-weight: 800; color: var(--body-loud-color); }
+  .tableau-de-bord .a-traiter { border-color: var(--primary); }
+  .tableau-de-bord .a-traiter .nombre { color: var(--primary); }
+  .tableau-de-bord .libelle { font-size: 12px; color: var(--body-quiet-color); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if tableau_de_bord %}
+<div class="tableau-de-bord">
+  {% for libelle, nombre, lien, a_traiter in tableau_de_bord %}
+  <a href="{{ lien }}" class="{% if a_traiter and nombre %}a-traiter{% endif %}">
+    <span class="nombre">{{ nombre }}</span>
+    <span class="libelle">{{ libelle }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}

@@ -16,7 +16,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
-from . import inscription_equipes, invitations, journal
+from . import inscription_equipes, invitations, journal, organisateurs
 from . import reglement as regles
 from .athletes import chercher_par_email
 from .carriere import profil_athlete
@@ -29,6 +29,7 @@ from .serializers import (
     JoueurSerializer,
     MatchListSerializer,
     MatchSerializer,
+    PhotoAthleteSerializer,
     SaisieFeuilleSerializer,
     StatistiqueJoueurSerializer,
     TournoiSerializer,
@@ -133,6 +134,14 @@ class StockageIndisponible(APIException):
     default_code = 'stockage_indisponible'
 
 
+def supprimer_fichier(stockage, nom):
+    """Efface un fichier remplacé ; un échec ne bloque pas la requête (le fichier reste, simplement)."""
+    try:
+        stockage.delete(nom)
+    except (OSError, *ERREURS_STOCKAGE):
+        logger.warning("Fichier %s non supprimé du stockage", nom)
+
+
 def enregistrer_avec_fichiers(serializer):
     """Enregistre l'objet ; un échec du stockage des images (Supabase Storage en prod) devient une 503 lisible."""
     try:
@@ -164,10 +173,17 @@ class UserViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             'username': user.username,
             'is_staff': user.is_staff,
             'organisateur_valide': est_organisateur_valide(user),
+            'type_compte': organisateurs.type_compte(user),
             'tournois_actifs': nb_tournois_actifs(user),
             'limite_tournois_actifs': None if user.is_staff else settings.LIMITE_TOURNOIS_ACTIFS,
             'athlete': getattr(invitations.fiche_du_compte(user), 'pk', None),  # lien « Mon profil »
         })
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], throttle_classes=[])
+    def devenir_organisateur(self, request):
+        """Un compte joueur demande à organiser des tournois : il attend la validation de l'équipe THE LAB."""
+        organisateurs.demander_validation(request.user)
+        return self.me(request)
 
 
 class TournoiViewSet(viewsets.ModelViewSet):
@@ -522,16 +538,39 @@ class AthleteViewSet(viewsets.GenericViewSet):
 
     def retrieve(self, request, pk=None):
         athlete = self.get_object()
-        avec_photo = athlete.joueurs.exclude(photo='').exclude(photo__isnull=True).order_by('-created_at').first()
-        photo = request.build_absolute_uri(avec_photo.photo.url) if avec_photo else None
-        return Response(profil_athlete(athlete, photo))
+        if athlete.photo:
+            photo = request.build_absolute_uri(athlete.photo.url)
+        else:  # à défaut, la photo ajoutée par un organisateur sur une inscription
+            avec_photo = athlete.joueurs.exclude(photo='').exclude(photo__isnull=True).order_by('-created_at').first()
+            photo = request.build_absolute_uri(avec_photo.photo.url) if avec_photo else None
+        profil = profil_athlete(athlete, photo)
+        profil['photo_perso'] = bool(athlete.photo)  # photo choisie par le joueur (il peut la retirer)
+        return Response(profil)
+
+    @action(detail=True, methods=['post', 'delete'], permission_classes=[permissions.IsAuthenticated])
+    def photo(self, request, pk=None):
+        """Le joueur relié à la fiche change (POST, champ « photo ») ou retire (DELETE) sa photo de profil."""
+        athlete = self.get_object()
+        if athlete.utilisateur_id != request.user.id:
+            raise PermissionDenied("Seul le joueur relié à cette fiche peut changer sa photo.")
+        ancienne = athlete.photo.name if athlete.photo else None
+        if request.method == 'DELETE':
+            athlete.photo = None
+            athlete.save(update_fields=['photo', 'updated_at'])
+        else:
+            serializer = PhotoAthleteSerializer(athlete, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            enregistrer_avec_fichiers(serializer)
+        if ancienne and ancienne != athlete.photo.name:
+            supprimer_fichier(athlete.photo.storage, ancienne)
+        return self.retrieve(request, pk)
 
 
 class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     """ViewSet pour gérer les matchs."""
     queryset = Match.objects.select_related(
         'tournoi__organisateur', 'equipe_domicile', 'equipe_exterieur'
-    ).prefetch_related('statistiques_joueurs__joueur__equipe').all()
+    ).prefetch_related('statistiques_joueurs__joueur__equipe', 'statistiques_joueurs__joueur__athlete').all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def get_serializer_class(self):
@@ -543,7 +582,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         queryset = Match.objects.select_related('tournoi__organisateur', 'equipe_domicile', 'equipe_exterieur')
         # La liste n'affiche pas les stats des joueurs : inutile de les charger
         if self.action != 'list':
-            queryset = queryset.prefetch_related('statistiques_joueurs__joueur__equipe')
+            queryset = queryset.prefetch_related('statistiques_joueurs__joueur__equipe', 'statistiques_joueurs__joueur__athlete')
 
         tournoi_param = self.request.query_params.get('tournoi', None)
         statut = self.request.query_params.get('statut', None)
@@ -600,7 +639,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         self._refuser_si_termine(match)
 
         stats_crees = []
-        for joueur in Joueur.objects.filter(equipe__in=[match.equipe_domicile_id, match.equipe_exterieur_id]):
+        for joueur in Joueur.objects.filter(equipe__in=[match.equipe_domicile_id, match.equipe_exterieur_id]).select_related('athlete'):
             stat, created = StatistiqueJoueur.objects.get_or_create(joueur=joueur, match=match)
             if created:
                 stats_crees.append(stat)
@@ -734,7 +773,7 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 
         with transaction.atomic():
             match = self._match_verrouille(pk)
-            stat = get_object_or_404(StatistiqueJoueur.objects.select_related('joueur'), id=stat_id, match=match)
+            stat = get_object_or_404(StatistiqueJoueur.objects.select_related('joueur__athlete'), id=stat_id, match=match)
 
             exclusion = match.reglement['fautes_exclusion']
             if ajout and exclusion and stat.fautes >= exclusion:
@@ -788,13 +827,13 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 class StatistiqueJoueurViewSet(viewsets.ReadOnlyModelViewSet):
     """Statistiques des joueurs, en lecture : elles se modifient par les actions du match (règles appliquées)."""
     queryset = StatistiqueJoueur.objects.select_related(
-        'joueur__equipe', 'match'
+        'joueur__equipe', 'joueur__athlete', 'match'
     ).all()
     serializer_class = StatistiqueJoueurSerializer
 
     def get_queryset(self):
         queryset = StatistiqueJoueur.objects.select_related(
-            'joueur__equipe', 'match'
+            'joueur__equipe', 'joueur__athlete', 'match'
         ).all()
 
         match_id = self.request.query_params.get('match', None)

@@ -131,6 +131,8 @@ class Athlete(models.Model):
     utilisateur = models.OneToOneField(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='athlete',
     )
+    # Photo de profil, choisie par le joueur relié (compressée par le navigateur avant l'envoi)
+    photo = models.ImageField(upload_to='athletes/photos/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

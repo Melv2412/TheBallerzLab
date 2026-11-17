@@ -122,7 +122,8 @@ Les listes sont paginées : `{count, next, previous, results}`, 50 éléments pa
 - `POST /api/joueurs/` - Ajouter un joueur ; `email` facultatif (jamais renvoyé) : le rattache à la fiche athlète qui a cet email, sinon une fiche est créée. Un athlète ne joue que dans une équipe par tournoi
 - `GET /api/joueurs/recherche_athlete/?email=` - Fiche athlète par email exact (organisateurs validés, 60 recherches par heure)
 - `POST /api/joueurs/{id}/delier/` - L'organisateur détache le compte relié à ce joueur
-- `GET /api/athletes/{id}/` - Profil public d'un athlète (carrière, tournois, palmarès, `compte_verifie`)
+- `GET /api/athletes/{id}/` - Profil public d'un athlète (carrière, tournois, palmarès, `compte_verifie`, `photo`)
+- `POST` / `DELETE /api/athletes/{id}/photo/` - Le joueur relié à la fiche change (champ `photo`, multipart) ou retire sa photo de profil
 - `POST /api/equipes/{id}/invitation/` - Code du lien d'invitation de l'équipe (organisateur) ; `{"regenerer": true}` remplace l'ancien lien
 - `GET /api/invitations/{code}/` - Page publique de l'invitation : équipe, tournoi, effectif et, si connecté, l'inscription du compte
 - `POST /api/invitations/{code}/rejoindre/` - Joueur connecté : `{"joueur": id}` (« c'est moi ») ou `{"numero_maillot", "prenom", "nom"}` (si `inscriptions_ouvertes` du tournoi) ; sa fiche athlète est reliée à son compte
@@ -131,7 +132,9 @@ Les listes sont paginées : `{count, next, previous, results}`, 50 éléments pa
 - `POST /api/inscriptions/{code}/demander/` - Capitaine connecté : `{"nom"}` propose son équipe (si `inscriptions_ouvertes`)
 - `GET /api/demandes_equipes/?tournoi={slug}` - Organisateur : demandes en attente (`?statut=` pour les autres)
 - `POST /api/demandes_equipes/{id}/accepter/` / `refuser/` - Organisateur : accepter crée l'équipe
-- `POST /api/users/` - Créer un compte (email obligatoire et unique) ; `GET /api/users/me/` renvoie aussi `athlete` (profil du compte)
+- `POST /api/users/` - Créer un compte (email obligatoire et unique) ; `type` : `orga` (demande de validation organisateur) ou `joueur` (défaut)
+- `GET /api/users/me/` - Profil du compte : `type_compte` (`organisateur`, `organisateur_en_attente`, `joueur`), `athlete` (fiche reliée)…
+- `POST /api/users/devenir_organisateur/` - Un compte joueur demande à organiser (en attente de validation)
 - `GET /api/matchs/?tournoi={id}` - Liste des matchs d'un tournoi
 - `GET /api/matchs/{id}/` - Détail d'un match avec statistiques
 - `POST /api/matchs/{id}/initialiser_stats/` - Initialiser les stats pour un match

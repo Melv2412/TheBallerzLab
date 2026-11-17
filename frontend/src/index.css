@@ -131,6 +131,20 @@ h3,
 }
 
 /* Animations */
+/* Sablier « en attente » : se retourne tranquillement */
+@keyframes sablier {
+  0%, 40% { transform: rotate(0deg); }
+  50%, 90% { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-sablier {
+  display: inline-block;
+  animation: sablier 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-sablier { animation: none; }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

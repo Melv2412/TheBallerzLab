@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getTournois, createTournoi, deleteTournoi, messageErreur } from '../api'
+import { getTournois, createTournoi, deleteTournoi, devenirOrganisateur, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 import { peutModifier } from '../permissions'
 import { FormulaireReglement } from './reglement/FormulaireReglement'
@@ -20,12 +20,32 @@ const FORMULAIRE_VIDE = {
 function ListeTournois() {
   const { user, rafraichirProfil } = useAuth()
   // undefined = profil pas encore chargé : on laisse essayer, le serveur tranchera
-  const enAttenteValidation = user?.organisateur_valide === false
+  const enAttenteValidation = user?.type_compte === 'organisateur_en_attente'
+  const compteJoueur = user?.type_compte === 'joueur'
+  const [proposerOrga, setProposerOrga] = useState(false)
+  const [demandeEnCours, setDemandeEnCours] = useState(false)
+
+  const demanderCompteOrga = async () => {
+    setDemandeEnCours(true)
+    try {
+      await devenirOrganisateur()
+      await rafraichirProfil()
+      setProposerOrga(false)
+      setAvertissement("Demande envoyée ! L'équipe THE LAB valide ton compte organisateur au plus vite.")
+    } catch (error) {
+      setProposerOrga(false)
+      setAvertissement(messageErreur(error))
+    } finally {
+      setDemandeEnCours(false)
+    }
+  }
   const limiteAtteinte = user?.limite_tournois_actifs != null && user.tournois_actifs >= user.limite_tournois_actifs
   const [avertissement, setAvertissement] = useState('')
 
   const ouvrirCreation = () => {
-    if (enAttenteValidation) {
+    if (compteJoueur) {
+      setProposerOrga(true)
+    } else if (enAttenteValidation) {
       setAvertissement("Ton compte organisateur est en attente de validation par l'équipe THE LAB. Tu pourras créer des tournois dès qu'il sera validé.")
     } else if (limiteAtteinte) {
       setAvertissement(`Tu as déjà ${user.limite_tournois_actifs} tournois en cours ou à venir. Un tournoi libère sa place une fois sa date de fin passée.`)
@@ -167,13 +187,29 @@ function ListeTournois() {
       </div>
 
       {user && enAttenteValidation && (
-        <div className="mb-8 bg-primary-orange/10 border border-primary-orange/30 rounded-2xl p-4 sm:p-5 flex items-start gap-4">
-          <span className="text-2xl">⏳</span>
-          <div>
-            <p className="text-primary-orange font-black uppercase text-xs tracking-widest">Compte en attente de validation</p>
-            <p className="text-gray-300 text-sm mt-1">
-              Tu peux suivre tous les tournois. La création de tournois sera disponible dès que l'équipe THE LAB aura validé ton compte organisateur.
+        <p className="mb-6 -mt-4 flex items-center gap-2 text-xs text-gray-400 border-l-2 border-primary-orange/50 pl-3 py-1">
+          <span className="animate-sablier" aria-hidden="true">⏳</span>
+          <span>
+            <span className="text-primary-orange font-bold">Compte organisateur en attente de validation</span>
+            <span className="hidden sm:inline"> · tu pourras créer des tournois dès qu'il sera validé</span>
+          </span>
+        </p>
+      )}
+
+      {proposerOrga && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setProposerOrga(false)}>
+          <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-8 w-full max-w-md text-center shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="text-5xl mb-4">🏀</div>
+            <p className="text-gray-200 mb-2 font-bold">Tu as un compte joueur.</p>
+            <p className="text-gray-400 text-sm mb-6">
+              Pour organiser des tournois, demande un compte organisateur : l'équipe THE LAB le valide, puis tu pourras créer tes tournois.
             </p>
+            <div className="flex gap-3">
+              <button onClick={() => setProposerOrga(false)} className="flex-1 py-4 rounded-xl border border-white/10 text-gray-300 font-bold">Annuler</button>
+              <button onClick={demanderCompteOrga} disabled={demandeEnCours} className="btn-basketball flex-1 py-4 disabled:opacity-50">
+                {demandeEnCours ? 'Envoi…' : 'Demander'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -181,7 +217,7 @@ function ListeTournois() {
       {avertissement && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setAvertissement('')}>
           <div className="bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-8 w-full max-w-md text-center shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="text-5xl mb-4">{enAttenteValidation ? '⏳' : '🏁'}</div>
+            <div className="text-5xl mb-4">{enAttenteValidation ? <span className="animate-sablier">⏳</span> : '🏁'}</div>
             <p className="text-gray-200 mb-6">{avertissement}</p>
             <button onClick={() => setAvertissement('')} className="btn-basketball w-full py-4">Compris</button>
           </div>

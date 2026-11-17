@@ -38,7 +38,8 @@ function Register() {
       await register({
         username: formData.username,
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        type: auth.mode, // 'orga' : demande de validation organisateur
       });
       // Connexion directe, puis retour à l'invitation si on en vient
       await login({ username: formData.username, password: formData.password });

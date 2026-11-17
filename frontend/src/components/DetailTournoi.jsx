@@ -98,21 +98,13 @@ function DetailTournoi() {
 
       <div className="relative z-10">
         {!isOwner && (
-          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 animate-pulse">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-              <span className="text-2xl">👁️</span>
-              <div>
-                <p className="text-blue-400 font-black uppercase text-[10px] tracking-widest">Mode Consultant Actif</p>
-                <p className="text-gray-400 text-xs">
-                  Vous consultez les statistiques du tournoi de{" "}
-                  <span className="text-white font-bold">{tournoi.organisateur_nom || "l'organisateur"}</span>.
-                </p>
-              </div>
-            </div>
-            <div className="hidden sm:block text-[10px] font-black text-blue-500/50 uppercase tracking-tighter">
-              Lecture seule
-            </div>
-          </div>
+          <p className="mb-4 flex items-center gap-2 text-[11px] text-gray-500 border-l-2 border-blue-500/40 pl-3 py-0.5">
+            <span aria-hidden="true">👁️</span>
+            <span className="truncate">
+              Lecture seule · tournoi de{" "}
+              <span className="text-gray-300 font-bold">{tournoi.organisateur_nom || "l'organisateur"}</span>
+            </span>
+          </p>
         )}
 
         {/* En-tête */}

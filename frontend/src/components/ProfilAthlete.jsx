@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getAthlete, getImageUrl } from "../api";
+import { envoyerPhotoAthlete, getAthlete, getImageUrl, messageErreur, supprimerPhotoAthlete } from "../api";
+import { useAuth } from "../AuthContext";
+import { compresserImage } from "../images";
 
 const STATS = [
   { cle: "points", label: "Points" },
@@ -26,9 +28,64 @@ function Chiffre({ valeur, label }) {
   );
 }
 
+// Photo de profil : le joueur relié à la fiche la change ; elle est compressée dans le navigateur avant l'envoi
+function Photo({ profil, modifiable, onChange }) {
+  const champ = useRef(null);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
+  const photo = getImageUrl(profil.photo);
+
+  const envoyer = async (requete) => {
+    setEnvoi(true);
+    setErreur("");
+    try {
+      const { data } = await requete();
+      onChange(data);
+    } catch (error) {
+      setErreur(messageErreur(error, "Impossible d'enregistrer la photo."));
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  const choisir = (e) => {
+    const fichier = e.target.files?.[0];
+    e.target.value = ""; // permet de rechoisir le même fichier
+    if (fichier) envoyer(async () => envoyerPhotoAthlete(profil.id, await compresserImage(fichier)));
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-2 shrink-0">
+      <div className="relative w-28 h-28 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+        {photo ? (
+          <img src={photo} alt={`${profil.prenom} ${profil.nom}`} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-4xl">👤</span>
+        )}
+        {envoi && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-xs animate-pulse">Envoi…</div>}
+      </div>
+      {modifiable && (
+        <div className="flex gap-3 text-[10px] font-black uppercase tracking-widest">
+          <button type="button" onClick={() => champ.current?.click()} disabled={envoi} className="text-primary-orange hover:underline disabled:opacity-50">
+            {photo ? "Changer" : "Ajouter une photo"}
+          </button>
+          {profil.photo_perso && (
+            <button type="button" onClick={() => envoyer(() => supprimerPhotoAthlete(profil.id))} disabled={envoi} className="text-gray-500 hover:text-red-400 disabled:opacity-50">
+              Retirer
+            </button>
+          )}
+          <input ref={champ} type="file" accept="image/*" className="hidden" onChange={choisir} />
+        </div>
+      )}
+      {erreur && <p className="text-xs text-red-400 max-w-[200px] text-center">{erreur}</p>}
+    </div>
+  );
+}
+
 // Profil public : carrière cumulée sur tous les tournois, puis le détail tournoi par tournoi
 export default function ProfilAthlete() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [profil, setProfil] = useState(null);
   const [erreur, setErreur] = useState(false);
 
@@ -44,18 +101,12 @@ export default function ProfilAthlete() {
   if (!profil) return <div className="text-center py-10 animate-pulse">Chargement du profil...</div>;
 
   const { carriere } = profil;
-  const photo = getImageUrl(profil.photo);
+  const monProfil = user?.athlete != null && String(user.athlete) === String(profil.id);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <header className="glass-card p-6 flex flex-col sm:flex-row items-center gap-6">
-        <div className="w-28 h-28 rounded-full overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
-          {photo ? (
-            <img src={photo} alt={`${profil.prenom} ${profil.nom}`} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-4xl">👤</span>
-          )}
-        </div>
+        <Photo profil={profil} modifiable={monProfil} onChange={setProfil} />
         <div className="text-center sm:text-left">
           <h1 className="text-3xl sm:text-4xl font-black uppercase italic tracking-tighter">
             {profil.prenom} <span className="text-primary-orange">{profil.nom}</span>

@@ -5,7 +5,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from . import athletes
+from . import athletes, organisateurs
 from . import reglement as regles
 from .journal import TYPES_ANNULABLES
 from .models import ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
@@ -25,10 +25,12 @@ def valider_taille_image(image):
 class UserSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle User. L'email est obligatoire et unique (la casse ne compte pas)."""
     email = serializers.EmailField(required=True, allow_blank=False)
+    # Mode choisi à l'inscription : « orga » = demande de validation organisateur
+    type = serializers.ChoiceField(choices=['orga', 'joueur'], default='joueur', write_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = ['id', 'username', 'email', 'password', 'type']
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate_email(self, email):
@@ -47,6 +49,8 @@ class UserSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             password=validated_data['password']
         )
+        if validated_data.get('type') == 'orga':
+            organisateurs.demander_validation(user)
         return user
 
 
@@ -277,12 +281,21 @@ class JoueurSerializer(serializers.ModelSerializer):
         return joueur
 
 
+class PhotoAthleteSerializer(serializers.ModelSerializer):
+    """Photo de profil, envoyée par le joueur relié à la fiche."""
+    photo = serializers.ImageField(required=True, validators=[valider_taille_image])
+
+    class Meta:
+        model = Athlete
+        fields = ['photo']
+
+
 class StatistiqueJoueurSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle StatistiqueJoueur."""
     joueur_nom = serializers.SerializerMethodField()
     joueur_numero = serializers.IntegerField(source='joueur.numero_maillot', read_only=True)
     athlete = serializers.IntegerField(source='joueur.athlete_id', read_only=True)
-    joueur_photo = serializers.ImageField(source='joueur.photo', read_only=True)
+    joueur_photo = serializers.SerializerMethodField()
     equipe_nom = serializers.CharField(source='joueur.equipe.nom', read_only=True)
 
     class Meta:
@@ -292,6 +305,14 @@ class StatistiqueJoueurSerializer(serializers.ModelSerializer):
             'points', 'passes', 'rebonds', 'contres', 'fautes',
             'created_at', 'updated_at'
         ]
+
+    def get_joueur_photo(self, obj):
+        """Photo de l'inscription, sinon celle que le joueur a mise sur sa fiche athlète."""
+        image = obj.joueur.photo or obj.joueur.athlete.photo
+        if not image:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(image.url) if request else image.url
 
     def get_joueur_nom(self, obj):
         return f"{obj.joueur.prenom} {obj.joueur.nom}"
