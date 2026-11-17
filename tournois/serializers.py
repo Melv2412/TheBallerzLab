@@ -23,11 +23,19 @@ def valider_taille_image(image):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer pour le modèle User."""
+    """Serializer pour le modèle User. L'email est obligatoire et unique (la casse ne compte pas)."""
+    email = serializers.EmailField(required=True, allow_blank=False)
+
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password']
         extra_kwargs = {'password': {'write_only': True}}
+
+    def validate_email(self, email):
+        email = athletes.normaliser_email(email)
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("Un compte existe déjà avec cet email.")
+        return email
 
     def validate_password(self, value):
         validate_password(value)
@@ -36,7 +44,7 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(
             username=validated_data['username'],
-            email=validated_data.get('email', ''),
+            email=validated_data['email'],
             password=validated_data['password']
         )
         return user
@@ -57,6 +65,7 @@ class TournoiSerializer(serializers.ModelSerializer):
             'id', 'nom', 'slug', 'organisateur', 'organisateur_nom', 'date_debut', 'date_fin',
             'equipes_count', 'matchs_count',
             'has_8emes', 'has_quarts', 'has_demis', 'has_finale', 'reglement', 'reglement_type',
+            'inscriptions_ouvertes',
             'victoires_requises_8eme', 'victoires_requises_quart', 'victoires_requises_demi', 'victoires_requises_finale',
             'created_at', 'updated_at'
         ]
@@ -189,12 +198,14 @@ class JoueurSerializer(serializers.ModelSerializer):
     equipe_nom = serializers.CharField(source='equipe.nom', read_only=True)
     tournoi_nom = serializers.CharField(source='equipe.tournoi.nom', read_only=True)
     email = serializers.EmailField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    # Le joueur a rejoint l'équipe avec son compte (lien d'invitation) : sa fiche lui appartient
+    compte_lie = serializers.SerializerMethodField()
 
     class Meta:
         model = Joueur
         fields = [
             'id', 'athlete', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'tournoi_nom',
-            'email', 'created_at', 'updated_at',
+            'email', 'compte_lie', 'created_at', 'updated_at',
         ]
         read_only_fields = ['athlete']
         extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
@@ -207,8 +218,15 @@ class JoueurSerializer(serializers.ModelSerializer):
             )
         return equipe
 
+    def get_compte_lie(self, obj):
+        return obj.athlete.utilisateur_id is not None
+
     def validate(self, attrs):
         email = athletes.normaliser_email(attrs.pop('email', None))
+        if email and self.instance is not None and self.instance.athlete.utilisateur_id is not None:
+            raise serializers.ValidationError({'email': (
+                "Ce joueur a relié son compte : sa fiche ne se change plus par email (délie-le d'abord si c'est une erreur)."
+            )})
         joueur = self.instance or Joueur(prenom=attrs.get('prenom', ''), nom=attrs.get('nom', ''))
         fiche = athletes.fiche_pour_email(joueur, email) if email else (self.instance.athlete if self.instance else None)
         equipe = attrs.get('equipe') or self.instance.equipe
@@ -243,8 +261,8 @@ class JoueurSerializer(serializers.ModelSerializer):
         fiche = joueur.athlete
         if ancienne != fiche.pk:
             athletes.supprimer_si_orpheline(ancienne)
-        elif fiche.joueurs.count() == 1 and (fiche.prenom, fiche.nom) != (joueur.prenom, joueur.nom):
-            # Fiche propre à ce joueur : elle suit les corrections de nom
+        elif fiche.utilisateur_id is None and fiche.joueurs.count() == 1 and (fiche.prenom, fiche.nom) != (joueur.prenom, joueur.nom):
+            # Fiche propre à ce joueur (et sans compte) : elle suit les corrections de nom
             fiche.prenom, fiche.nom = joueur.prenom, joueur.nom
             fiche.save(update_fields=['prenom', 'nom', 'updated_at'])
         return joueur

@@ -38,9 +38,19 @@ function Navbar() {
 
             {user ? (
               <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary-orange bg-primary-orange/10 px-3 py-1.5 rounded-full border border-primary-orange/20 truncate max-w-[90px] sm:max-w-none">
-                  {user.username}
-                </span>
+                {user.athlete ? (
+                  <Link
+                    to={`/athlete/${user.athlete}`}
+                    title="Mon profil"
+                    className="text-[10px] font-black uppercase tracking-widest text-primary-orange bg-primary-orange/10 px-3 py-1.5 rounded-full border border-primary-orange/20 truncate max-w-[90px] sm:max-w-none hover:bg-primary-orange/20"
+                  >
+                    {user.username}
+                  </Link>
+                ) : (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary-orange bg-primary-orange/10 px-3 py-1.5 rounded-full border border-primary-orange/20 truncate max-w-[90px] sm:max-w-none">
+                    {user.username}
+                  </span>
+                )}
                 <button
                   onClick={handleLogout}
                   className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-red-500 transition-all whitespace-nowrap"

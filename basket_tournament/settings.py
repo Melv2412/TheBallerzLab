@@ -230,6 +230,7 @@ REST_FRAMEWORK = {
         'inscription': config('THROTTLE_INSCRIPTION', default='20/hour'),
         # Recherche de fiche athlète par email (par compte) : évite de tester des emails en masse
         'recherche_athlete': config('THROTTLE_RECHERCHE_ATHLETE', default='60/hour'),
+        'invitation': config('THROTTLE_INVITATION', default='30/hour'),
     },
 }
 

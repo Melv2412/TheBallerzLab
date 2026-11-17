@@ -184,3 +184,11 @@ export const genererPhasesFinales = (slug) => api.post(`/tournois/${slug}/genere
 
 
 
+
+// Lien d'invitation d'équipe : les joueurs rejoignent leur équipe avec leur compte
+export const lienInvitation = (equipeId, regenerer = false) =>
+  api.post(`/equipes/${equipeId}/invitation/`, { regenerer })
+export const getInvitation = (code) => api.get(`/invitations/${code}/`)
+// { joueur } : « c'est moi » ; sinon { numero_maillot, prenom, nom } : nouveau joueur
+export const rejoindreEquipe = (code, data) => api.post(`/invitations/${code}/rejoindre/`, data)
+export const delierJoueur = (id) => api.post(`/joueurs/${id}/delier/`)

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { register } from '../api';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 import { ChampMotDePasse } from './ChampMotDePasse'
+import { cheminSuite } from './invitation/invitation'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -13,6 +15,9 @@ function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
+  // Venu d'un lien d'invitation : connexion automatique puis retour à l'invitation
+  const suite = cheminSuite(useLocation().search);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +35,12 @@ function Register() {
         email: formData.email,
         password: formData.password
       });
-      navigate('/login');
+      if (suite) {
+        await login({ username: formData.username, password: formData.password });
+        navigate(suite);
+      } else {
+        navigate('/login');
+      }
     } catch (err) {
       // Afficher le premier message renvoyé par le serveur (pseudo pris, mot de passe trop faible…)
       const erreurs = err.response?.data;
@@ -50,7 +60,7 @@ function Register() {
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 italic uppercase tracking-tighter">
             JOIN <span className="text-primary-orange">THE LAB</span>
           </h2>
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">Devenir organisateur</p>
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">{suite ? 'Rejoindre ton équipe' : 'Organisateur ou joueur'}</p>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-xs font-bold mb-6">
@@ -119,7 +129,7 @@ function Register() {
           <div className="mt-8 text-center">
             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
               Déjà un compte ?{' '}
-              <Link to="/login" className="text-primary-orange hover:underline">
+              <Link to={suite ? `/login?suite=${encodeURIComponent(suite)}` : '/login'} className="text-primary-orange hover:underline">
                 Se connecter
               </Link>
             </p>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ChampMotDePasse } from './ChampMotDePasse'
+import { cheminSuite } from './invitation/invitation'
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -10,6 +11,8 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  // Venu d'un lien d'invitation : on y revient après la connexion
+  const suite = cheminSuite(useLocation().search);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +20,7 @@ function Login() {
     setLoading(true);
     try {
       await login({ username, password });
-      navigate('/');
+      navigate(suite || '/');
     } catch {
       setError('Identifiants invalides. Réessayez.');
     } finally {
@@ -35,7 +38,7 @@ function Login() {
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 italic uppercase tracking-tighter">
             THE <span className="text-primary-orange">LAB</span>
           </h2>
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">Connexion organisateur</p>
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">{suite ? 'Connexion' : 'Connexion organisateur'}</p>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-xs font-bold mb-6 animate-shake">
@@ -79,7 +82,7 @@ function Login() {
           <div className="mt-8 text-center">
             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
               Pas encore de compte ?{' '}
-              <Link to="/register" className="text-primary-orange hover:underline">
+              <Link to={suite ? `/register?suite=${encodeURIComponent(suite)}` : '/register'} className="text-primary-orange hover:underline">
                 Créer un profil
               </Link>
             </p>

@@ -26,6 +26,8 @@ class Tournoi(models.Model):
     has_quarts = models.BooleanField(default=False)
     has_demis = models.BooleanField(default=False)
     has_finale = models.BooleanField(default=True)
+    # Les joueurs peuvent rejoindre leur équipe par le lien d'invitation (fermable par l'organisateur)
+    inscriptions_ouvertes = models.BooleanField(default=True)
     # Règlement (voir tournois/reglement.py) : copié sur chaque match à sa création
     reglement = models.JSONField(default=reglement_par_defaut)
 
@@ -73,6 +75,8 @@ class Equipe(models.Model):
     nom = models.CharField(max_length=200)
     logo = models.ImageField(upload_to='equipes/logos/', null=True, blank=True)
     tournoi = models.ForeignKey(Tournoi, on_delete=models.CASCADE, related_name='equipes')
+    # Lien d'invitation /invitation/<code> envoyé au capitaine (régénérer le code tue l'ancien lien)
+    code_invitation = models.CharField(max_length=32, unique=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -94,6 +98,10 @@ class Athlete(models.Model):
     prenom = models.CharField(max_length=100)
     nom = models.CharField(max_length=100)
     email = models.EmailField(null=True, blank=True)  # toujours en minuscules
+    # Compte du joueur, relié quand il rejoint son équipe par le lien d'invitation
+    utilisateur = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='athlete',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

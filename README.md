@@ -121,6 +121,12 @@ Les listes sont paginées : `{count, next, previous, results}`, 50 éléments pa
 - `GET /api/joueurs/?equipe={id}` - Liste des joueurs d'une équipe
 - `POST /api/joueurs/` - Ajouter un joueur ; `email` facultatif (jamais renvoyé) : le rattache à la fiche athlète qui a cet email, sinon une fiche est créée. Un athlète ne joue que dans une équipe par tournoi
 - `GET /api/joueurs/recherche_athlete/?email=` - Fiche athlète par email exact (organisateurs validés, 60 recherches par heure)
+- `POST /api/joueurs/{id}/delier/` - L'organisateur détache le compte relié à ce joueur
+- `GET /api/athletes/{id}/` - Profil public d'un athlète (carrière, tournois, palmarès, `compte_verifie`)
+- `POST /api/equipes/{id}/invitation/` - Code du lien d'invitation de l'équipe (organisateur) ; `{"regenerer": true}` remplace l'ancien lien
+- `GET /api/invitations/{code}/` - Page publique de l'invitation : équipe, tournoi, effectif et, si connecté, l'inscription du compte
+- `POST /api/invitations/{code}/rejoindre/` - Joueur connecté : `{"joueur": id}` (« c'est moi ») ou `{"numero_maillot", "prenom", "nom"}` (si `inscriptions_ouvertes` du tournoi) ; sa fiche athlète est reliée à son compte
+- `POST /api/users/` - Créer un compte (email obligatoire et unique) ; `GET /api/users/me/` renvoie aussi `athlete` (profil du compte)
 - `GET /api/matchs/?tournoi={id}` - Liste des matchs d'un tournoi
 - `GET /api/matchs/{id}/` - Détail d'un match avec statistiques
 - `POST /api/matchs/{id}/initialiser_stats/` - Initialiser les stats pour un match

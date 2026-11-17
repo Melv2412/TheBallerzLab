@@ -35,8 +35,8 @@ def verifier_un_par_tournoi(athlete, tournoi_id, sauf_joueur=None):
 
 
 def supprimer_si_orpheline(athlete_id):
-    """Une fiche sans aucune inscription ne sert plus à rien."""
-    Athlete.objects.filter(pk=athlete_id, joueurs__isnull=True).delete()
+    """Une fiche sans aucune inscription ne sert plus à rien (sauf si un compte y est relié : c'est son profil)."""
+    Athlete.objects.filter(pk=athlete_id, joueurs__isnull=True, utilisateur__isnull=True).delete()
 
 
 def fiche_pour_email(joueur, email):
@@ -58,13 +58,15 @@ def fiche_pour_email(joueur, email):
 @transaction.atomic
 def fusionner(athletes):
     """
-    Regroupe les fiches en une seule (la plus ancienne, ou celle qui a un email).
-    Refusé si deux emails différents, ou si deux fiches ont joué le même tournoi.
+    Regroupe les fiches en une seule (celle reliée à un compte, sinon celle qui a un email, sinon la plus ancienne).
+    Refusé si deux comptes ou deux emails différents, ou si deux fiches ont joué le même tournoi.
     """
     athletes = list(athletes)
     if len(athletes) < 2:
         raise ConflitAthlete("Sélectionne au moins deux fiches à fusionner.")
     emails = {a.email for a in athletes if a.email}
+    if len({a.utilisateur_id for a in athletes if a.utilisateur_id}) > 1:
+        raise ConflitAthlete("Ces fiches sont reliées à deux comptes différents : ce sont deux personnes.")
     if len(emails) > 1:
         raise ConflitAthlete("Ces fiches ont des emails différents : ce ne sont sans doute pas la même personne.")
     doublons = (
@@ -77,10 +79,14 @@ def fusionner(athletes):
         noms = ", ".join(d['equipe__tournoi__nom'] for d in doublons)
         raise ConflitAthlete(f"Ces fiches ont joué le même tournoi ({noms}) : ce sont deux personnes différentes.")
 
-    cible = min(athletes, key=lambda a: (a.email is None, a.created_at, a.pk))
+    # La fiche reliée à un compte est gardée en priorité (sinon le compte perdrait son profil)
+    cible = min(athletes, key=lambda a: (a.utilisateur_id is None, a.email is None, a.created_at, a.pk))
     autres = [a for a in athletes if a.pk != cible.pk]
     Joueur.objects.filter(athlete__in=autres).update(athlete=cible)
     Athlete.objects.filter(pk__in=[a.pk for a in autres]).delete()
+    if emails and not cible.email:  # l'email d'une fiche absorbée n'est pas perdu
+        cible.email = emails.pop()
+        cible.save(update_fields=['email', 'updated_at'])
     return cible
 
 

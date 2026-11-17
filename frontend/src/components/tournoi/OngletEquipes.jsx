@@ -1,9 +1,72 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { getImageUrl } from "../../api";
+import { delierJoueur, getImageUrl, lienInvitation, messageErreur, updateTournoi } from "../../api";
 import { LogoEquipe } from "./LogoEquipe";
 
+// Lien d'invitation d'une équipe, à envoyer au capitaine (WhatsApp…) : chaque joueur s'y inscrit avec son compte
+function LienInvitation({ equipe }) {
+  const [code, setCode] = useState(null);
+  const [message, setMessage] = useState("");
+
+  const obtenir = async (regenerer = false) => {
+    if (regenerer && !window.confirm("Créer un nouveau lien ? L'ancien ne marchera plus.")) return;
+    try {
+      const { data } = await lienInvitation(equipe.id, regenerer);
+      setCode(data.code);
+      setMessage(regenerer ? "Nouveau lien créé." : "");
+    } catch (error) {
+      setMessage(messageErreur(error, "Impossible d'obtenir le lien."));
+    }
+  };
+
+  const url = code ? `${window.location.origin}/invitation/${code}` : "";
+  const copier = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setMessage("Lien copié : envoie-le au capitaine.");
+    } catch {
+      setMessage("Copie impossible : sélectionne le lien à la main.");
+    }
+  };
+
+  if (!code) {
+    return (
+      <button
+        onClick={() => obtenir()}
+        className="w-full mb-4 py-2 rounded-xl bg-primary-orange/10 text-primary-orange text-xs font-black uppercase tracking-widest hover:bg-primary-orange hover:text-white transition-all"
+      >
+        🔗 Lien d'invitation des joueurs
+      </button>
+    );
+  }
+  return (
+    <div className="mb-4 p-3 rounded-xl bg-white/5 border border-primary-orange/30 space-y-2">
+      <input
+        readOnly
+        value={url}
+        onFocus={(e) => e.target.select()}
+        className="w-full bg-black/30 rounded-lg px-2 py-1 text-[11px] text-gray-300 font-mono"
+        aria-label="Lien d'invitation"
+      />
+      <div className="flex gap-2">
+        <button onClick={copier} className="flex-1 py-1.5 rounded-lg bg-primary-orange text-white text-[10px] font-black uppercase">
+          Copier
+        </button>
+        <button
+          onClick={() => obtenir(true)}
+          className="flex-1 py-1.5 rounded-lg bg-white/10 text-gray-300 text-[10px] font-black uppercase hover:bg-white/20"
+        >
+          Nouveau lien
+        </button>
+      </div>
+      {message && <p className="text-[11px] text-gray-400">{message}</p>}
+    </div>
+  );
+}
+
 export function OngletEquipes({
+  tournoi,
+  onRecharger,
   equipes,
   joueursParEquipe,
   isOwner,
@@ -17,9 +80,45 @@ export function OngletEquipes({
   const [equipesOuvertes, setEquipesOuvertes] = useState({});
   const basculer = (equipeId) => setEquipesOuvertes((prev) => ({ ...prev, [equipeId]: !prev[equipeId] }));
 
+  const basculerInscriptions = async () => {
+    try {
+      await updateTournoi(tournoi.slug, { inscriptions_ouvertes: !tournoi.inscriptions_ouvertes });
+      onRecharger();
+    } catch (error) {
+      window.alert(messageErreur(error));
+    }
+  };
+
+  const delier = async (joueur) => {
+    const question = `Délier le compte de ${joueur.prenom} ${joueur.nom} ? Le joueur reste dans l'équipe, mais ce compte n'y sera plus relié.`;
+    if (!window.confirm(question)) return;
+    try {
+      await delierJoueur(joueur.id);
+      onRecharger();
+    } catch (error) {
+      window.alert(messageErreur(error));
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <h2 className="text-2xl sm:text-4xl font-black italic mb-6 card-title-accent uppercase">🛡️ Rosters & Équipes</h2>
+      {isOwner && tournoi && (
+        <div className="glass-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p className="text-sm text-gray-300">
+            <span className="font-black text-white">Inscriptions par lien {tournoi.inscriptions_ouvertes ? "ouvertes" : "fermées"}.</span>{" "}
+            {tournoi.inscriptions_ouvertes
+              ? "Les joueurs qui ont le lien de leur équipe peuvent s'y ajouter."
+              : "Les joueurs déjà ajoutés peuvent encore relier leur compte, personne ne peut s'ajouter."}
+          </p>
+          <button
+            onClick={basculerInscriptions}
+            className="shrink-0 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-black uppercase tracking-widest"
+          >
+            {tournoi.inscriptions_ouvertes ? "Fermer les inscriptions" : "Rouvrir les inscriptions"}
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {equipes.map((equipe) => {
           const joueurs = joueursParEquipe[equipe.id] || [];
@@ -64,6 +163,8 @@ export function OngletEquipes({
                   )}
                 </div>
 
+                {isOwner && <LienInvitation equipe={equipe} />}
+
                 <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                   {joueurs.length > 0 ? (
                     joueurs.map((joueur) => (
@@ -88,11 +189,25 @@ export function OngletEquipes({
                               >
                                 {joueur.prenom} {joueur.nom}
                               </Link>
+                              {joueur.compte_lie && (
+                                <span className="text-green-400 text-xs font-black" title="Compte relié">
+                                  ✓
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
                         {isOwner && (
                           <div className="flex gap-3 md:gap-2 md:opacity-0 md:group-hover/player:opacity-100 transition-all shrink-0">
+                            {joueur.compte_lie && (
+                              <button
+                                onClick={() => delier(joueur)}
+                                className="text-gray-400 hover:text-white transition-all text-xs"
+                                title="Délier le compte"
+                              >
+                                ⛓
+                              </button>
+                            )}
                             <button
                               onClick={() => onEditerJoueur(joueur, equipe.id)}
                               className="text-blue-400 hover:text-blue-500 transition-all"

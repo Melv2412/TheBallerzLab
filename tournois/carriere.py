@@ -97,6 +97,7 @@ def profil_athlete(athlete, photo_url=None):
         'prenom': athlete.prenom,
         'nom': athlete.nom,
         'photo': photo_url,
+        'compte_verifie': athlete.utilisateur_id is not None,  # le joueur a relié son compte
         'carriere': carriere,
         'tournois': tournois,
     }

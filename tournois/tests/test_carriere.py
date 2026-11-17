@@ -50,6 +50,7 @@ class ProfilAthleteTests(BaseAPITestCase):
         self.assertEqual(carriere['moyennes']['points'], 15.0)
         self.assertEqual((carriere['tournois'], carriere['mvp'], carriere['titres']), (2, 1, 1))
         self.assertNotIn('email', reponse.data)
+        self.assertFalse(reponse.data['compte_verifie'])
 
         recent, ancien = reponse.data['tournois']  # le plus récent d'abord
         self.assertEqual((recent['tournoi_nom'], recent['numero'], recent['matchs']), ('Été', 9, 1))

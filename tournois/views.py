@@ -15,7 +15,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
-from . import journal
+from . import invitations, journal
 from . import reglement as regles
 from .athletes import chercher_par_email
 from .carriere import profil_athlete
@@ -165,6 +165,7 @@ class UserViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             'organisateur_valide': est_organisateur_valide(user),
             'tournois_actifs': nb_tournois_actifs(user),
             'limite_tournois_actifs': None if user.is_staff else settings.LIMITE_TOURNOIS_ACTIFS,
+            'athlete': getattr(invitations.fiche_du_compte(user), 'pk', None),  # lien « Mon profil »
         })
 
 
@@ -268,6 +269,13 @@ class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
                 queryset = queryset.filter(tournoi__slug=tournoi_param)
         return queryset
 
+    @action(detail=True, methods=['post'])
+    def invitation(self, request, pk=None):
+        """Code du lien d'invitation de l'équipe (organisateur) ; `regenerer` invalide l'ancien lien."""
+        equipe = self.get_object()
+        code = invitations.code_invitation(equipe, regenerer=bool(request.data.get('regenerer')))
+        return Response({'code': code})
+
 
 class RechercheAthleteThrottle(UserRateThrottle):
     """Limite par compte la recherche de fiches par email (pas de test d'emails en masse)."""
@@ -281,7 +289,7 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        queryset = Joueur.objects.select_related('equipe', 'equipe__tournoi').all()
+        queryset = Joueur.objects.select_related('equipe', 'equipe__tournoi', 'athlete').all()
         equipe_id = self.request.query_params.get('equipe', None)
         if equipe_id:
             queryset = queryset.filter(equipe_id=equipe_id)
@@ -313,6 +321,99 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             return Response({'detail': "Aucune fiche avec cet email."}, status=status.HTTP_404_NOT_FOUND)
         tournois = fiche.joueurs.values('equipe__tournoi_id').distinct().count()
         return Response({'athlete': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom, 'nb_tournois': tournois})
+
+
+    @action(detail=True, methods=['post'])
+    def delier(self, request, pk=None):
+        """L'organisateur détache le compte relié à ce joueur (ce n'était pas la bonne personne)."""
+        joueur = self.get_object()
+        try:
+            invitations.delier(joueur)
+        except invitations.InvitationRefusee as erreur:
+            raise ValidationError({'detail': str(erreur)}) from erreur
+        return Response(self.get_serializer(Joueur.objects.select_related('athlete').get(pk=joueur.pk)).data)
+
+
+class InvitationThrottle(UserRateThrottle):
+    """Limite par compte les tentatives pour rejoindre une équipe."""
+    scope = 'invitation'
+
+
+class InvitationViewSet(viewsets.GenericViewSet):
+    """Page du lien d'invitation d'une équipe (publique) et inscription du joueur connecté."""
+    queryset = Equipe.objects.select_related('tournoi')
+    lookup_field = 'code_invitation'
+    lookup_url_kwarg = 'code'
+    lookup_value_regex = '[A-Za-z0-9_-]+'
+    permission_classes = [permissions.AllowAny]
+
+    def retrieve(self, request, code=None):
+        equipe = self.get_object()
+        tournoi = equipe.tournoi
+        joueurs = equipe.joueurs.select_related('athlete').order_by('numero_maillot')
+        user = request.user
+        moi = None
+        if user.is_authenticated:
+            fiche = invitations.fiche_du_compte(user)
+            inscrit = invitations.inscription_dans_le_tournoi(user, tournoi.pk)
+            moi = {
+                'fiche': {'id': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom} if fiche else None,
+                'inscription': {
+                    'joueur': inscrit.pk, 'equipe': inscrit.equipe_id, 'equipe_nom': inscrit.equipe.nom,
+                    'numero_maillot': inscrit.numero_maillot,
+                } if inscrit else None,
+            }
+        return Response({
+            'equipe': {
+                'id': equipe.pk, 'nom': equipe.nom,
+                'logo': request.build_absolute_uri(equipe.logo.url) if equipe.logo else None,
+            },
+            'tournoi': {
+                'nom': tournoi.nom, 'slug': tournoi.slug, 'date_debut': tournoi.date_debut, 'date_fin': tournoi.date_fin,
+            },
+            'inscriptions_ouvertes': tournoi.inscriptions_ouvertes,
+            'joueurs': [
+                {
+                    'id': j.pk, 'prenom': j.prenom, 'nom': j.nom, 'numero_maillot': j.numero_maillot,
+                    'compte_lie': j.athlete.utilisateur_id is not None,
+                }
+                for j in joueurs
+            ],
+            'moi': moi,
+        })
+
+    @action(
+        detail=True, methods=['post'],
+        permission_classes=[permissions.IsAuthenticated], throttle_classes=[InvitationThrottle],
+    )
+    def rejoindre(self, request, code=None):
+        """`{joueur}` : « c'est moi » ; sinon `{numero_maillot, prenom, nom}` : nouveau joueur dans l'équipe."""
+        equipe = self.get_object()
+        donnees = request.data
+        try:
+            if donnees.get('joueur') not in (None, ''):
+                joueur = invitations.reclamer(request.user, equipe, self._entier(donnees, 'joueur'))
+                code_retour = status.HTTP_200_OK
+            else:
+                numero = self._entier(donnees, 'numero_maillot')
+                if not 0 <= numero <= 99:
+                    raise ValidationError({'numero_maillot': "Le numéro doit être entre 0 et 99."})
+                joueur = invitations.s_inscrire(
+                    request.user, equipe, numero,
+                    prenom=str(donnees.get('prenom') or ''), nom=str(donnees.get('nom') or ''),
+                )
+                code_retour = status.HTTP_201_CREATED
+        except invitations.InvitationRefusee as erreur:
+            raise ValidationError({'detail': str(erreur)}) from erreur
+        joueur = Joueur.objects.select_related('equipe__tournoi', 'athlete').get(pk=joueur.pk)
+        return Response(JoueurSerializer(joueur, context={'request': request}).data, status=code_retour)
+
+    @staticmethod
+    def _entier(donnees, champ):
+        try:
+            return int(donnees.get(champ))
+        except (TypeError, ValueError) as erreur:
+            raise ValidationError({champ: "Nombre attendu."}) from erreur
 
 
 class AthleteViewSet(viewsets.GenericViewSet):

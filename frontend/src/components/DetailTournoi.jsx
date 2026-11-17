@@ -194,6 +194,8 @@ function DetailTournoi() {
 
         {activeTab === "rosters" && (
           <OngletEquipes
+            tournoi={tournoi}
+            onRecharger={recharger}
             equipes={equipes}
             joueursParEquipe={joueursParEquipe}
             isOwner={isOwner}

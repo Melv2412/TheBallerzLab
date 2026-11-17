@@ -64,8 +64,10 @@ function PopupConnexion({ onFermer }) {
           <div className="flex gap-3 items-start bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-2xl">👀</span>
             <p className="text-sm text-gray-300">
-              <span className="font-black text-white">Spectateur, joueur, supporter ?</span> Pas besoin de compte :
+              <span className="font-black text-white">Spectateur, supporter ?</span> Pas besoin de compte :
               tous les tournois, scores, stats et matchs en direct sont visibles librement.
+              <span className="font-black text-white"> Joueur ?</span> Ton compte sert à rejoindre ton équipe
+              avec le lien envoyé par ton capitaine, et à regrouper tes stats sur ton profil.
             </p>
           </div>
           <div className="flex gap-3 items-start bg-primary-orange/10 border border-primary-orange/30 rounded-2xl p-4">

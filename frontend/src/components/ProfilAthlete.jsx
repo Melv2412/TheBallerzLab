@@ -60,6 +60,14 @@ export default function ProfilAthlete() {
           <h1 className="text-3xl sm:text-4xl font-black uppercase italic tracking-tighter">
             {profil.prenom} <span className="text-primary-orange">{profil.nom}</span>
           </h1>
+          {profil.compte_verifie && (
+            <span
+              className="inline-block mt-1 text-[10px] font-black uppercase tracking-widest text-green-400 bg-green-500/10 border border-green-500/30 px-2 py-1 rounded-full"
+              title="Le joueur a relié son compte à cette fiche"
+            >
+              ✓ Compte vérifié
+            </span>
+          )}
           <p className="text-sm text-gray-400 mt-1">
             {carriere.tournois} tournoi{carriere.tournois > 1 ? "s" : ""} · {carriere.matchs} match
             {carriere.matchs > 1 ? "s" : ""} terminé{carriere.matchs > 1 ? "s" : ""}

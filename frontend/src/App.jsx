@@ -12,6 +12,7 @@ const FeuilleMatch = lazy(() => import('./components/FeuilleMatch'))
 const EcranSalle = lazy(() => import('./components/EcranSalle'))
 const SaisieFeuille = lazy(() => import('./components/SaisieFeuille'))
 const ProfilAthlete = lazy(() => import('./components/ProfilAthlete'))
+const Invitation = lazy(() => import('./components/Invitation'))
 const Login = lazy(() => import('./components/Login'))
 const Register = lazy(() => import('./components/Register'))
 
@@ -44,6 +45,7 @@ function Pages() {
             <Route path="/match/:id/ecran" element={<EcranSalle />} />
             <Route path="/match/:id/saisie" element={<SaisieFeuille />} />
             <Route path="/athlete/:id" element={<ProfilAthlete />} />
+            <Route path="/invitation/:code" element={<Invitation />} />
           </Routes>
         </Suspense>
       </div>
