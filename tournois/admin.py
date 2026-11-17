@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group, User
 from django.db.models import Count
 
 from .athletes import ConflitAthlete, fusionner
-from .models import ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .models import ActionMatch, Athlete, DemandeEquipe, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import GROUPE_ORGANISATEURS
 
 admin.site.unregister(User)
@@ -70,6 +70,14 @@ class JoueurInline(admin.TabularInline):
 
     def has_add_permission(self, request, obj=None):
         return False
+
+
+@admin.register(DemandeEquipe)
+class DemandeEquipeAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'tournoi', 'capitaine', 'statut', 'equipe', 'created_at']
+    list_filter = ['statut']
+    search_fields = ['nom', 'tournoi__nom', 'capitaine__username']
+    raw_id_fields = ['tournoi', 'capitaine', 'equipe']
 
 
 @admin.register(Athlete)

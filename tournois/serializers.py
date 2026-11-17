@@ -58,6 +58,8 @@ class TournoiSerializer(serializers.ModelSerializer):
     reglement_type = serializers.SerializerMethodField()
 
     organisateur_nom = serializers.CharField(source='organisateur.username', read_only=True)
+    # Lien d'inscription des équipes : secret, montré à l'organisateur seulement
+    code_inscription = serializers.SerializerMethodField()
 
     class Meta:
         model = Tournoi
@@ -65,11 +67,18 @@ class TournoiSerializer(serializers.ModelSerializer):
             'id', 'nom', 'slug', 'organisateur', 'organisateur_nom', 'date_debut', 'date_fin',
             'equipes_count', 'matchs_count',
             'has_8emes', 'has_quarts', 'has_demis', 'has_finale', 'reglement', 'reglement_type',
-            'inscriptions_ouvertes',
+            'inscriptions_ouvertes', 'code_inscription',
             'victoires_requises_8eme', 'victoires_requises_quart', 'victoires_requises_demi', 'victoires_requises_finale',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['slug', 'organisateur']
+
+    def get_code_inscription(self, obj):
+        requete = self.context.get('request')
+        user = getattr(requete, 'user', None)
+        if user is not None and user.is_authenticated and obj.organisateur_id == user.id:
+            return obj.code_inscription
+        return None
 
     def get_reglement_type(self, obj):
         return regles.nom_preset(obj.reglement)

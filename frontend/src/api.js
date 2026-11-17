@@ -206,3 +206,12 @@ export const getInvitation = (code) => api.get(`/invitations/${code}/`)
 // { joueur } : « c'est moi » ; sinon { numero_maillot, prenom, nom } : nouveau joueur
 export const rejoindreEquipe = (code, data) => api.post(`/invitations/${code}/rejoindre/`, data)
 export const delierJoueur = (id) => api.post(`/joueurs/${id}/delier/`)
+
+// Lien d'inscription du tournoi : les capitaines proposent leur équipe, l'organisateur valide
+// options : { regenerer } remplace le lien, { desactiver } le supprime
+export const lienInscription = (slug, options = {}) => api.post(`/tournois/${slug}/lien_inscription/`, options)
+export const getInscription = (code) => api.get(`/inscriptions/${code}/`)
+export const demanderEquipe = (code, nom) => api.post(`/inscriptions/${code}/demander/`, { nom })
+export const getDemandesEquipes = (slug) => api.get('/demandes_equipes/', { params: { tournoi: slug } })
+export const accepterDemande = (id) => api.post(`/demandes_equipes/${id}/accepter/`)
+export const refuserDemande = (id) => api.post(`/demandes_equipes/${id}/refuser/`)

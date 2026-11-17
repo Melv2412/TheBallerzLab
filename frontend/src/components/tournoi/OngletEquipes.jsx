@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { delierJoueur, getImageUrl, lienInvitation, messageErreur, updateTournoi } from "../../api";
+import { InscriptionsEquipes } from "./InscriptionsEquipes";
 import { LogoEquipe } from "./LogoEquipe";
 
 // Lien d'invitation d'une équipe, à envoyer au capitaine (WhatsApp…) : chaque joueur s'y inscrit avec son compte
@@ -108,8 +109,8 @@ export function OngletEquipes({
           <p className="text-sm text-gray-300">
             <span className="font-black text-white">Inscriptions par lien {tournoi.inscriptions_ouvertes ? "ouvertes" : "fermées"}.</span>{" "}
             {tournoi.inscriptions_ouvertes
-              ? "Les joueurs qui ont le lien de leur équipe peuvent s'y ajouter."
-              : "Les joueurs déjà ajoutés peuvent encore relier leur compte, personne ne peut s'ajouter."}
+              ? "Les capitaines peuvent proposer leur équipe, et les joueurs qui ont le lien de leur équipe peuvent s'y ajouter."
+              : "Les joueurs déjà ajoutés peuvent encore relier leur compte ; personne ne peut ajouter d'équipe ni s'ajouter."}
           </p>
           <button
             onClick={basculerInscriptions}
@@ -119,6 +120,7 @@ export function OngletEquipes({
           </button>
         </div>
       )}
+      {isOwner && tournoi && <InscriptionsEquipes tournoi={tournoi} onRecharger={onRecharger} />}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {equipes.map((equipe) => {
           const joueurs = joueursParEquipe[equipe.id] || [];

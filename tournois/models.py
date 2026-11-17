@@ -28,6 +28,8 @@ class Tournoi(models.Model):
     has_finale = models.BooleanField(default=True)
     # Les joueurs peuvent rejoindre leur équipe par le lien d'invitation (fermable par l'organisateur)
     inscriptions_ouvertes = models.BooleanField(default=True)
+    # Lien /inscription/<code> : les capitaines proposent leur équipe (aucun lien tant que le code est vide)
+    code_inscription = models.CharField(max_length=32, unique=True, null=True, blank=True)
     # Règlement (voir tournois/reglement.py) : copié sur chaque match à sa création
     reglement = models.JSONField(default=reglement_par_defaut)
 
@@ -88,6 +90,33 @@ class Equipe(models.Model):
 
     def __str__(self):
         return f"{self.nom} ({self.tournoi.nom})"
+
+
+class DemandeEquipe(models.Model):
+    """Équipe proposée par un capitaine avec le lien d'inscription du tournoi, en attente de l'organisateur."""
+    EN_ATTENTE, ACCEPTEE, REFUSEE = 'en_attente', 'acceptee', 'refusee'
+    STATUTS = [(EN_ATTENTE, 'En attente'), (ACCEPTEE, 'Acceptée'), (REFUSEE, 'Refusée')]
+
+    tournoi = models.ForeignKey(Tournoi, on_delete=models.CASCADE, related_name='demandes_equipes')
+    capitaine = models.ForeignKey(User, on_delete=models.CASCADE, related_name='demandes_equipes')
+    nom = models.CharField(max_length=200)
+    statut = models.CharField(max_length=12, choices=STATUTS, default=EN_ATTENTE)
+    # Équipe créée à l'acceptation (vide si l'organisateur la supprime ensuite)
+    equipe = models.OneToOneField(
+        Equipe, on_delete=models.SET_NULL, null=True, blank=True, related_name='demande',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Demande d'équipe"
+        verbose_name_plural = "Demandes d'équipes"
+        ordering = ['created_at']
+        # Une demande par capitaine et par tournoi (modifiée si elle est refusée puis renvoyée)
+        unique_together = [['tournoi', 'capitaine']]
+
+    def __str__(self):
+        return f"{self.nom} ({self.tournoi.nom}, {self.get_statut_display()})"
 
 
 class Athlete(models.Model):

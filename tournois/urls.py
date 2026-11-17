@@ -3,7 +3,9 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     AthleteViewSet,
+    DemandeEquipeViewSet,
     EquipeViewSet,
+    InscriptionViewSet,
     InvitationViewSet,
     JoueurViewSet,
     MatchViewSet,
@@ -20,6 +22,8 @@ router.register(r'equipes', EquipeViewSet, basename='equipe')
 router.register(r'joueurs', JoueurViewSet, basename='joueur')
 router.register(r'athletes', AthleteViewSet, basename='athlete')
 router.register(r'invitations', InvitationViewSet, basename='invitation')
+router.register(r'inscriptions', InscriptionViewSet, basename='inscription')
+router.register(r'demandes_equipes', DemandeEquipeViewSet, basename='demande-equipe')
 router.register(r'matchs', MatchViewSet, basename='match')
 router.register(r'statistiques', StatistiqueJoueurViewSet, basename='statistique')
 router.register(r'users', UserViewSet, basename='user')

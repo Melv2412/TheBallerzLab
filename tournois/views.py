@@ -15,11 +15,11 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
-from . import invitations, journal
+from . import inscription_equipes, invitations, journal
 from . import reglement as regles
 from .athletes import chercher_par_email
 from .carriere import profil_athlete
-from .models import Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .models import Athlete, DemandeEquipe, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
 from .phases_finales import generer_phases_finales, resume_phases_finales, verrouiller_tournoi
 from .serializers import (
@@ -229,6 +229,15 @@ class TournoiViewSet(viewsets.ModelViewSet):
         return Response(resume_phases_finales(tournoi), status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
+    def lien_inscription(self, request, slug=None):
+        """Lien d'inscription des équipes (organisateur) : `regenerer` remplace le lien, `desactiver` le supprime."""
+        tournoi = self.get_object()  # vérifie que l'utilisateur est l'organisateur
+        code = inscription_equipes.code_inscription(
+            tournoi, regenerer=bool(request.data.get('regenerer')), desactiver=bool(request.data.get('desactiver')),
+        )
+        return Response({'code': code})
+
+    @action(detail=True, methods=['post'])
     def reset_playoffs(self, request, slug=None):
         """Réinitialise les playoffs pour ce tournoi (soit tout, soit à partir d'une phase)."""
         tournoi = self.get_object()  # vérifie que l'utilisateur est l'organisateur
@@ -414,6 +423,95 @@ class InvitationViewSet(viewsets.GenericViewSet):
             return int(donnees.get(champ))
         except (TypeError, ValueError) as erreur:
             raise ValidationError({champ: "Nombre attendu."}) from erreur
+
+
+def _demande_json(demande, avec_lien=False):
+    equipe = demande.equipe
+    statut = demande.statut
+    if statut == DemandeEquipe.ACCEPTEE and equipe is None:
+        statut = DemandeEquipe.REFUSEE  # équipe supprimée après acceptation : le capitaine peut redemander
+    donnees = {
+        'id': demande.pk, 'nom': demande.nom, 'statut': statut,
+        'equipe': equipe.pk if equipe else None, 'created_at': demande.created_at,
+    }
+    if avec_lien and equipe is not None:
+        donnees['code_invitation'] = invitations.code_invitation(equipe)
+    return donnees
+
+
+class InscriptionViewSet(viewsets.GenericViewSet):
+    """Page du lien d'inscription d'un tournoi (publique) : le capitaine connecté propose son équipe."""
+    queryset = Tournoi.objects.select_related('organisateur')
+    lookup_field = 'code_inscription'
+    lookup_url_kwarg = 'code'
+    lookup_value_regex = '[A-Za-z0-9_-]+'
+    permission_classes = [permissions.AllowAny]
+
+    def retrieve(self, request, code=None):
+        tournoi = self.get_object()
+        demande = inscription_equipes.demande_du_compte(request.user, tournoi)
+        return Response({
+            'tournoi': {
+                'nom': tournoi.nom, 'slug': tournoi.slug, 'date_debut': tournoi.date_debut, 'date_fin': tournoi.date_fin,
+                'organisateur_nom': getattr(tournoi.organisateur, 'username', None),
+            },
+            'inscriptions_ouvertes': tournoi.inscriptions_ouvertes,
+            'nb_equipes': tournoi.equipes.count(),
+            'limite_equipes': settings.LIMITE_EQUIPES_PAR_TOURNOI,
+            'ma_demande': _demande_json(demande, avec_lien=True) if demande else None,
+        })
+
+    @action(
+        detail=True, methods=['post'],
+        permission_classes=[permissions.IsAuthenticated], throttle_classes=[InvitationThrottle],
+    )
+    def demander(self, request, code=None):
+        """`{nom}` : propose l'équipe à l'organisateur (ou renomme la demande en attente)."""
+        tournoi = self.get_object()
+        try:
+            demande = inscription_equipes.demander(request.user, tournoi, request.data.get('nom'))
+        except invitations.InvitationRefusee as erreur:
+            raise ValidationError({'detail': str(erreur)}) from erreur
+        return Response(_demande_json(demande), status=status.HTTP_201_CREATED)
+
+
+class DemandeEquipeViewSet(viewsets.GenericViewSet):
+    """Demandes d'équipes des tournois de l'organisateur connecté (`?tournoi=<slug ou id>`, `?statut=`)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = DemandeEquipe.objects.select_related('tournoi', 'capitaine', 'equipe').filter(
+            tournoi__organisateur=self.request.user,
+        )
+        tournoi_param = self.request.query_params.get('tournoi')
+        if tournoi_param:
+            filtre = {'tournoi_id': tournoi_param} if tournoi_param.isdigit() else {'tournoi__slug': tournoi_param}
+            queryset = queryset.filter(**filtre)
+        return queryset
+
+    @staticmethod
+    def _json(demande):
+        return {**_demande_json(demande), 'capitaine': demande.capitaine.username}
+
+    def list(self, request):
+        statut = request.query_params.get('statut', DemandeEquipe.EN_ATTENTE)
+        return Response([self._json(d) for d in self.get_queryset().filter(statut=statut)])
+
+    def _traiter(self, fonction):
+        try:
+            demande = fonction(self.get_object())
+        except invitations.InvitationRefusee as erreur:
+            raise ValidationError({'detail': str(erreur)}) from erreur
+        return Response(self._json(DemandeEquipe.objects.select_related('capitaine', 'equipe').get(pk=demande.pk)))
+
+    @action(detail=True, methods=['post'])
+    def accepter(self, request, pk=None):
+        """Crée l'équipe ; le capitaine voit alors le lien d'invitation de ses joueurs."""
+        return self._traiter(inscription_equipes.accepter)
+
+    @action(detail=True, methods=['post'])
+    def refuser(self, request, pk=None):
+        return self._traiter(inscription_equipes.refuser)
 
 
 class AthleteViewSet(viewsets.GenericViewSet):

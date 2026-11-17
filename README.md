@@ -126,6 +126,11 @@ Les listes sont paginées : `{count, next, previous, results}`, 50 éléments pa
 - `POST /api/equipes/{id}/invitation/` - Code du lien d'invitation de l'équipe (organisateur) ; `{"regenerer": true}` remplace l'ancien lien
 - `GET /api/invitations/{code}/` - Page publique de l'invitation : équipe, tournoi, effectif et, si connecté, l'inscription du compte
 - `POST /api/invitations/{code}/rejoindre/` - Joueur connecté : `{"joueur": id}` (« c'est moi ») ou `{"numero_maillot", "prenom", "nom"}` (si `inscriptions_ouvertes` du tournoi) ; sa fiche athlète est reliée à son compte
+- `POST /api/tournois/{slug}/lien_inscription/` - Organisateur : code du lien d'inscription des équipes (`{"regenerer": true}` le remplace, `{"desactiver": true}` le supprime)
+- `GET /api/inscriptions/{code}/` - Page publique du lien d'inscription : tournoi, nombre d'équipes et, si connecté, la demande du capitaine (avec le lien d'invitation de son équipe une fois acceptée)
+- `POST /api/inscriptions/{code}/demander/` - Capitaine connecté : `{"nom"}` propose son équipe (si `inscriptions_ouvertes`)
+- `GET /api/demandes_equipes/?tournoi={slug}` - Organisateur : demandes en attente (`?statut=` pour les autres)
+- `POST /api/demandes_equipes/{id}/accepter/` / `refuser/` - Organisateur : accepter crée l'équipe
 - `POST /api/users/` - Créer un compte (email obligatoire et unique) ; `GET /api/users/me/` renvoie aussi `athlete` (profil du compte)
 - `GET /api/matchs/?tournoi={id}` - Liste des matchs d'un tournoi
 - `GET /api/matchs/{id}/` - Détail d'un match avec statistiques
