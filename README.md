@@ -195,6 +195,8 @@ La liste complète est dans [.env.example](.env.example). En résumé :
 
 Côté frontend, `VITE_API_URL` et `VITE_MEDIA_URL` permettent de pointer vers un autre backend (par défaut, le proxy Vite redirige `/api` et `/media` vers `localhost:8000`).
 
+`VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (clé publique « anon » du projet Supabase) activent le **direct en temps réel** : la base signale chaque modification d'un match sur le canal privé `match:<id>` (migration 0021) et les pages le rechargent aussitôt. Sans elles, les pages se rafraîchissent toutes les 3 s pendant un match. Le détail d'un match répond `304` (ETag) quand rien n'a changé.
+
 ### Déploiement (Vercel + Supabase)
 
 Deux projets Vercel, branchés sur le même dépôt GitHub :
@@ -202,7 +204,7 @@ Deux projets Vercel, branchés sur le même dépôt GitHub :
 | Projet Vercel | Root Directory | Variables |
 |---|---|---|
 | Backend (ex. `thelab-api`) | `./` (racine) | celles de [.env.example](.env.example) |
-| Frontend (ex. `thelab`) | `frontend` | `VITE_API_URL` (voir [frontend/.env.example](frontend/.env.example)) |
+| Frontend (ex. `thelab`) | `frontend` | `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (voir [frontend/.env.example](frontend/.env.example)) |
 
 - **Backend** : Vercel détecte Django via `manage.py`, installe `requirements.txt`, lance `collectstatic` et sert l'app comme une fonction serverless. [vercel.json](vercel.json) exclut du bundle le frontend, la vidéo et les tests.
 - **Frontend** : [frontend/vercel.json](frontend/vercel.json) renvoie toutes les routes vers `index.html` (sinon 404 au rechargement d'une page).

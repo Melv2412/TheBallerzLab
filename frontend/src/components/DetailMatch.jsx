@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, getImageUrl, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 import { usePolling } from '../usePolling'
+import { useTempsReelMatch } from '../tempsReel'
 import { peutModifier } from '../permissions'
 
 function DetailMatch() {
@@ -14,8 +15,10 @@ function DetailMatch() {
 
   const isOwner = Boolean(match) && peutModifier(user, match.organisateur_id);
 
-  // Toutes les 3 s pendant le match, toutes les 30 s sinon (terminé ou à venir)
-  usePolling(() => loadMatch(), () => (match?.statut === 'en_cours' ? 3000 : 30000), [id])
+  // En temps réel : rechargé à chaque signal de la base, et toutes les 30 s par sécurité.
+  // Sans temps réel : toutes les 3 s pendant le match, toutes les 30 s sinon (terminé ou à venir)
+  const tempsReel = useTempsReelMatch(id, () => loadMatch())
+  usePolling(() => loadMatch(), () => (!tempsReel && match?.statut === 'en_cours' ? 3000 : 30000), [id])
 
   const loadMatch = async () => {
     try {

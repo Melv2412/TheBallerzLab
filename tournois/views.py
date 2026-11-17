@@ -9,6 +9,7 @@ from django.db.models import Count, F
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.cache import patch_cache_control
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
@@ -556,6 +557,13 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(statut=statut)
 
         return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        # Le navigateur revalide à chaque fois : si rien n'a changé, le serveur répond 304 sans contenu
+        # (ETag calculé par ConditionalGetMiddleware)
+        response = super().retrieve(request, *args, **kwargs)
+        patch_cache_control(response, private=True, no_cache=True)
+        return response
 
     def _refuser_si_termine(self, match):
         if match.statut == 'termine':

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getMatch, updateMatch } from "../../api";
 import { usePolling } from "../../usePolling";
+import { useTempsReelMatch } from "../../tempsReel";
 import { avecHeureReception, calculerChrono } from "./chrono";
 
 // Charge le match, le rafraîchit régulièrement et fait tourner l'affichage du chrono.
@@ -38,9 +39,12 @@ export function useMatchLive(id) {
     setMatch(avecHeureReception(response.data));
   };
 
+  // En temps réel, la base signale chaque changement : le rafraîchissement n'est plus qu'un filet de sécurité
+  const tempsReel = useTempsReelMatch(id, () => loadMatch());
   usePolling(
     () => loadMatch(),
     () => {
+      if (tempsReel) return 30000;
       const m = matchRef.current;
       const enDirect = m?.statut === "en_cours" || m?.chrono_en_cours;
       return enDirect ? 3000 : 10000; // match à venir ou terminé : pas besoin de rafraîchir souvent
