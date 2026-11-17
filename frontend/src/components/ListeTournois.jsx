@@ -226,7 +226,6 @@ function ListeTournois() {
 
       {tournois.length === 0 ? (
         <div className="glass-card p-20 text-center">
-          <div className="text-8xl mb-6 opacity-20">⛹️</div>
           <h2 className="text-3xl font-bold mb-4">Aucun Tournoi Trouvé</h2>
           <p className="text-gray-400 mb-8 max-w-md mx-auto">Préparez votre sifflet et organisez votre première compétition dès aujourd'hui.</p>
           {user && (
@@ -245,10 +244,6 @@ function ListeTournois() {
               key={tournoi.id}
               className="glass-card group relative overflow-hidden flex flex-col hover-lift"
             >
-              {/* Decorative Background Icon */}
-              <div className="absolute -right-4 -top-4 text-9xl opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none rotate-12">
-                🏀
-              </div>
               
               <div className="p-8 flex-1">
                 <div className="flex justify-between items-start mb-6">
@@ -272,7 +267,6 @@ function ListeTournois() {
                 </h2>
                 
                 <div className="flex items-center gap-2 text-gray-400 font-bold text-xs uppercase mb-6">
-                  <span>📅</span>
                   <span>{new Date(tournoi.date_debut).toLocaleDateString('fr-FR')}</span>
                   <span>-</span>
                   <span>{new Date(tournoi.date_fin).toLocaleDateString('fr-FR')}</span>

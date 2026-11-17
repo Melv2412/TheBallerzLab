@@ -42,7 +42,7 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
     <div className="animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-white/5 pb-4">
         <h2 className="text-2xl sm:text-4xl font-black italic card-title-accent uppercase flex items-center gap-4">
-          🏆 Brackets de la Phase Finale
+          Brackets de la Phase Finale
         </h2>
         {isOwner && aDesMatchsEliminatoires && (
           <button

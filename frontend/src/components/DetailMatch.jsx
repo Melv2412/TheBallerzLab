@@ -102,15 +102,12 @@ function DetailMatch() {
         </Link>
 
         {match && !isOwner && (
-          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 animate-pulse">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-              <span className="text-2xl">👁️</span>
-              <div>
-                <p className="text-blue-400 font-black uppercase text-[10px] tracking-widest">Mode Consultant Actif</p>
-                <p className="text-gray-400 text-xs">Lecture seule • Tournoi de <span className="text-white font-bold">{match.organisateur_nom || 'l\'organisateur'}</span>.</p>
-              </div>
-            </div>
-          </div>
+          <p className="mb-6 no-print flex items-center gap-2 text-[11px] text-gray-500 border-l-2 border-blue-500/40 pl-3 py-0.5">
+            <span className="truncate">
+              Lecture seule · tournoi de{" "}
+              <span className="text-gray-300 font-bold">{match.organisateur_nom || "l'organisateur"}</span>
+            </span>
+          </p>
         )}
         
         <div className="glass-card overflow-hidden">

@@ -103,7 +103,7 @@ export function OngletEquipes({
 
   return (
     <div className="animate-fade-in">
-      <h2 className="text-2xl sm:text-4xl font-black italic mb-6 card-title-accent uppercase">🛡️ Rosters & Équipes</h2>
+      <h2 className="text-2xl sm:text-4xl font-black italic mb-6 card-title-accent uppercase">Rosters & Équipes</h2>
       {isOwner && tournoi && (
         <div className="glass-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-gray-300">

@@ -180,29 +180,18 @@ function MatchLive() {
         </div>
 
         {!isOwner && (
-          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 animate-pulse">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-              <span className="text-2xl">👁️</span>
-              <div>
-                <p className="text-blue-400 font-black uppercase text-[10px] tracking-widest">Mode Consultant Actif</p>
-                <p className="text-gray-400 text-xs">
-                  Analyse en temps réel du tournoi de{" "}
-                  <span className="text-white font-bold">{match.organisateur_nom || "l'organisateur"}</span>.
-                </p>
-              </div>
-            </div>
-            <div className="hidden sm:block text-[10px] font-black text-blue-500/50 uppercase tracking-tighter">
-              Lecture seule
-            </div>
-          </div>
+          <p className="mb-6 no-print flex items-center gap-2 text-[11px] text-gray-500 border-l-2 border-blue-500/40 pl-3 py-0.5">
+            <span className="truncate">
+              Lecture seule · tournoi de{" "}
+              <span className="text-gray-300 font-bold">{match.organisateur_nom || "l'organisateur"}</span>
+            </span>
+          </p>
         )}
 
         <div className="max-w-6xl mx-auto">
           <div className="glass-card p-4 sm:p-8 mb-6">
             <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
-              <button className="hidden lg:flex w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                <span className="text-2xl">🏀</span>
-              </button>
+              <div className="hidden lg:block w-12" aria-hidden="true" />
 
               <TableauChrono
                 match={match}

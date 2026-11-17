@@ -96,7 +96,7 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
 
   return (
     <div className="animate-fade-in max-w-3xl mx-auto glass-card p-5 sm:p-10 border border-white/5 relative">
-      <h2 className="text-2xl sm:text-4xl font-black italic mb-8 card-title-accent uppercase">⚙️ Paramètres du Tournoi</h2>
+      <h2 className="text-2xl sm:text-4xl font-black italic mb-8 card-title-accent uppercase">Paramètres du Tournoi</h2>
       <form onSubmit={enregistrer} className="space-y-8">
         <div className="border-b border-white/5 pb-6">
           <h3 className="text-lg font-black uppercase text-primary-orange mb-2 tracking-wider">Règlement</h3>

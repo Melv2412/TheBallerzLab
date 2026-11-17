@@ -51,7 +51,7 @@ export function ResumeSeries({ phases }) {
     <div className="lg:col-span-2 glass-card overflow-hidden">
       <div className="p-5 sm:p-8 border-b border-white/5">
         <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
-          <span className="text-primary-orange">🏆</span> Tableau éliminatoire
+          Tableau éliminatoire
         </h2>
       </div>
       <div className="p-4 sm:p-6 space-y-6">

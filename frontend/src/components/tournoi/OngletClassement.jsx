@@ -7,7 +7,6 @@ function TableauClassement({ classement, equipes, type }) {
     <div className="lg:col-span-2 glass-card overflow-hidden">
       <div className="p-5 sm:p-8 border-b border-white/5 flex items-center justify-between gap-3">
         <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
-          <span className="text-primary-orange">📊</span>{" "}
           {type === "poule" ? "Classement Général" : "Classement Éliminatoires"}
         </h2>
         <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-[10px] font-black uppercase tracking-tighter text-gray-500 shrink-0">
@@ -86,7 +85,7 @@ function LeadersEvaluation({ joueurs, type }) {
     <div className="glass-card overflow-hidden h-fit">
       <div className="p-5 sm:p-8 border-b border-white/5">
         <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
-          <span className="text-primary-orange">👑</span> {type === "poule" ? "Leaders Évaluation" : "Leaders Phase Finale"}
+          {type === "poule" ? "Leaders Évaluation" : "Leaders Phase Finale"}
         </h2>
       </div>
       <div className="p-4 sm:p-6 space-y-4">

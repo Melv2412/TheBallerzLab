@@ -243,3 +243,9 @@ h3,
     color: black !important;
   }
 }
+
+/* Listes déroulantes : options lisibles sur fond sombre (sinon blanc sur blanc) */
+select option {
+  background-color: #1a1a1b;
+  color: #fff;
+}

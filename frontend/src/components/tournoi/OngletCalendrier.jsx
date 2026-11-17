@@ -5,7 +5,7 @@ export function OngletCalendrier({ matchs, equipes, isOwner, onSupprimerMatch })
   const matchsPoule = matchs.filter((m) => m.phase === "poule");
   return (
     <div className="animate-fade-in">
-      <h2 className="text-2xl sm:text-4xl font-black italic mb-6 card-title-accent uppercase">🏀 Calendrier des Matchs</h2>
+      <h2 className="text-2xl sm:text-4xl font-black italic mb-6 card-title-accent uppercase">Calendrier des Matchs</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {matchsPoule.map((match) => (
           <MatchCard key={match.id} match={match} equipes={equipes} onDelete={onSupprimerMatch} isOwner={isOwner} />

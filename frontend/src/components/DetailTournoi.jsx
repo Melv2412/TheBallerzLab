@@ -65,11 +65,11 @@ function DetailTournoi() {
   }
 
   const onglets = [
-    { id: "classement", label: "Classement", icon: "📊" },
-    { id: "matchs", label: "Calendrier", icon: "🏀" },
-    { id: "rosters", label: "Équipes", icon: "🛡️" },
-    { id: "brackets", label: "Phase Finale", icon: "🏆" },
-    ...(isOwner ? [{ id: "settings", label: "Paramètres", icon: "⚙️" }] : []),
+    { id: "classement", label: "Classement" },
+    { id: "matchs", label: "Calendrier" },
+    { id: "rosters", label: "Équipes" },
+    { id: "brackets", label: "Phase Finale" },
+    ...(isOwner ? [{ id: "settings", label: "Paramètres" }] : []),
   ];
 
   const boutonTypeClassement = (type, label) => (
@@ -98,8 +98,7 @@ function DetailTournoi() {
 
       <div className="relative z-10">
         {!isOwner && (
-          <p className="mb-4 flex items-center gap-2 text-[11px] text-gray-500 border-l-2 border-blue-500/40 pl-3 py-0.5">
-            <span aria-hidden="true">👁️</span>
+          <p className="mb-4 no-print flex items-center gap-2 text-[11px] text-gray-500 border-l-2 border-blue-500/40 pl-3 py-0.5">
             <span className="truncate">
               Lecture seule · tournoi de{" "}
               <span className="text-gray-300 font-bold">{tournoi.organisateur_nom || "l'organisateur"}</span>
@@ -135,7 +134,7 @@ function DetailTournoi() {
                 onClick={() => window.print()}
                 className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-xs tracking-widest flex items-center gap-2"
               >
-                <span>🖨️</span> Rapport PDF
+                Rapport PDF
               </button>
               {isOwner && (
                 <>
@@ -159,7 +158,7 @@ function DetailTournoi() {
               onClick={() => setActiveTab(tab.id)}
               className={`pb-4 px-2 font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center gap-2 border-b-2 whitespace-nowrap shrink-0 ${activeTab === tab.id ? "text-primary-orange border-primary-orange" : "text-gray-500 border-transparent hover:text-white"}`}
             >
-              <span>{tab.icon}</span> {tab.label}
+              {tab.label}
             </button>
           ))}
         </div>
