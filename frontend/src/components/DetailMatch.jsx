@@ -134,6 +134,14 @@ function DetailMatch() {
                >
                  📄 Feuille de match
                </Link>
+               {isOwner && match.statut !== 'termine' && (
+                 <Link
+                   to={`/match/${id}/saisie`}
+                   className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"
+                 >
+                   ✍️ Saisir la feuille
+                 </Link>
+               )}
                 {isOwner && (
                   <select
                     value={match.statut}

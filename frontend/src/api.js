@@ -144,6 +144,8 @@ export const getMatch = (id) => api.get(`/matchs/${id}/`)
 export const createMatch = (data) => api.post('/matchs/', data)
 export const updateMatch = (id, data) => api.patch(`/matchs/${id}/`, data)
 export const deleteMatch = (id) => api.delete(`/matchs/${id}/`)
+// Feuille saisie après coup : totaux de chaque joueur, score par période, fin du match
+export const saisieFeuille = (id, data) => api.post(`/matchs/${id}/saisie_feuille/`, data)
 export const initialiserStatsMatch = (id) => api.post(`/matchs/${id}/initialiser_stats/`)
 export const tempsMort = (id, equipe) => api.post(`/matchs/${id}/temps_mort/`, { equipe })
 export const periodeSuivante = (id) => api.post(`/matchs/${id}/periode_suivante/`)

@@ -24,6 +24,7 @@ from .serializers import (
     JoueurSerializer,
     MatchListSerializer,
     MatchSerializer,
+    SaisieFeuilleSerializer,
     StatistiqueJoueurSerializer,
     TournoiSerializer,
     UpdateStatistiqueSerializer,
@@ -413,6 +414,63 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         with transaction.atomic():
             match = self._match_verrouille(pk)
             journal.annuler_derniere_action(match)
+        return self._reponse_match(match)
+
+    @action(detail=True, methods=['post'])
+    def saisie_feuille(self, request, pk=None):
+        """
+        Feuille de match saisie après coup : remplace les totaux des joueurs envoyés, enregistre le score
+        par période (facultatif) et peut terminer le match. Tout ou rien : une erreur n'enregistre rien.
+        """
+        actuel = self.get_object()  # permissions
+        saisie = SaisieFeuilleSerializer(data=request.data)
+        saisie.is_valid(raise_exception=True)
+        donnees = saisie.validated_data
+
+        with transaction.atomic():
+            if donnees['terminer']:
+                verrouiller_tournoi(actuel.tournoi)  # même ordre de verrous qu'un PATCH qui termine le match
+            match = self._match_verrouille(pk)
+            joueurs = set(Joueur.objects.filter(
+                equipe_id__in=[match.equipe_domicile_id, match.equipe_exterieur_id],
+            ).values_list('id', flat=True))
+            exclusion = match.reglement['fautes_exclusion']
+
+            for ligne in donnees['stats']:
+                valeurs = {champ: ligne[champ] for champ in UpdateStatistiqueSerializer.CHAMPS}
+                if ligne['joueur'] not in joueurs:
+                    raise ValidationError({'stats': f"Le joueur n°{ligne['joueur']} ne joue pas dans ce match."})
+                if exclusion and valeurs['fautes'] > exclusion:
+                    raise ValidationError({'stats': f"Un joueur ne peut pas dépasser {exclusion} fautes (exclusion)."})
+                StatistiqueJoueur.objects.update_or_create(joueur_id=ligne['joueur'], match=match, defaults=valeurs)
+
+            # Les actions en direct ne correspondent plus aux stats : elles restent visibles, marquées annulées
+            match.actions.filter(type='stat', annulee=False).update(annulee=True)
+            match.refresh_from_db()
+
+            periodes = donnees.get('score_periodes')
+            if periodes is not None:
+                if len(periodes['domicile']) < match.reglement['nb_periodes']:
+                    raise ValidationError({'score_periodes': (
+                        f"Le règlement de ce match prévoit {match.reglement['nb_periodes']} périodes."
+                    )})
+                for cote in ('domicile', 'exterieur'):
+                    total = sum(periodes[cote])
+                    score = getattr(match, f'score_{cote}')
+                    if total != score:
+                        raise ValidationError({'score_periodes': (
+                            f"Les périodes de l'équipe {cote} font {total} points, "
+                            f"mais ses joueurs en ont marqué {score}."
+                        )})
+            match.score_periodes = periodes
+            if match.statut == 'a_venir':
+                match.statut = 'en_cours'
+            match.save(update_fields=['score_periodes', 'statut', 'updated_at'])
+
+            if donnees['terminer']:
+                fin = MatchSerializer(match, data={'statut': 'termine'}, partial=True, context={'request': request})
+                fin.is_valid(raise_exception=True)
+                fin.save()
         return self._reponse_match(match)
 
     @action(detail=True, methods=['patch'], url_path='stats/(?P<stat_id>[^/.]+)/update')

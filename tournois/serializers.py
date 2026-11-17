@@ -256,11 +256,11 @@ class MatchSerializer(serializers.ModelSerializer):
             'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'score_domicile',
             'score_exterieur', 'date_match', 'statistiques', 'mvp', 'reglement',
             'temps_restant_secondes', 'periode_actuelle', 'chrono_en_cours',
-            'shot_clock_secondes', 'possession_fleche',
+            'shot_clock_secondes', 'possession_fleche', 'score_periodes',
             'created_at', 'updated_at'
         ]
         # Le score découle uniquement des statistiques des joueurs (voir Match.calculer_scores_depuis_stats)
-        read_only_fields = ['score_domicile', 'score_exterieur']
+        read_only_fields = ['score_domicile', 'score_exterieur', 'score_periodes']
 
     CHAMPS_CHRONO = ('temps_restant_secondes', 'shot_clock_secondes', 'periode_actuelle', 'chrono_en_cours')
     # Seuls changements acceptés sur un match terminé : le rouvrir, ou le reprogrammer
@@ -452,3 +452,40 @@ class UpdateStatistiqueSerializer(serializers.Serializer):
     # Toujours positif : le sens est donné par `action`
     valeur = serializers.IntegerField(default=1, min_value=1, max_value=200)
 
+
+
+class LigneFeuilleSerializer(serializers.Serializer):
+    """Totaux d'un joueur sur la feuille de match saisie après coup."""
+    joueur = serializers.IntegerField()
+    points = serializers.IntegerField(min_value=0, max_value=200, default=0)
+    passes = serializers.IntegerField(min_value=0, max_value=200, default=0)
+    rebonds = serializers.IntegerField(min_value=0, max_value=200, default=0)
+    contres = serializers.IntegerField(min_value=0, max_value=200, default=0)
+    fautes = serializers.IntegerField(min_value=0, max_value=20, default=0)
+
+
+class SaisieFeuilleSerializer(serializers.Serializer):
+    """Feuille de match saisie après coup : totaux des joueurs, score par période (facultatif), fin du match."""
+    stats = LigneFeuilleSerializer(many=True, allow_empty=False)
+    score_periodes = serializers.DictField(
+        child=serializers.ListField(
+            child=serializers.IntegerField(min_value=0, max_value=300), min_length=1, max_length=20,
+        ),
+        required=False, allow_null=True,
+    )
+    terminer = serializers.BooleanField(default=False)
+
+    def validate_stats(self, lignes):
+        joueurs = [ligne['joueur'] for ligne in lignes]
+        if len(joueurs) != len(set(joueurs)):
+            raise serializers.ValidationError("Un joueur apparaît deux fois sur la feuille.")
+        return lignes
+
+    def validate_score_periodes(self, periodes):
+        if periodes is None:
+            return None
+        if set(periodes) != {'domicile', 'exterieur'}:
+            raise serializers.ValidationError("Indiquez le score par période des deux équipes (domicile et exterieur).")
+        if len(periodes['domicile']) != len(periodes['exterieur']):
+            raise serializers.ValidationError("Les deux équipes doivent avoir le même nombre de périodes.")
+        return periodes

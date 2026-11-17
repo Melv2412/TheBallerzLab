@@ -88,7 +88,10 @@ function FeuilleMatch() {
   const stats = match.statistiques || [];
   const statsDom = stats.filter((s) => s.equipe_nom === match.equipe_domicile_nom);
   const statsExt = stats.filter((s) => s.equipe_nom === match.equipe_exterieur_nom);
-  const score = scoreParPeriode(actions, nbPeriodes, match.periode_actuelle);
+  // Score par période saisi après coup, sinon reconstitué depuis l'historique du direct
+  const score = match.score_periodes
+    ? { ...match.score_periodes, periodes: match.score_periodes.domicile.map((_, i) => i + 1) }
+    : scoreParPeriode(actions, nbPeriodes, match.periode_actuelle);
   const suivi = {
     domicile: fautesEtTempsMorts(actions, "domicile", score.periodes),
     exterieur: fautesEtTempsMorts(actions, "exterieur", score.periodes),

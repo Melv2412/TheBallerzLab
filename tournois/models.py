@@ -171,6 +171,9 @@ class Match(models.Model):
     temps_morts_utilises_domicile = models.PositiveIntegerField(default=0)
     temps_morts_utilises_exterieur = models.PositiveIntegerField(default=0)
     temps_morts_segment = models.PositiveIntegerField(default=1)
+    # Score par période saisi après coup ({'domicile': [..], 'exterieur': [..]}) ; vide si le match a été suivi
+    # en direct (la feuille le calcule alors depuis l'historique) ou si les stats ont changé depuis la saisie
+    score_periodes = models.JSONField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -279,7 +282,14 @@ class Match(models.Model):
 
         self.score_domicile = stats_domicile
         self.score_exterieur = stats_exterieur
-        self.save(update_fields=['score_domicile', 'score_exterieur'])
+        champs = ['score_domicile', 'score_exterieur']
+        if self.score_periodes and (
+            sum(self.score_periodes['domicile']) != stats_domicile
+            or sum(self.score_periodes['exterieur']) != stats_exterieur
+        ):
+            self.score_periodes = None  # le score par période saisi ne correspond plus
+            champs.append('score_periodes')
+        self.save(update_fields=champs)
 
 
 class StatistiqueJoueur(models.Model):
