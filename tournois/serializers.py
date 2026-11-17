@@ -1,12 +1,14 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from . import athletes
 from . import reglement as regles
 from .journal import TYPES_ANNULABLES
-from .models import ActionMatch, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .models import ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .phases_finales import ACTIVATION, LIBELLES, PHASES, avancer_phases_finales, phase_suivante_commencee
 from .services import mvp_du_match
 
@@ -180,13 +182,21 @@ class EquipeSerializer(serializers.ModelSerializer):
 
 
 class JoueurSerializer(serializers.ModelSerializer):
-    """Serializer pour le modèle Joueur."""
+    """
+    Serializer pour le modèle Joueur. `email` (facultatif, jamais renvoyé) rattache le joueur
+    à la fiche athlète qui a cet email, ou la crée.
+    """
     equipe_nom = serializers.CharField(source='equipe.nom', read_only=True)
     tournoi_nom = serializers.CharField(source='equipe.tournoi.nom', read_only=True)
+    email = serializers.EmailField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Joueur
-        fields = ['id', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'tournoi_nom', 'created_at', 'updated_at']
+        fields = [
+            'id', 'athlete', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'tournoi_nom',
+            'email', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['athlete']
         extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
 
     def validate_equipe(self, equipe):
@@ -196,6 +206,48 @@ class JoueurSerializer(serializers.ModelSerializer):
                 f"Une équipe ne peut pas dépasser {settings.LIMITE_JOUEURS_PAR_EQUIPE} joueurs."
             )
         return equipe
+
+    def validate(self, attrs):
+        email = athletes.normaliser_email(attrs.pop('email', None))
+        joueur = self.instance or Joueur(prenom=attrs.get('prenom', ''), nom=attrs.get('nom', ''))
+        fiche = athletes.fiche_pour_email(joueur, email) if email else (self.instance.athlete if self.instance else None)
+        equipe = attrs.get('equipe') or self.instance.equipe
+        try:
+            athletes.verifier_un_par_tournoi(fiche, equipe.tournoi_id, sauf_joueur=self.instance)
+        except athletes.ConflitAthlete as erreur:
+            raise serializers.ValidationError({'email' if email else 'equipe': str(erreur)}) from erreur
+        self._fiche = fiche
+        return attrs
+
+    def _enregistrer_fiche(self, validated_data):
+        fiche = self._fiche
+        if fiche is None:  # création sans email : nouvelle fiche
+            fiche = Athlete(prenom=validated_data['prenom'], nom=validated_data['nom'])
+        try:
+            with transaction.atomic():
+                fiche.save()
+        except IntegrityError as erreur:  # même email enregistré au même instant par quelqu'un d'autre
+            raise serializers.ValidationError({'email': "Cet email vient d'être utilisé, réessaie."}) from erreur
+        validated_data['athlete'] = fiche
+
+    @transaction.atomic
+    def create(self, validated_data):
+        self._enregistrer_fiche(validated_data)
+        return super().create(validated_data)
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        ancienne = instance.athlete_id
+        self._enregistrer_fiche(validated_data)
+        joueur = super().update(instance, validated_data)
+        fiche = joueur.athlete
+        if ancienne != fiche.pk:
+            athletes.supprimer_si_orpheline(ancienne)
+        elif fiche.joueurs.count() == 1 and (fiche.prenom, fiche.nom) != (joueur.prenom, joueur.nom):
+            # Fiche propre à ce joueur : elle suit les corrections de nom
+            fiche.prenom, fiche.nom = joueur.prenom, joueur.nom
+            fiche.save(update_fields=['prenom', 'nom', 'updated_at'])
+        return joueur
 
 
 class StatistiqueJoueurSerializer(serializers.ModelSerializer):

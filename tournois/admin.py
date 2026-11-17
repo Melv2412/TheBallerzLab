@@ -1,8 +1,10 @@
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group, User
+from django.db.models import Count
 
-from .models import ActionMatch, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .athletes import ConflitAthlete, fusionner
+from .models import ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import GROUPE_ORGANISATEURS
 
 admin.site.unregister(User)
@@ -58,11 +60,50 @@ class EquipeAdmin(admin.ModelAdmin):
     search_fields = ['nom']
 
 
+class JoueurInline(admin.TabularInline):
+    model = Joueur
+    fields = ['prenom', 'nom', 'numero_maillot', 'equipe']
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+    show_change_link = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Athlete)
+class AthleteAdmin(admin.ModelAdmin):
+    """Fiches athlètes ; les doublons se regroupent avec l'action « Fusionner »."""
+    list_display = ['nom', 'prenom', 'email', 'nb_inscriptions', 'created_at']
+    search_fields = ['nom', 'prenom', 'email']
+    ordering = ['nom', 'prenom']
+    inlines = [JoueurInline]
+    actions = ['fusionner_fiches']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(nb=Count('joueurs'))
+
+    @admin.display(description='Inscriptions', ordering='nb')
+    def nb_inscriptions(self, obj):
+        return obj.nb
+
+    @admin.action(description='Fusionner les fiches sélectionnées (même personne)')
+    def fusionner_fiches(self, request, queryset):
+        try:
+            cible = fusionner(queryset)
+        except ConflitAthlete as erreur:
+            self.message_user(request, str(erreur), messages.ERROR)
+            return
+        self.message_user(request, f'Fiches regroupées dans « {cible} ».', messages.SUCCESS)
+
+
 @admin.register(Joueur)
 class JoueurAdmin(admin.ModelAdmin):
-    list_display = ['prenom', 'nom', 'numero_maillot', 'equipe']
+    list_display = ['prenom', 'nom', 'numero_maillot', 'equipe', 'athlete']
     list_filter = ['equipe__tournoi', 'equipe']
-    search_fields = ['prenom', 'nom']
+    search_fields = ['prenom', 'nom', 'athlete__email']
+    autocomplete_fields = ['athlete']
 
 
 @admin.register(Match)

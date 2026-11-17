@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { createEquipe, updateEquipe, createJoueur, updateJoueur, createMatch, messageErreur } from "../../api";
+import { createEquipe, updateEquipe, createJoueur, updateJoueur, createMatch, messageErreur, rechercherAthlete } from "../../api";
 import { compresserImage } from "../../images";
 import { ZoneImage } from "./ZoneImage";
 
@@ -91,6 +91,24 @@ export function ModalJoueur({ equipeId, joueur, onFermer, onEnregistre }) {
     numero_maillot: joueur?.numero_maillot ?? "",
   });
   const [photo, setPhoto] = useState(null);
+  // Email facultatif : retrouve la fiche de l'athlète s'il a déjà joué ailleurs
+  const [email, setEmail] = useState("");
+  const [recherche, setRecherche] = useState(null);
+
+  const chercher = async () => {
+    if (!email.trim()) return;
+    try {
+      const { data } = await rechercherAthlete(email.trim());
+      setRecherche({ trouvee: true, ...data });
+      setForm((f) => ({ ...f, prenom: data.prenom, nom: data.nom }));
+    } catch (error) {
+      setRecherche(
+        error.response?.status === 404
+          ? { trouvee: false, message: "Aucune fiche avec cet email : une nouvelle fiche sera créée." }
+          : { trouvee: false, message: messageErreur(error, "Recherche impossible.") },
+      );
+    }
+  };
 
   const enregistrer = async (e) => {
     e.preventDefault();
@@ -104,6 +122,7 @@ export function ModalJoueur({ equipeId, joueur, onFermer, onEnregistre }) {
       formData.append("prenom", form.prenom.trim().toUpperCase());
       formData.append("nom", form.nom.trim().toUpperCase());
       formData.append("numero_maillot", numero);
+      if (email.trim()) formData.append("email", email.trim());
       if (photo instanceof File) formData.append("photo", await compresserImage(photo));
 
       if (joueur) {
@@ -122,6 +141,31 @@ export function ModalJoueur({ equipeId, joueur, onFermer, onEnregistre }) {
   return (
     <Modal titre={joueur ? "Éditer Joueur" : "Nouveau Joueur"} centre>
       <form onSubmit={enregistrer} className="space-y-6">
+        <div>
+          <label className={petiteEtiquette}>Email du joueur (facultatif)</label>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setRecherche(null);
+              }}
+              className={champ}
+              placeholder={joueur ? "Pour le relier à sa fiche" : "Retrouve sa fiche s'il a déjà joué"}
+            />
+            <button type="button" onClick={chercher} className="btn-basketball text-xs whitespace-nowrap">
+              Chercher
+            </button>
+          </div>
+          {recherche && (
+            <p className={`mt-2 text-xs font-bold ${recherche.trouvee ? "text-green-400" : "text-gray-400"}`}>
+              {recherche.trouvee
+                ? `Fiche trouvée : ${recherche.prenom} ${recherche.nom} (${recherche.nb_tournois} tournoi${recherche.nb_tournois > 1 ? "s" : ""}). Le joueur y sera rattaché.`
+                : recherche.message}
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={petiteEtiquette}>Prénom</label>

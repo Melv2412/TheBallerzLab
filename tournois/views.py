@@ -2,6 +2,8 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import EmailValidator
 from django.db import DatabaseError, connection, transaction
 from django.db.models import Count, F
 from django.db.models.functions import Greatest
@@ -11,10 +13,11 @@ from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
 from . import journal
 from . import reglement as regles
+from .athletes import chercher_par_email
 from .models import Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
 from .phases_finales import generer_phases_finales, resume_phases_finales, verrouiller_tournoi
@@ -265,6 +268,11 @@ class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         return queryset
 
 
+class RechercheAthleteThrottle(UserRateThrottle):
+    """Limite par compte la recherche de fiches par email (pas de test d'emails en masse)."""
+    scope = 'recherche_athlete'
+
+
 class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     """ViewSet pour gérer les joueurs."""
     queryset = Joueur.objects.select_related('equipe', 'equipe__tournoi').all()
@@ -284,6 +292,26 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             else:
                 queryset = queryset.filter(equipe__tournoi__slug=tournoi_param)
         return queryset
+
+    @action(
+        detail=False, methods=['get'], url_path='recherche_athlete',
+        permission_classes=[permissions.IsAuthenticated],
+        throttle_classes=[RechercheAthleteThrottle],
+    )
+    def recherche_athlete(self, request):
+        """Retrouve une fiche athlète par son email exact (organisateurs validés, email jamais renvoyé)."""
+        if not est_organisateur_valide(request.user):
+            raise PermissionDenied("Réservé aux organisateurs validés.")
+        email = request.query_params.get('email', '')
+        try:
+            EmailValidator()(email)
+        except DjangoValidationError as erreur:
+            raise ValidationError({'email': "Adresse email invalide."}) from erreur
+        fiche = chercher_par_email(email)
+        if fiche is None:
+            return Response({'detail': "Aucune fiche avec cet email."}, status=status.HTTP_404_NOT_FOUND)
+        tournois = fiche.joueurs.values('equipe__tournoi_id').distinct().count()
+        return Response({'athlete': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom, 'nb_tournois': tournois})
 
 
 class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):

@@ -86,8 +86,37 @@ class Equipe(models.Model):
         return f"{self.nom} ({self.tournoi.nom})"
 
 
+class Athlete(models.Model):
+    """
+    La personne réelle, au-dessus de ses inscriptions (Joueur) dans les équipes de différents tournois.
+    L'email est facultatif : un organisateur qui le connaît retrouve la fiche par recherche exacte.
+    """
+    prenom = models.CharField(max_length=100)
+    nom = models.CharField(max_length=100)
+    email = models.EmailField(null=True, blank=True)  # toujours en minuscules
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Athlète"
+        verbose_name_plural = "Athlètes"
+        ordering = ['nom', 'prenom']
+        constraints = [
+            # Les fiches sans email (NULL) ne sont pas concernées
+            models.UniqueConstraint(Lower('email'), name='athlete_email_unique'),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.strip().lower() if self.email else None
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.prenom} {self.nom}" + (f" <{self.email}>" if self.email else "")
+
+
 class Joueur(models.Model):
-    """Modèle représentant un joueur dans une équipe."""
+    """Inscription d'un athlète dans une équipe (un athlète au maximum par tournoi)."""
+    athlete = models.ForeignKey(Athlete, on_delete=models.PROTECT, related_name='joueurs')
     prenom = models.CharField(max_length=100)
     nom = models.CharField(max_length=100)
     numero_maillot = models.IntegerField(validators=[MinValueValidator(0)])
@@ -101,6 +130,12 @@ class Joueur(models.Model):
         verbose_name_plural = "Joueurs"
         ordering = ['equipe', 'numero_maillot']
         unique_together = [['equipe', 'numero_maillot']]
+
+    def save(self, *args, **kwargs):
+        # Un joueur créé sans fiche (admin, tests, anciens appels) en reçoit une nouvelle
+        if self.athlete_id is None:
+            self.athlete = Athlete.objects.create(prenom=self.prenom, nom=self.nom)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.prenom} {self.nom} (#{self.numero_maillot}) - {self.equipe.nom}"

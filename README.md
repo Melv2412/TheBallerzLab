@@ -92,7 +92,7 @@ Le frontend sera accessible sur `http://localhost:3000`
 Basket4.0/
 ├── basket_tournament/     # Configuration Django
 ├── tournois/              # Application Django principale
-│   ├── models.py         # Modèles (Tournoi, Equipe, Joueur, Match, StatistiqueJoueur)
+│   ├── models.py         # Modèles (Tournoi, Equipe, Athlete, Joueur, Match, StatistiqueJoueur)
 │   ├── serializers.py    # Serializers DRF
 │   ├── views.py          # ViewSets DRF
 │   ├── classement.py     # Classement et départage FIBA
@@ -119,9 +119,12 @@ Les listes sont paginées : `{count, next, previous, results}`, 50 éléments pa
 - `GET /api/tournois/` - Liste des tournois
 - `GET /api/equipes/?tournoi={id}` - Liste des équipes d'un tournoi
 - `GET /api/joueurs/?equipe={id}` - Liste des joueurs d'une équipe
+- `POST /api/joueurs/` - Ajouter un joueur ; `email` facultatif (jamais renvoyé) : le rattache à la fiche athlète qui a cet email, sinon une fiche est créée. Un athlète ne joue que dans une équipe par tournoi
+- `GET /api/joueurs/recherche_athlete/?email=` - Fiche athlète par email exact (organisateurs validés, 60 recherches par heure)
 - `GET /api/matchs/?tournoi={id}` - Liste des matchs d'un tournoi
 - `GET /api/matchs/{id}/` - Détail d'un match avec statistiques
 - `POST /api/matchs/{id}/initialiser_stats/` - Initialiser les stats pour un match
+- `POST /api/matchs/{id}/saisie_feuille/` - Feuille saisie après coup : totaux de chaque joueur, score par période facultatif, `terminer`
 - `PATCH /api/matchs/{id}/stats/{stat_id}/update/` - Mettre à jour une statistique (refusé si le match est terminé ou si le joueur est exclu)
 - `POST /api/matchs/{id}/temps_mort/` - Temps mort (`{"equipe": "domicile"}`), selon la dotation du règlement
 - `POST /api/matchs/{id}/periode_suivante/` - Période suivante (prolongation au-delà du temps réglementaire)
