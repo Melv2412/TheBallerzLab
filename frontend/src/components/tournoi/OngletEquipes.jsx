@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { delierJoueur, getImageUrl, lienInvitation, messageErreur, updateTournoi } from "../../api";
 import { InscriptionsEquipes } from "./InscriptionsEquipes";
 import { LogoEquipe } from "./LogoEquipe";
-import { equipeAJoue } from "./phases";
+import { aDesMatchsRestants, equipeAJoue } from "./phases";
 
 // Lien d'invitation d'une équipe, à envoyer au capitaine (WhatsApp…) : chaque joueur s'y inscrit avec son compte
 function LienInvitation({ equipe }) {
@@ -81,6 +81,7 @@ export function OngletEquipes({
   onSupprimerJoueur,
   onRetirerJoueur,
   onReintegrerJoueur,
+  onForfaitGeneral,
 }) {
   const [equipesOuvertes, setEquipesOuvertes] = useState({});
   const basculer = (equipeId) => setEquipesOuvertes((prev) => ({ ...prev, [equipeId]: !prev[equipeId] }));
@@ -174,6 +175,14 @@ export function OngletEquipes({
                 </div>
 
                 {isOwner && <LienInvitation equipe={equipe} />}
+                {isOwner && aDesMatchsRestants(matchs, equipe.id) && (
+                  <button
+                    onClick={() => onForfaitGeneral(equipe)}
+                    className="w-full mb-4 py-2 rounded-xl bg-white/5 text-gray-400 text-xs font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 transition-all"
+                  >
+                    Forfait général
+                  </button>
+                )}
 
                 <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                   {joueurs.length > 0 ? (

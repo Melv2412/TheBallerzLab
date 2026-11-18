@@ -6,6 +6,8 @@ import { usePolling } from '../usePolling'
 import { useTempsReelMatch } from '../tempsReel'
 import { peutModifier } from '../permissions'
 import { ModalPresences } from './match-live/ModalPresences'
+import { ModalForfait } from './match-live/ModalForfait'
+import { texteForfait } from './match-live/forfait'
 
 function DetailMatch() {
   const { user } = useAuth()
@@ -15,6 +17,7 @@ function DetailMatch() {
   const [statsInitialisees, setStatsInitialisees] = useState(false)
   // Fenêtre des présences : 'fin' juste après la fin du match, 'correction' depuis le bouton
   const [presences, setPresences] = useState(null)
+  const [forfaitOuvert, setForfaitOuvert] = useState(false)
 
   const isOwner = Boolean(match) && peutModifier(user, match.organisateur_id);
 
@@ -124,8 +127,10 @@ function DetailMatch() {
             </div>
             <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-6 md:mt-0">
                <div className={`px-4 py-2 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 ${match.statut === 'en_cours' ? 'bg-red-500 animate-pulse' : 'bg-white/10'}`}>
-                {match.statut === 'en_cours' ? '🔴 LIVE' : match.statut === 'termine' ? '✅ TERMINE' : '⏳ A VENIR'}
+                {match.forfait ? 'FORFAIT' : match.statut === 'en_cours' ? '🔴 LIVE' : match.statut === 'termine' ? '✅ TERMINE' : '⏳ A VENIR'}
                </div>
+               {!match.forfait && (
+               <>
                <Link
                  to={`/match/${id}/live`}
                  className="px-6 py-2 bg-primary-orange hover:bg-orange-600 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"
@@ -138,6 +143,8 @@ function DetailMatch() {
                >
                  📄 Feuille de match
                </Link>
+               </>
+               )}
                {isOwner && match.statut !== 'termine' && (
                  <Link
                    to={`/match/${id}/saisie`}
@@ -146,7 +153,7 @@ function DetailMatch() {
                    ✍️ Saisir la feuille
                  </Link>
                )}
-               {isOwner && match.statut === 'termine' && (
+               {isOwner && match.statut === 'termine' && !match.forfait && (
                  <button
                    onClick={() => setPresences('correction')}
                    className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
@@ -154,7 +161,15 @@ function DetailMatch() {
                    Présences
                  </button>
                )}
-                {isOwner && (
+               {isOwner && (match.forfait || match.statut !== 'termine') && (
+                 <button
+                   onClick={() => setForfaitOuvert(true)}
+                   className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+                 >
+                   {match.forfait ? 'Modifier le forfait' : 'Forfait'}
+                 </button>
+               )}
+                {isOwner && !match.forfait && (
                   <select
                     value={match.statut}
                     onChange={(e) => handleChangeStatut(e.target.value)}
@@ -177,7 +192,7 @@ function DetailMatch() {
              
              <div className="flex flex-col items-center">
                 <div className="text-lg sm:text-3xl font-black text-white/20 italic">
-                  {match.statut === 'termine' ? 'FINAL' : 'VS'}
+                  {match.forfait ? 'FORFAIT' : match.statut === 'termine' ? 'FINAL' : 'VS'}
                 </div>
                 <div className="w-1 h-12 sm:h-20 bg-white/5 my-4"></div>
              </div>
@@ -192,6 +207,12 @@ function DetailMatch() {
                 <div className="text-[120px] sm:text-[250px] font-black italic uppercase tracking-tighter">BASKET</div>
              </div>
           </div>
+
+          {match.forfait && (
+            <p className="px-4 pb-8 text-center text-sm font-black uppercase tracking-widest text-primary-orange">
+              {texteForfait(match)} · pas de feuille de stats
+            </p>
+          )}
 
           {/* MVP Spotlight */}
           {match.mvp && (
@@ -213,7 +234,7 @@ function DetailMatch() {
             </div>
           )}
 
-          {!statsInitialisees && isOwner && (
+          {!statsInitialisees && isOwner && !match.forfait && (
             <div className="p-8 sm:p-20 text-center border-t border-white/5">
               <button
                 onClick={handleInitialiserStats}
@@ -224,7 +245,7 @@ function DetailMatch() {
               <p className="text-xs font-bold text-gray-500 mt-4 uppercase tracking-widest">Générez les entrées statistiques pour tous les joueurs</p>
             </div>
           )}
-          {!statsInitialisees && !isOwner && (
+          {!statsInitialisees && !isOwner && !match.forfait && (
             <div className="p-8 sm:p-20 text-center border-t border-white/5 italic opacity-40">
               Les statistiques détaillées ne sont pas encore disponibles pour ce match.
             </div>
@@ -232,7 +253,7 @@ function DetailMatch() {
         </div>
       </div>
 
-      {statsInitialisees && (
+      {statsInitialisees && !match.forfait && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Home Stats */}
           <div className="space-y-6">
@@ -270,6 +291,17 @@ function DetailMatch() {
         </div>
       )}
       </div>
+
+      {forfaitOuvert && (
+        <ModalForfait
+          match={match}
+          onFermer={() => setForfaitOuvert(false)}
+          onEnregistre={() => {
+            setForfaitOuvert(false)
+            loadMatch()
+          }}
+        />
+      )}
 
       {presences && (
         <ModalPresences

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { equipeAJoue, erreurPhases, phasesCommencees, pointsVerrouilles } from "./phases";
+import { aDesMatchsRestants, equipeAJoue, erreurPhases, phasesCommencees, pointsVerrouilles } from "./phases";
 
 describe("erreurPhases", () => {
   it("accepte des phases consécutives jusqu'à la finale, ou aucune phase", () => {
@@ -35,5 +35,7 @@ describe("verrous des résultats", () => {
     expect(equipeAJoue(matchs, 2)).toBe(true);
     expect(equipeAJoue(matchs, 3)).toBe(true);
     expect(equipeAJoue(matchs, 5)).toBe(false);
+    expect(aDesMatchsRestants([{ statut: "en_cours", equipe_domicile: 1, equipe_exterieur: 2 }], 2)).toBe(true);
+    expect(aDesMatchsRestants([{ statut: "termine", equipe_domicile: 1, equipe_exterieur: 2 }], 2)).toBe(false);
   });
 });

@@ -174,6 +174,9 @@ export const deleteMatch = (id) => api.delete(`/matchs/${id}/`)
 // Feuille saisie après coup : totaux de chaque joueur, score par période, fin du match
 export const saisieFeuille = (id, data) => api.post(`/matchs/${id}/saisie_feuille/`, data)
 // Joueurs sans stat d'un match terminé : liste, et confirmation de ceux qui ont joué
+export const declarerForfait = (id, donnees) => api.post(`/matchs/${id}/forfait/`, donnees)
+export const annulerForfait = (id) => api.delete(`/matchs/${id}/forfait/`)
+export const declarerForfaitGeneral = (id) => api.post(`/equipes/${id}/forfait_general/`)
 export const getPresences = (id) => api.get(`/matchs/${id}/presences/`)
 export const enregistrerPresences = (id, presents) => api.post(`/matchs/${id}/presences/`, { presents })
 export const initialiserStatsMatch = (id) => api.post(`/matchs/${id}/initialiser_stats/`)

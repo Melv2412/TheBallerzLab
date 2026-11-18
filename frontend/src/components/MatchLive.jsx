@@ -13,6 +13,7 @@ import { ModalSelectionJoueur } from "./match-live/ModalSelectionJoueur";
 import { ModalCorrection } from "./match-live/ModalCorrection";
 import { ModalReglesMatch } from "./match-live/ModalReglesMatch";
 import { DerouleMatch, decrireAction } from "./match-live/DerouleMatch";
+import { MatchForfait } from "./match-live/MatchForfait";
 
 const ALTERNANCE = { neutre: "domicile", domicile: "exterieur", exterieur: "domicile" };
 
@@ -52,6 +53,8 @@ function MatchLive() {
   if (!match) {
     return <div className="text-center py-8 athletic-font text-2xl">Match non trouvé</div>;
   }
+
+  if (match.forfait) return <MatchForfait match={match} />;
 
   const isOwner = peutModifier(user, match.organisateur_id);
   const statistiques = match.statistiques || [];

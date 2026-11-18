@@ -16,7 +16,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
-from . import inscription_equipes, invitations, journal, organisateurs, protections
+from . import forfaits, inscription_equipes, invitations, journal, organisateurs, protections
 from . import reglement as regles
 from .athletes import chercher_par_email
 from .carriere import profil_athlete
@@ -27,6 +27,7 @@ from .presences import enregistrer_presences, presences_du_match
 from .serializers import (
     ActionMatchSerializer,
     EquipeSerializer,
+    ForfaitSerializer,
     JoueurSerializer,
     MatchListSerializer,
     MatchSerializer,
@@ -305,6 +306,11 @@ class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         equipe = self.get_object()
         code = invitations.code_invitation(equipe, regenerer=bool(request.data.get('regenerer')))
         return Response({'code': code})
+
+    @action(detail=True, methods=['post'])
+    def forfait_general(self, request, pk=None):
+        """L'équipe abandonne le tournoi : elle perd par forfait tous ses matchs restants."""
+        return Response({'matchs': forfaits.forfait_general(self.get_object())})
 
     def perform_destroy(self, equipe):
         with transaction.atomic():
@@ -816,6 +822,16 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             saisie.is_valid(raise_exception=True)
             match = enregistrer_presences(match.pk, set(saisie.validated_data['presents']))
         return Response(presences_du_match(match))
+
+    @action(detail=True, methods=['post', 'delete'])
+    def forfait(self, request, pk=None):
+        """POST {"equipe", "score_vainqueur", "score_perdant"} déclare ou corrige le forfait ; DELETE l'annule."""
+        match = self.get_object()  # permissions
+        if request.method == 'DELETE':
+            return self._reponse_match(forfaits.annuler_forfait(match))
+        saisie = ForfaitSerializer(data=request.data)
+        saisie.is_valid(raise_exception=True)
+        return self._reponse_match(forfaits.declarer_forfait(match, **saisie.validated_data))
 
     @action(detail=True, methods=['patch'], url_path='stats/(?P<stat_id>[^/.]+)/update')
     def update_statistique(self, request, pk=None, stat_id=None):

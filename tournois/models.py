@@ -222,6 +222,20 @@ class Match(models.Model):
     score_exterieur = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     date_match = models.DateTimeField(null=True, blank=True)
 
+    # Équipe forfait : le match est alors « terminé » et son score est posé à la main (voir tournois/forfaits.py)
+    FORFAIT_AUCUN = ''
+    FORFAIT_DOMICILE = 'domicile'
+    FORFAIT_EXTERIEUR = 'exterieur'
+    FORFAIT_DOUBLE = 'double'
+    FORFAIT_CHOICES = [
+        (FORFAIT_AUCUN, 'Aucun'),
+        (FORFAIT_DOMICILE, 'Domicile'),
+        (FORFAIT_EXTERIEUR, 'Extérieur'),
+        (FORFAIT_DOUBLE, 'Double forfait'),
+    ]
+    # db_default : l'ancien code peut encore créer des matchs pendant la mise en ligne
+    forfait = models.CharField(max_length=10, choices=FORFAIT_CHOICES, blank=True, default='', db_default='')
+
     # Gestion du chronomètre et des périodes.
     # Quand le chrono tourne, temps_restant_secondes et shot_clock_secondes sont les valeurs
     # à l'instant chrono_demarre_a : le temps réel se calcule (voir etat_chrono), sans écriture chaque seconde.
@@ -352,7 +366,9 @@ class Match(models.Model):
         self.chrono_demarre_a = None
 
     def calculer_scores_depuis_stats(self):
-        """Calcule les scores des équipes à partir des statistiques des joueurs."""
+        """Calcule les scores des équipes à partir des statistiques des joueurs (sauf forfait : score posé à la main)."""
+        if self.forfait:
+            return
         stats_domicile = StatistiqueJoueur.objects.filter(
             joueur__equipe=self.equipe_domicile,
             match=self

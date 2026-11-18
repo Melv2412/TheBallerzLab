@@ -5,7 +5,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from . import athletes, organisateurs, protections
+from . import athletes, forfaits, organisateurs, protections
 from . import reglement as regles
 from .journal import TYPES_ANNULABLES
 from .models import ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
@@ -423,14 +423,15 @@ class MatchSerializer(serializers.ModelSerializer):
         model = Match
         fields = [
             'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'organisateur_nom', 'organisateur_id', 'phase', 'equipe_domicile', 'equipe_domicile_nom',
-            'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'score_domicile',
+            'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'forfait', 'score_domicile',
             'score_exterieur', 'date_match', 'statistiques', 'mvp', 'reglement',
             'temps_restant_secondes', 'periode_actuelle', 'chrono_en_cours',
             'shot_clock_secondes', 'possession_fleche', 'score_periodes',
             'created_at', 'updated_at'
         ]
-        # Le score découle uniquement des statistiques des joueurs (voir Match.calculer_scores_depuis_stats)
-        read_only_fields = ['score_domicile', 'score_exterieur', 'score_periodes']
+        # Le score découle des statistiques des joueurs (voir Match.calculer_scores_depuis_stats),
+        # ou du forfait, qui a sa propre action (voir MatchViewSet.forfait)
+        read_only_fields = ['forfait', 'score_domicile', 'score_exterieur', 'score_periodes']
 
     CHAMPS_CHRONO = ('temps_restant_secondes', 'shot_clock_secondes', 'periode_actuelle', 'chrono_en_cours')
     # Seuls changements acceptés sur un match terminé : le rouvrir, ou le reprogrammer
@@ -506,7 +507,9 @@ class MatchSerializer(serializers.ModelSerializer):
         return match
 
     def get_mvp(self, obj):
-        """MVP du match (meilleure évaluation), à partir des stats déjà chargées."""
+        """MVP du match (meilleure évaluation), à partir des stats déjà chargées ; aucun sur un forfait."""
+        if obj.forfait:
+            return None
         return mvp_du_match(obj.statistiques_joueurs.all())
 
     def validate(self, attrs):
@@ -516,6 +519,8 @@ class MatchSerializer(serializers.ModelSerializer):
                 "Match terminé : repassez-le « en cours » pour le modifier."
             )
         rouvert = match and match.statut == 'termine' and attrs.get('statut') in ('a_venir', 'en_cours')
+        if rouvert and match.forfait:
+            raise serializers.ValidationError({'statut': "Ce match est un forfait : annulez le forfait pour le rouvrir."})
         if rouvert and match.phase != 'poule' and phase_suivante_commencee(match):
             raise serializers.ValidationError({'statut': (
                 "La phase suivante a déjà commencé : réinitialisez-la (onglet Phase finale) avant de rouvrir ce match."
@@ -553,7 +558,7 @@ class MatchSerializer(serializers.ModelSerializer):
         if match:
             self._valider_chrono(attrs)
 
-        if attrs.get('statut') == 'termine':
+        if attrs.get('statut') == 'termine' and not getattr(match, 'forfait', ''):
             score_dom = getattr(match, 'score_domicile', 0)
             score_ext = getattr(match, 'score_exterieur', 0)
             if score_dom == score_ext:
@@ -605,7 +610,7 @@ class MatchListSerializer(serializers.ModelSerializer):
         model = Match
         fields = [
             'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'organisateur_nom', 'phase', 'equipe_domicile', 'equipe_domicile_nom',
-            'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'score_domicile',
+            'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'forfait', 'score_domicile',
             'score_exterieur', 'date_match', 'created_at', 'updated_at'
         ]
 
@@ -632,6 +637,22 @@ class LigneFeuilleSerializer(serializers.Serializer):
     rebonds = serializers.IntegerField(min_value=0, max_value=200, default=0)
     contres = serializers.IntegerField(min_value=0, max_value=200, default=0)
     fautes = serializers.IntegerField(min_value=0, max_value=20, default=0)
+
+
+class ForfaitSerializer(serializers.Serializer):
+    """Équipe forfait et score retenu (ignoré pour un double forfait, toujours 0-0)."""
+    equipe = serializers.ChoiceField(choices=[
+        Match.FORFAIT_DOMICILE, Match.FORFAIT_EXTERIEUR, Match.FORFAIT_DOUBLE,
+    ])
+    score_vainqueur = serializers.IntegerField(min_value=1, max_value=200, default=forfaits.SCORE_VAINQUEUR)
+    score_perdant = serializers.IntegerField(min_value=0, max_value=200, default=forfaits.SCORE_PERDANT)
+
+    def validate(self, attrs):
+        if attrs['equipe'] != Match.FORFAIT_DOUBLE and attrs['score_vainqueur'] <= attrs['score_perdant']:
+            raise serializers.ValidationError(
+                {'score_vainqueur': "Le vainqueur doit avoir plus de points que l'équipe forfait."}
+            )
+        return attrs
 
 
 class PresencesSerializer(serializers.Serializer):

@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { deleteEquipe, deleteJoueur, deleteMatch, messageErreur, reintegrerJoueur, retirerJoueur } from "../api";
+import {
+  declarerForfaitGeneral,
+  deleteEquipe,
+  deleteJoueur,
+  deleteMatch,
+  messageErreur,
+  reintegrerJoueur,
+  retirerJoueur,
+} from "../api";
 import { useAuth } from "../AuthContext";
 import { peutModifier } from "../permissions";
 import { useTournoi } from "./tournoi/useTournoi";
@@ -43,6 +51,11 @@ function DetailTournoi() {
     retirerJoueur,
   );
   const reintegrer = apresConfirmation("Remettre ce joueur dans l'effectif ?", reintegrerJoueur);
+  const forfaitGeneral = (equipe) =>
+    apresConfirmation(
+      `Déclarer ${equipe.nom} forfait général ? Tous ses matchs restants seront perdus par forfait (20-0).`,
+      declarerForfaitGeneral,
+    )(equipe.id);
 
   const apresEnregistrement = () => {
     setModale(null);
@@ -204,6 +217,7 @@ function DetailTournoi() {
             onSupprimerJoueur={supprimerJoueur}
             onRetirerJoueur={retirer}
             onReintegrerJoueur={reintegrer}
+            onForfaitGeneral={forfaitGeneral}
           />
         )}
 

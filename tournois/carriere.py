@@ -56,9 +56,10 @@ def profil_athlete(athlete, photo_url=None):
     joueurs = list(
         athlete.joueurs.select_related('equipe__tournoi').order_by('-equipe__tournoi__date_debut', '-id')
     )
-    # Seuls les matchs réellement joués comptent : une ligne à 0 sans présence confirmée est une absence
+    # Seuls les matchs réellement joués comptent : une ligne à 0 sans présence confirmée est une absence,
+    # et un forfait ne compte jamais pour les joueurs
     stats = list(
-        StatistiqueJoueur.objects.filter(A_JOUE, joueur__athlete=athlete, match__statut='termine')
+        StatistiqueJoueur.objects.filter(A_JOUE, joueur__athlete=athlete, match__statut='termine', match__forfait='')
     )
     # MVP (même règle que la page du match) : il faut toutes les stats de chaque match joué
     stats_des_matchs = defaultdict(list)

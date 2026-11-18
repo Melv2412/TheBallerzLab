@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMatchLive } from "./match-live/useMatchLive";
 import { formaterTemps, nomPeriode } from "./match-live/chrono";
+import { MatchForfait } from "./match-live/MatchForfait";
 
 function Equipe({ nom, score, fautes, bonus, tempsMorts, seuilBonus, possession }) {
   return (
@@ -52,6 +53,8 @@ function EcranSalle() {
   if (!match) {
     return <div className="min-h-screen bg-black flex items-center justify-center text-white text-2xl">Match introuvable</div>;
   }
+
+  if (match.forfait) return <MatchForfait match={match} />;
 
   const reglement = match.reglement;
   const finDuTemps = chrono.temps === 0 && !match.chrono_en_cours && match.periode_actuelle >= reglement.nb_periodes;

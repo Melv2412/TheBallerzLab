@@ -1,14 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { LogoEquipe } from "./LogoEquipe";
+import { estForfait } from "../match-live/forfait";
 
-function EquipeDuMatch({ nom, equipe, bordure }) {
+function EquipeDuMatch({ nom, equipe, bordure, forfait }) {
   return (
     <div className={`flex-1 min-w-0 p-4 sm:p-6 text-center ${bordure}`}>
       <div className="w-12 h-12 rounded-xl bg-white p-1 mx-auto mb-3 shadow-lg flex items-center justify-center overflow-hidden">
         <LogoEquipe equipe={equipe} />
       </div>
       <h4 className="font-black italic text-sm uppercase leading-tight mb-1 truncate">{nom}</h4>
+      {forfait && <p className="text-[9px] font-black uppercase tracking-widest text-primary-orange">Forfait</p>}
     </div>
   );
 }
@@ -22,6 +24,7 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
           nom={match.equipe_domicile_nom}
           equipe={equipe(match.equipe_domicile)}
           bordure="border-r border-white/5"
+          forfait={estForfait(match, "domicile")}
         />
 
         <div className="w-20 sm:w-24 shrink-0 flex flex-col items-center justify-center p-2 bg-primary-orange/5">
@@ -35,7 +38,7 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
           <div
             className={`px-2 py-0.5 rounded text-[7px] font-black uppercase tracking-widest mt-2 ${match.statut === "en_cours" ? "bg-red-500 text-white animate-pulse" : "bg-white/10 text-gray-400"}`}
           >
-            {match.statut === "en_cours" ? "Live" : match.statut === "termine" ? "Terminé" : "À venir"}
+            {match.forfait ? "Forfait" : match.statut === "en_cours" ? "Live" : match.statut === "termine" ? "Terminé" : "À venir"}
           </div>
         </div>
 
@@ -43,6 +46,7 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
           nom={match.equipe_exterieur_nom}
           equipe={equipe(match.equipe_exterieur)}
           bordure="border-l border-white/5"
+          forfait={estForfait(match, "exterieur")}
         />
       </div>
       <div className="p-3 bg-black/40 flex justify-between items-center px-4 sm:px-6">
@@ -61,7 +65,7 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
             to={`/match/${match.id}`}
             className="px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg bg-primary-orange text-white font-black italic uppercase text-[10px] sm:text-[8px] tracking-widest hover:scale-105 transition-all"
           >
-            Stats
+            {match.forfait ? "Détail" : "Stats"}
           </Link>
           {match.statut !== "termine" && (
             <Link

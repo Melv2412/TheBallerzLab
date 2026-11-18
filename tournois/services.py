@@ -35,18 +35,22 @@ def classement_du_tournoi(tournoi, type_classement=None):
     """Classement FIBA sur les matchs terminés (2 requêtes, calcul en mémoire)."""
     matchs = filtrer_par_type(tournoi.matchs.filter(statut='termine'), type_classement)
     equipes = tournoi.equipes.values_list('id', 'nom')
-    scores = matchs.values_list('equipe_domicile_id', 'equipe_exterieur_id', 'score_domicile', 'score_exterieur')
+    scores = matchs.values_list(
+        'equipe_domicile_id', 'equipe_exterieur_id', 'score_domicile', 'score_exterieur', 'forfait',
+    )
     reglement = tournoi.reglement
     return calculer_classement(equipes, scores, reglement['points_victoire'], reglement['points_defaite'])
 
 
 def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
     """
-    Joueurs à la meilleure évaluation moyenne sur les matchs terminés où ils ont joué (2 requêtes).
+    Joueurs à la meilleure évaluation moyenne sur les matchs terminés où ils ont joué, hors forfaits (2 requêtes).
     Pour éviter qu'un seul gros match suffise, un joueur doit avoir joué au moins la moitié des matchs de son équipe.
     """
     stats = filtrer_par_type(
-        StatistiqueJoueur.objects.filter(A_JOUE, joueur__equipe__tournoi=tournoi, match__statut='termine'),
+        StatistiqueJoueur.objects.filter(
+            A_JOUE, joueur__equipe__tournoi=tournoi, match__statut='termine', match__forfait='',
+        ),
         type_classement,
         champ_phase='match__phase',
     )
@@ -59,9 +63,8 @@ def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
         .order_by('joueur__equipe', 'joueur__numero_maillot')
     )
     matchs_par_equipe = Counter()
-    for domicile, exterieur in filtrer_par_type(tournoi.matchs.filter(statut='termine'), type_classement).values_list(
-        'equipe_domicile_id', 'equipe_exterieur_id'
-    ):
+    matchs_joues = filtrer_par_type(tournoi.matchs.filter(statut='termine', forfait=''), type_classement)
+    for domicile, exterieur in matchs_joues.values_list('equipe_domicile_id', 'equipe_exterieur_id'):
         matchs_par_equipe.update((domicile, exterieur))
 
     joueurs = [

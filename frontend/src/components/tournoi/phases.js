@@ -14,6 +14,9 @@ export const pointsVerrouilles = (matchs) => matchs.some((m) => m.statut === "te
 export const equipeAJoue = (matchs, equipeId) =>
   matchs.some((m) => m.statut !== "a_venir" && (m.equipe_domicile === equipeId || m.equipe_exterieur === equipeId));
 
+export const aDesMatchsRestants = (matchs, equipeId) =>
+  matchs.some((m) => m.statut !== "termine" && (m.equipe_domicile === equipeId || m.equipe_exterieur === equipeId));
+
 // Même règle que le serveur : phases actives consécutives, jusqu'à la finale
 export const erreurPhases = (form) => {
   const actives = PHASES.filter((p) => form[p.cle]);

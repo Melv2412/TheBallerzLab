@@ -243,11 +243,13 @@ class JoueurAdmin(admin.ModelAdmin):
 
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
-    list_display = ['equipe_domicile', 'equipe_exterieur', 'tournoi', 'statut', 'score_domicile', 'score_exterieur']
+    list_display = [
+        'equipe_domicile', 'equipe_exterieur', 'tournoi', 'statut', 'forfait', 'score_domicile', 'score_exterieur',
+    ]
     list_filter = ['statut', 'tournoi']
     search_fields = ['equipe_domicile__nom', 'equipe_exterieur__nom']
     list_select_related = ['equipe_domicile', 'equipe_exterieur', 'tournoi']
-    readonly_fields = ['reglement_tableau']
+    readonly_fields = ['reglement_tableau', 'forfait']
     actions = ['rouvrir']
 
     @admin.display(description='Règlement (lisible)')

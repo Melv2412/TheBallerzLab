@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getActions, getMatch } from "../api";
 import { NOMS_PRESETS } from "./reglement/presets";
+import { MatchForfait } from "./match-live/MatchForfait";
 import {
   enTetePeriode,
   evaluationStat,
@@ -82,6 +83,8 @@ function FeuilleMatch() {
 
   if (erreur) return <div className="text-center py-10">Feuille de match introuvable.</div>;
   if (!match) return <div className="text-center py-10 animate-pulse">Préparation de la feuille de match...</div>;
+
+  if (match.forfait) return <MatchForfait match={match} />;
 
   const reglement = match.reglement;
   const nbPeriodes = reglement.nb_periodes;

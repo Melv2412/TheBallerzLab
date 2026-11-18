@@ -27,6 +27,8 @@ def _joueurs_sans_stat(match):
 
 
 def presences_du_match(match):
+    if match.forfait:
+        return []  # match non joué : personne à confirmer
     return [
         {
             'joueur': joueur.pk,
@@ -49,6 +51,8 @@ def enregistrer_presences(match_id, presents):
     match = Match.objects.select_for_update().get(pk=match_id)
     if match.statut != 'termine':
         raise ValidationError({'detail': "Les présences se confirment une fois le match terminé."})
+    if match.forfait:
+        raise ValidationError({'detail': "Ce match est un forfait : il n'y a pas de présences à confirmer."})
     candidats = {joueur.pk for joueur, _ in _joueurs_sans_stat(match)}
     if presents - candidats:
         raise ValidationError({'presents': "La liste a changé : recharge la page et recommence."})
