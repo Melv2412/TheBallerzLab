@@ -11,7 +11,7 @@
   },
   "crons": [
     {
-      "path": "/api/health/",
+      "path": "/api/taches/quotidiennes/",
       "schedule": "0 6 * * *"
     }
   ]

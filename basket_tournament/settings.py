@@ -76,6 +76,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Efface du stockage les images notées pendant la requête
+    'tournois.images.NettoyageImagesMiddleware',
 ]
 
 ROOT_URLCONF = 'basket_tournament.urls'
@@ -187,6 +189,8 @@ STORAGES = {
 STORAGE_BUCKET = config('STORAGE_BUCKET', default='')
 
 if STORAGE_BUCKET:
+    from botocore.config import Config
+
     # Prod : Supabase Storage via son API compatible S3 (bucket public)
     STORAGES['default'] = {
         'BACKEND': 'storages.backends.s3.S3Storage',
@@ -196,7 +200,10 @@ if STORAGE_BUCKET:
             'region_name': config('STORAGE_S3_REGION'),           # ex. eu-west-3
             'access_key': config('STORAGE_S3_ACCESS_KEY_ID'),
             'secret_key': config('STORAGE_S3_SECRET_ACCESS_KEY'),
-            'addressing_style': 'path',
+            # Délais courts : un stockage qui ne répond pas ne doit pas consommer les 30 s de Vercel
+            'client_config': Config(
+                s3={'addressing_style': 'path'}, connect_timeout=5, read_timeout=20, retries={'max_attempts': 2},
+            ),
             # URLs publiques directes (sans signature) : <projet>.supabase.co/storage/v1/object/public/<bucket>
             'custom_domain': config('STORAGE_PUBLIC_DOMAIN'),
             'querystring_auth': False,
@@ -216,6 +223,9 @@ TAILLE_MAX_IMAGE_MO = config('TAILLE_MAX_IMAGE_MO', default=2, cast=int)
 LIMITE_TOURNOIS_ACTIFS = config('LIMITE_TOURNOIS_ACTIFS', default=3, cast=int)
 LIMITE_EQUIPES_PAR_TOURNOI = config('LIMITE_EQUIPES_PAR_TOURNOI', default=32, cast=int)
 LIMITE_JOUEURS_PAR_EQUIPE = config('LIMITE_JOUEURS_PAR_EQUIPE', default=25, cast=int)
+
+# Secret envoyé par le cron Vercel : sans lui, la tâche quotidienne ne fait que réveiller la base
+CRON_SECRET = config('CRON_SECRET', default='')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

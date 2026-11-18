@@ -1,5 +1,5 @@
 import React from "react";
-import { getImageUrl } from "../../api";
+import { ImageSecours } from "../ImageSecours";
 import { evaluation } from "./chrono";
 
 export function MvpLive({ mvp }) {
@@ -11,11 +11,10 @@ export function MvpLive({ mvp }) {
       {mvp ? (
         <>
           <div className="w-16 h-16 rounded-full border-2 border-primary-orange overflow-hidden mb-2">
-            {getImageUrl(mvp.joueur_photo) ? (
-              <img src={getImageUrl(mvp.joueur_photo)} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-white/10 flex items-center justify-center text-xl">👤</div>
-            )}
+            <ImageSecours
+              src={mvp.joueur_photo}
+              secours={<div className="w-full h-full bg-white/10 flex items-center justify-center text-xl">👤</div>}
+            />
           </div>
           <div className="text-xs font-black uppercase text-white truncate w-full text-center">
             #{mvp.joueur_numero} {mvp.joueur_nom}

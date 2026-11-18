@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getTournois, createTournoi, deleteTournoi, devenirOrganisateur, messageErreur } from '../api'
+import { getTournois, createTournoi, getCorbeille, devenirOrganisateur, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 import { peutModifier } from '../permissions'
 import { FormulaireReglement } from './reglement/FormulaireReglement'
 import { NOMS_PRESETS, typeReglement, usePresets } from './reglement/presets'
+import { ModalCorbeille } from './tournoi/ModalCorbeille'
+import { ModalSuppressionTournoi } from './tournoi/ModalSuppressionTournoi'
 
 const FORMULAIRE_VIDE = {
   nom: '',
@@ -63,6 +65,28 @@ function ListeTournois() {
   const [personnaliser, setPersonnaliser] = useState(false)
   const presets = usePresets()
   const reglementChoisi = formData.reglement || presets?.presets.fiba
+  const [aSupprimer, setASupprimer] = useState(null)
+  const [corbeille, setCorbeille] = useState([])
+  const [voirCorbeille, setVoirCorbeille] = useState(false)
+  const gereDesTournois = Boolean(user) && !compteJoueur
+
+  const chargerCorbeille = async () => {
+    try {
+      const { data } = await getCorbeille()
+      setCorbeille(data)
+    } catch (error) {
+      console.error('Erreur lors du chargement de la corbeille:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (gereDesTournois) chargerCorbeille()
+  }, [gereDesTournois])
+
+  // Après une suppression ou une restauration : listes et compteur de tournois à jour
+  const actualiserApresSuppression = async () => {
+    await Promise.all([loadTournois(searchTerm), chargerCorbeille(), rafraichirProfil()])
+  }
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -116,17 +140,6 @@ function ListeTournois() {
     }
   }
 
-  const handleDelete = async (slug) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce tournoi ?')) {
-      try {
-        await deleteTournoi(slug)
-        loadTournois(searchTerm)
-      } catch (error) {
-        console.error('Erreur lors de la suppression:', error)
-      }
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-pulse">
@@ -163,6 +176,15 @@ function ListeTournois() {
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
+          {corbeille.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setVoirCorbeille(true)}
+              className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-xs tracking-widest whitespace-nowrap"
+            >
+              Corbeille ({corbeille.length})
+            </button>
+          )}
           {/* Barre de Recherche */}
           <div className="relative group w-full md:w-80">
             <input 
@@ -254,7 +276,8 @@ function ListeTournois() {
                   </div>
                   {peutModifier(user, tournoi.organisateur) && (
                     <button
-                      onClick={() => handleDelete(tournoi.slug)}
+                      onClick={() => setASupprimer(tournoi)}
+                      aria-label={`Supprimer ${tournoi.nom}`}
                       className="text-gray-600 hover:text-red-500 transition-colors p-1"
                     >
                       ✕
@@ -428,6 +451,24 @@ function ListeTournois() {
             </form>
           </div>
         </div>
+      )}
+      {aSupprimer && (
+        <ModalSuppressionTournoi
+          tournoi={aSupprimer}
+          onFermer={() => setASupprimer(null)}
+          onSupprime={async () => {
+            setASupprimer(null)
+            await actualiserApresSuppression()
+          }}
+        />
+      )}
+
+      {voirCorbeille && (
+        <ModalCorbeille
+          tournois={corbeille}
+          onFermer={() => setVoirCorbeille(false)}
+          onChange={actualiserApresSuppression}
+        />
       )}
       </div>
     </div>

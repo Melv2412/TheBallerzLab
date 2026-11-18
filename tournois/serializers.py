@@ -109,6 +109,10 @@ class TournoiSerializer(serializers.ModelSerializer):
             doublons = Tournoi.objects.filter(organisateur=organisateur, nom__iexact=nom)
             if self.instance is not None:
                 doublons = doublons.exclude(pk=self.instance.pk)
+            if doublons.filter(supprime_le__isnull=False).exists():
+                raise serializers.ValidationError(
+                    "Un tournoi de ta corbeille porte ce nom : restaure-le ou supprime-le définitivement."
+                )
             if doublons.exists():
                 raise serializers.ValidationError("Tu as déjà un tournoi avec ce nom.")
         return nom

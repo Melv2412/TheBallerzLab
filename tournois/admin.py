@@ -31,11 +31,15 @@ def tableau_de_bord():
     return [
         ('⏳ Organisateurs en attente', User.objects.filter(groups__name=GROUPE_DEMANDES).count(),
          lien_liste(User, 'attente=oui'), True),
-        ('📝 Équipes proposées en attente', DemandeEquipe.objects.filter(statut=DemandeEquipe.EN_ATTENTE).count(),
+        ('📝 Équipes proposées en attente', DemandeEquipe.objects.filter(
+            statut=DemandeEquipe.EN_ATTENTE, tournoi__supprime_le__isnull=True,
+        ).count(),
          lien_liste(DemandeEquipe, f'statut__exact={DemandeEquipe.EN_ATTENTE}'), True),
-        ('🔴 Matchs en cours', Match.objects.filter(statut='en_cours').count(),
+        ('🔴 Matchs en cours', Match.objects.filter(statut='en_cours', tournoi__supprime_le__isnull=True).count(),
          lien_liste(Match, 'statut__exact=en_cours'), False),
-        ('🏆 Tournois en cours ou à venir', Tournoi.objects.filter(date_fin__gte=timezone.localdate()).count(),
+        ('🏆 Tournois en cours ou à venir', Tournoi.objects.filter(
+            date_fin__gte=timezone.localdate(), supprime_le__isnull=True,
+        ).count(),
          lien_liste(Tournoi, 'actif=oui'), False),
         ('👤 Comptes', User.objects.count(), lien_liste(User), False),
         ('🏀 Fiches athlètes', Athlete.objects.count(), lien_liste(Athlete), False),
@@ -169,7 +173,7 @@ class UtilisateurAdmin(UserAdmin):
 
 @admin.register(Tournoi)
 class TournoiAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'organisateur', 'date_debut', 'date_fin']
+    list_display = ['nom', 'organisateur', 'date_debut', 'date_fin', 'supprime_le']
     list_filter = [TournoiActifFilter, 'date_debut', 'organisateur']
     search_fields = ['nom']
     readonly_fields = ['reglement_tableau']

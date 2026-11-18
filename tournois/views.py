@@ -10,13 +10,14 @@ from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.cache import patch_cache_control
+from django.utils.crypto import constant_time_compare
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
-from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
-from . import forfaits, inscription_equipes, invitations, journal, organisateurs, protections
+from . import corbeille, forfaits, inscription_equipes, invitations, journal, organisateurs, protections
 from . import reglement as regles
 from .athletes import chercher_par_email
 from .carriere import profil_athlete
@@ -61,6 +62,34 @@ def health(request):
     except DatabaseError:
         return Response({'status': 'erreur', 'database': False}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     return Response({'status': 'ok', 'database': True})
+
+
+@api_view(['GET'])
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+def taches_quotidiennes(request):
+    """Cron Vercel : garde la base éveillée puis, avec le bon secret, purge la corbeille et les images."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+    except DatabaseError:
+        return Response({'status': 'erreur', 'database': False}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    if not settings.CRON_SECRET:
+        return Response({'status': 'ok', 'database': True, 'taches': 'non_configurees'})
+    if not constant_time_compare(request.headers.get('Authorization', ''), f'Bearer {settings.CRON_SECRET}'):
+        return Response({'detail': "Accès refusé."}, status=status.HTTP_401_UNAUTHORIZED)
+    return Response({'status': 'ok', 'database': True, 'taches': corbeille.taches_quotidiennes()})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def corbeille_tournois(request):
+    """Tournois que l'utilisateur peut restaurer (les siens ; le staff voit aussi ceux sans organisateur)."""
+    proprietaire = Q(organisateur=request.user)
+    if request.user.is_staff:
+        proprietaire |= Q(organisateur__isnull=True)
+    tournois = Tournoi.objects.filter(proprietaire, supprime_le__isnull=False).order_by('-supprime_le')
+    return Response([corbeille.element_corbeille(tournoi) for tournoi in tournois])
 
 
 @api_view(['GET'])
@@ -120,7 +149,10 @@ class OrganisateurRequisMixin:
         return get_tournoi(serializer.instance)
 
     def verifier_organisateur(self, serializer):
-        if not peut_modifier(self.request.user, self.get_tournoi_cible(serializer)):
+        tournoi = self.get_tournoi_cible(serializer)
+        if tournoi is not None and tournoi.supprime_le is not None:
+            raise NotFound("Ce tournoi est dans la corbeille.")
+        if not peut_modifier(self.request.user, tournoi):
             raise PermissionDenied("Vous n'êtes pas l'organisateur de ce tournoi.")
 
     def perform_create(self, serializer):
@@ -135,14 +167,6 @@ class OrganisateurRequisMixin:
 class StockageIndisponible(APIException):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     default_code = 'stockage_indisponible'
-
-
-def supprimer_fichier(stockage, nom):
-    """Efface un fichier remplacé ; un échec ne bloque pas la requête (le fichier reste, simplement)."""
-    try:
-        stockage.delete(nom)
-    except (OSError, *ERREURS_STOCKAGE):
-        logger.warning("Fichier %s non supprimé du stockage", nom)
 
 
 def enregistrer_avec_fichiers(serializer):
@@ -196,10 +220,13 @@ class TournoiViewSet(viewsets.ModelViewSet):
     lookup_field = 'slug'
     filter_backends = [filters.SearchFilter]
     search_fields = ['nom']
+    ACTIONS_CORBEILLE = ('restaurer', 'supprimer_definitivement')
 
     def get_queryset(self):
+        # Un tournoi de la corbeille n'existe plus, sauf pour le restaurer ou l'effacer
+        hors_corbeille = self.action not in self.ACTIONS_CORBEILLE
         # Les compteurs sont calculés par la base en une seule requête
-        return Tournoi.objects.select_related('organisateur').annotate(
+        return Tournoi.objects.filter(supprime_le__isnull=hors_corbeille).select_related('organisateur').annotate(
             nb_equipes=Count('equipes', distinct=True),
             nb_matchs=Count('matchs', distinct=True),
         ).order_by(*Tournoi._meta.ordering)  # ordering du Meta ignoré avec annotate()
@@ -225,6 +252,48 @@ class TournoiViewSet(viewsets.ModelViewSet):
             )})
         # L'organisateur est l'utilisateur connecté
         serializer.save(organisateur=user)
+
+    def _verifier_confirmation(self, request, tournoi):
+        saisie = request.data.get('confirmation') if isinstance(request.data, dict) else None
+        if not corbeille.nom_confirme(saisie, tournoi.nom):
+            raise ValidationError({'confirmation': "Retape exactement le nom du tournoi pour confirmer."})
+
+    def destroy(self, request, *args, **kwargs):
+        """Le nom retapé est exigé. Tournoi commencé : corbeille de 30 jours ; sinon, effacement immédiat."""
+        tournoi = self.get_object()
+        self._verifier_confirmation(request, tournoi)
+        return Response({'resultat': corbeille.supprimer(tournoi), 'jours': corbeille.DUREE_CORBEILLE.days})
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def apercu_suppression(self, request, slug=None):
+        """Ce que la suppression fera perdre (organisateur uniquement)."""
+        tournoi = self.get_object()
+        if not peut_modifier(request.user, tournoi):
+            raise PermissionDenied("Vous n'êtes pas l'organisateur de ce tournoi.")
+        return Response(corbeille.apercu(tournoi))
+
+    @action(detail=True, methods=['post'])
+    def restaurer(self, request, slug=None):
+        tournoi = self.get_object()
+        organisateur = tournoi.organisateur
+        if (
+            organisateur is not None and tournoi.date_fin >= timezone.localdate()
+            and organisateurs.limite_tournois_atteinte(organisateur)
+        ):
+            raise ValidationError({'detail': (
+                f"Tu as déjà {settings.LIMITE_TOURNOIS_ACTIFS} tournois en cours ou à venir : "
+                "impossible de restaurer celui-ci pour le moment."
+            )})
+        corbeille.restaurer(tournoi)
+        return Response(self.get_serializer(tournoi).data)
+
+    @action(detail=True, methods=['post'])
+    def supprimer_definitivement(self, request, slug=None):
+        """Efface tout de suite un tournoi de la corbeille (le nom retapé est exigé)."""
+        tournoi = self.get_object()
+        self._verifier_confirmation(request, tournoi)
+        tournoi.delete()
+        return Response({'resultat': 'supprime'})
 
     @action(detail=True, methods=['get'])
     def classement(self, request, slug=None):
@@ -289,7 +358,7 @@ class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        queryset = Equipe.objects.select_related('tournoi').annotate(
+        queryset = Equipe.objects.filter(tournoi__supprime_le__isnull=True).select_related('tournoi').annotate(
             nb_joueurs=Count('joueurs', filter=Q(joueurs__retire=False)),
         ).order_by(*Equipe._meta.ordering)
         tournoi_param = self.request.query_params.get('tournoi', None)
@@ -335,7 +404,8 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = protections.annoter_stats_joueurs(
-            Joueur.objects.select_related('equipe', 'equipe__tournoi', 'athlete')
+            Joueur.objects.filter(equipe__tournoi__supprime_le__isnull=True)
+            .select_related('equipe', 'equipe__tournoi', 'athlete')
         )
         equipe_id = self.request.query_params.get('equipe', None)
         if equipe_id:
@@ -366,7 +436,10 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         fiche = chercher_par_email(email)
         if fiche is None:
             return Response({'detail': "Aucune fiche avec cet email."}, status=status.HTTP_404_NOT_FOUND)
-        tournois = fiche.joueurs.values('equipe__tournoi_id').distinct().count()
+        tournois = (
+            fiche.joueurs.filter(equipe__tournoi__supprime_le__isnull=True)
+            .values('equipe__tournoi_id').distinct().count()
+        )
         return Response({'athlete': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom, 'nb_tournois': tournois})
 
 
@@ -409,7 +482,7 @@ class InvitationThrottle(UserRateThrottle):
 
 class InvitationViewSet(viewsets.GenericViewSet):
     """Page du lien d'invitation d'une équipe (publique) et inscription du joueur connecté."""
-    queryset = Equipe.objects.select_related('tournoi')
+    queryset = Equipe.objects.filter(tournoi__supprime_le__isnull=True).select_related('tournoi')
     lookup_field = 'code_invitation'
     lookup_url_kwarg = 'code'
     lookup_value_regex = '[A-Za-z0-9_-]+'
@@ -500,7 +573,7 @@ def _demande_json(demande, avec_lien=False):
 
 class InscriptionViewSet(viewsets.GenericViewSet):
     """Page du lien d'inscription d'un tournoi (publique) : le capitaine connecté propose son équipe."""
-    queryset = Tournoi.objects.select_related('organisateur')
+    queryset = Tournoi.objects.filter(supprime_le__isnull=True).select_related('organisateur')
     lookup_field = 'code_inscription'
     lookup_url_kwarg = 'code'
     lookup_value_regex = '[A-Za-z0-9_-]+'
@@ -540,7 +613,7 @@ class DemandeEquipeViewSet(viewsets.GenericViewSet):
 
     def get_queryset(self):
         queryset = DemandeEquipe.objects.select_related('tournoi', 'capitaine', 'equipe').filter(
-            tournoi__organisateur=self.request.user,
+            tournoi__organisateur=self.request.user, tournoi__supprime_le__isnull=True,
         )
         tournoi_param = self.request.query_params.get('tournoi')
         if tournoi_param:
@@ -583,7 +656,10 @@ class AthleteViewSet(viewsets.GenericViewSet):
         if athlete.photo:
             photo = request.build_absolute_uri(athlete.photo.url)
         else:  # à défaut, la photo ajoutée par un organisateur sur une inscription
-            avec_photo = athlete.joueurs.exclude(photo='').exclude(photo__isnull=True).order_by('-created_at').first()
+            avec_photo = (
+                athlete.joueurs.filter(equipe__tournoi__supprime_le__isnull=True)
+                .exclude(photo='').exclude(photo__isnull=True).order_by('-created_at').first()
+            )
             photo = request.build_absolute_uri(avec_photo.photo.url) if avec_photo else None
         profil = profil_athlete(athlete, photo)
         profil['photo_perso'] = bool(athlete.photo)  # photo choisie par le joueur (il peut la retirer)
@@ -595,7 +671,6 @@ class AthleteViewSet(viewsets.GenericViewSet):
         athlete = self.get_object()
         if athlete.utilisateur_id != request.user.id:
             raise PermissionDenied("Seul le joueur relié à cette fiche peut changer sa photo.")
-        ancienne = athlete.photo.name if athlete.photo else None
         if request.method == 'DELETE':
             athlete.photo = None
             athlete.save(update_fields=['photo', 'updated_at'])
@@ -603,8 +678,6 @@ class AthleteViewSet(viewsets.GenericViewSet):
             serializer = PhotoAthleteSerializer(athlete, data=request.data)
             serializer.is_valid(raise_exception=True)
             enregistrer_avec_fichiers(serializer)
-        if ancienne and ancienne != athlete.photo.name:
-            supprimer_fichier(athlete.photo.storage, ancienne)
         return self.retrieve(request, pk)
 
 
@@ -621,7 +694,9 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         return MatchSerializer
 
     def get_queryset(self):
-        queryset = Match.objects.select_related('tournoi__organisateur', 'equipe_domicile', 'equipe_exterieur')
+        queryset = Match.objects.filter(tournoi__supprime_le__isnull=True).select_related(
+            'tournoi__organisateur', 'equipe_domicile', 'equipe_exterieur',
+        )
         # La liste n'affiche pas les stats des joueurs : inutile de les charger
         if self.action != 'list':
             queryset = queryset.prefetch_related('statistiques_joueurs__joueur__equipe', 'statistiques_joueurs__joueur__athlete')
@@ -905,9 +980,9 @@ class StatistiqueJoueurViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = StatistiqueJoueurSerializer
 
     def get_queryset(self):
-        queryset = StatistiqueJoueur.objects.select_related(
+        queryset = StatistiqueJoueur.objects.filter(match__tournoi__supprime_le__isnull=True).select_related(
             'joueur__equipe', 'joueur__athlete', 'match'
-        ).all()
+        )
 
         match_id = self.request.query_params.get('match', None)
         if match_id:

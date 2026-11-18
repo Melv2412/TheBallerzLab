@@ -113,7 +113,12 @@ export const getTournois = (search = '', page = 1) =>
 export const getTournoi = (slug) => api.get(`/tournois/${slug}/`)
 export const createTournoi = (data) => api.post('/tournois/', data)
 export const updateTournoi = (slug, data) => api.patch(`/tournois/${slug}/`, data)
-export const deleteTournoi = (slug) => api.delete(`/tournois/${slug}/`)
+export const deleteTournoi = (slug, confirmation) => api.delete(`/tournois/${slug}/`, { data: { confirmation } })
+export const getApercuSuppression = (slug) => api.get(`/tournois/${slug}/apercu_suppression/`)
+export const getCorbeille = () => api.get('/corbeille/')
+export const restaurerTournoi = (slug) => api.post(`/tournois/${slug}/restaurer/`)
+export const supprimerDefinitivement = (slug, confirmation) =>
+  api.post(`/tournois/${slug}/supprimer_definitivement/`, { confirmation })
 export const getClassement = (idOrSlug, type = '') => {
   const url = type ? `/tournois/${idOrSlug}/classement/?type=${type}` : `/tournois/${idOrSlug}/classement/`
   return api.get(url)

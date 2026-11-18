@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { delierJoueur, getImageUrl, lienInvitation, messageErreur, updateTournoi } from "../../api";
+import { delierJoueur, lienInvitation, messageErreur, updateTournoi } from "../../api";
+import { ImageSecours } from "../ImageSecours";
 import { InscriptionsEquipes } from "./InscriptionsEquipes";
 import { LogoEquipe } from "./LogoEquipe";
 import { aDesMatchsRestants, equipeAJoue } from "./phases";
@@ -193,11 +194,11 @@ export function OngletEquipes({
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center">
-                            {getImageUrl(joueur.photo) ? (
-                              <img src={getImageUrl(joueur.photo)} className="w-full h-full object-cover" alt="photo" />
-                            ) : (
-                              <span className="text-lg font-black text-gray-700">👤</span>
-                            )}
+                            <ImageSecours
+                              src={joueur.photo}
+                              alt="photo"
+                              secours={<span className="text-lg font-black text-gray-700">👤</span>}
+                            />
                           </div>
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">

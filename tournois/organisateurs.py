@@ -26,8 +26,8 @@ def est_organisateur_valide(user):
 
 
 def nb_tournois_actifs(user):
-    """Tournois en cours ou à venir (date de fin pas encore passée)."""
-    return user.tournois_crees.filter(date_fin__gte=timezone.localdate()).count()
+    """Tournois en cours ou à venir (date de fin pas encore passée), hors corbeille."""
+    return user.tournois_crees.filter(date_fin__gte=timezone.localdate(), supprime_le__isnull=True).count()
 
 
 def limite_tournois_atteinte(user):

@@ -91,6 +91,11 @@ def fusionner(athletes):
     cible = min(athletes, key=lambda a: (a.utilisateur_id is None, a.email is None, a.created_at, a.pk))
     autres = [a for a in athletes if a.pk != cible.pk]
     Joueur.objects.filter(athlete__in=autres).update(athlete=cible)
+    if not cible.photo:  # la photo d'une fiche absorbée est gardée si la fiche conservée n'en a pas
+        avec_photo = next((a for a in autres if a.photo), None)
+        if avec_photo is not None:
+            cible.photo = avec_photo.photo.name
+            cible.save(update_fields=['photo', 'updated_at'])
     Athlete.objects.filter(pk__in=[a.pk for a in autres]).delete()
     if emails and not cible.email:  # l'email d'une fiche absorbée n'est pas perdu
         cible.email = emails.pop()

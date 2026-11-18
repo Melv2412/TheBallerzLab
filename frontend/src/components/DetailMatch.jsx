@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, getImageUrl, messageErreur } from '../api'
+import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 import { usePolling } from '../usePolling'
 import { useTempsReelMatch } from '../tempsReel'
 import { peutModifier } from '../permissions'
+import { ImageSecours } from './ImageSecours'
 import { ModalPresences } from './match-live/ModalPresences'
 import { ModalForfait } from './match-live/ModalForfait'
 import { texteForfait } from './match-live/forfait'
@@ -340,11 +341,7 @@ function StatCard({ stat, onUpdate, matchStatut, limiteFautes, isOwner }) {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-primary-orange text-white flex items-center justify-center rounded-xl font-black text-xl italic shadow-lg shadow-primary-orange/20 overflow-hidden">
-            {getImageUrl(stat.joueur_photo) ? (
-              <img src={getImageUrl(stat.joueur_photo)} className="w-full h-full object-cover" alt="photo" />
-            ) : (
-              <span>#{stat.joueur_numero}</span>
-            )}
+            <ImageSecours src={stat.joueur_photo} alt="photo" secours={<span>#{stat.joueur_numero}</span>} />
           </div>
           <div>
             <h3 className="text-xl font-black italic uppercase tracking-tighter">

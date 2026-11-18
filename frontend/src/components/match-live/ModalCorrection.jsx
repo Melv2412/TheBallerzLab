@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { getImageUrl } from "../../api";
+import { ImageSecours } from "../ImageSecours";
 
 const AUCUNE_CORRECTION = { points: 0, rebonds: 0, passes: 0, fautes: 0 };
 
@@ -22,11 +22,10 @@ export function ModalCorrection({ stat, onConfirmer, onAnnuler }) {
       <div className="glass-card max-w-sm w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 text-center border-red-500/50">
         <div className="flex flex-col items-center mb-6">
           <div className="w-20 h-20 rounded-full border-2 border-red-500 overflow-hidden mb-4">
-            {getImageUrl(stat.joueur_photo) ? (
-              <img src={getImageUrl(stat.joueur_photo)} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-white/10 flex items-center justify-center text-2xl">👤</div>
-            )}
+            <ImageSecours
+              src={stat.joueur_photo}
+              secours={<div className="w-full h-full bg-white/10 flex items-center justify-center text-2xl">👤</div>}
+            />
           </div>
           <h3 className="text-xl font-black text-white uppercase italic">
             CORRIGER : #{stat.joueur_numero} {stat.joueur_nom}

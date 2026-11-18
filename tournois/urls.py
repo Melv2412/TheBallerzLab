@@ -12,8 +12,10 @@ from .views import (
     StatistiqueJoueurViewSet,
     TournoiViewSet,
     UserViewSet,
+    corbeille_tournois,
     health,
     reglements,
+    taches_quotidiennes,
 )
 
 router = DefaultRouter()
@@ -31,6 +33,8 @@ router.register(r'users', UserViewSet, basename='user')
 urlpatterns = [
     path('health/', health, name='health'),
     path('reglements/', reglements, name='reglements'),
+    path('corbeille/', corbeille_tournois, name='corbeille'),
+    path('taches/quotidiennes/', taches_quotidiennes, name='taches-quotidiennes'),
     path('', include(router.urls)),
 ]
 

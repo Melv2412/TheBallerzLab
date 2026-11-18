@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { envoyerPhotoAthlete, getAthlete, getImageUrl, messageErreur, supprimerPhotoAthlete } from "../api";
 import { useAuth } from "../AuthContext";
 import { compresserImage } from "../images";
+import { ImageSecours } from "./ImageSecours";
 
 const STATS = [
   { cle: "points", label: "Points" },
@@ -57,11 +58,7 @@ function Photo({ profil, modifiable, onChange }) {
   return (
     <div className="flex flex-col items-center gap-2 shrink-0">
       <div className="relative w-28 h-28 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
-        {photo ? (
-          <img src={photo} alt={`${profil.prenom} ${profil.nom}`} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-4xl">👤</span>
-        )}
+        <ImageSecours src={profil.photo} alt={`${profil.prenom} ${profil.nom}`} secours={<span className="text-4xl">👤</span>} />
         {envoi && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-xs animate-pulse">Envoi…</div>}
       </div>
       {modifiable && (

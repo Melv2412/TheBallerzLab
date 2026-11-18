@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getImageUrl, getInvitation, messageErreur, rejoindreEquipe } from "../api";
+import { getInvitation, messageErreur, rejoindreEquipe } from "../api";
 import { useAuth } from "../AuthContext";
+import { ImageSecours } from "./ImageSecours";
 import { erreurInscription, suggestions } from "./invitation/invitation";
 
 const CHAMP =
@@ -65,7 +66,6 @@ export default function Invitation() {
   const libres = joueurs.filter((j) => !j.compte_lie);
   const proposes = suggestions(joueurs, fiche);
   const suite = encodeURIComponent(`/invitation/${code}`);
-  const logo = getImageUrl(equipe.logo);
 
   const envoyer = async (donnees) => {
     setErreur("");
@@ -111,7 +111,7 @@ export default function Invitation() {
     <div className="max-w-2xl mx-auto space-y-6">
       <header className="glass-card p-6 flex items-center gap-5">
         <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
-          {logo ? <img src={logo} alt={equipe.nom} className="w-full h-full object-cover" /> : <span className="text-3xl">🛡️</span>}
+          <ImageSecours src={equipe.logo} alt={equipe.nom} secours={<span className="text-3xl">🛡️</span>} />
         </div>
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Invitation à rejoindre</p>

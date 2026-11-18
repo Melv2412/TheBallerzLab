@@ -19,6 +19,8 @@ class Tournoi(models.Model):
     slug = models.SlugField(max_length=250, unique=True, blank=True)
     # Compte supprimé : le tournoi reste, sans organisateur (il passe alors au staff)
     organisateur = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='tournois_crees', null=True, blank=True)
+    # Date de mise à la corbeille : le tournoi est alors masqué partout (voir corbeille.py)
+    supprime_le = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
     date_debut = models.DateField()
     date_fin = models.DateField()
 
@@ -68,6 +70,21 @@ class Tournoi(models.Model):
             slug = f'{base}-{i}'
             i += 1
         return slug
+
+    def __str__(self):
+        return self.nom
+
+
+class FichierASupprimer(models.Model):
+    """Image à effacer du stockage, notée dans la même transaction que la suppression (voir images.py)."""
+    nom = models.CharField(max_length=255, unique=True)
+    pas_avant = models.DateTimeField(default=timezone.now)
+    tentatives = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Fichier à supprimer"
+        verbose_name_plural = "Fichiers à supprimer"
 
     def __str__(self):
         return self.nom

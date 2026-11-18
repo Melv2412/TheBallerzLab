@@ -6,4 +6,4 @@ class TournoisConfig(AppConfig):
     name = 'tournois'
 
     def ready(self):
-        from . import athletes  # noqa: F401  (branche le nettoyage des fiches orphelines)
+        from . import athletes, images  # noqa: F401  (branchent le nettoyage des fiches et des images)
