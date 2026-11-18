@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { delierJoueur, getImageUrl, lienInvitation, messageErreur, updateTournoi } from "../../api";
 import { InscriptionsEquipes } from "./InscriptionsEquipes";
 import { LogoEquipe } from "./LogoEquipe";
+import { equipeAJoue } from "./phases";
 
 // Lien d'invitation d'une équipe, à envoyer au capitaine (WhatsApp…) : chaque joueur s'y inscrit avec son compte
 function LienInvitation({ equipe }) {
@@ -69,6 +70,7 @@ export function OngletEquipes({
   tournoi,
   onRecharger,
   equipes,
+  matchs,
   joueursParEquipe,
   isOwner,
   onNouvelleEquipe,
@@ -77,6 +79,8 @@ export function OngletEquipes({
   onNouveauJoueur,
   onEditerJoueur,
   onSupprimerJoueur,
+  onRetirerJoueur,
+  onReintegrerJoueur,
 }) {
   const [equipesOuvertes, setEquipesOuvertes] = useState({});
   const basculer = (equipeId) => setEquipesOuvertes((prev) => ({ ...prev, [equipeId]: !prev[equipeId] }));
@@ -123,7 +127,9 @@ export function OngletEquipes({
       {isOwner && tournoi && <InscriptionsEquipes tournoi={tournoi} onRecharger={onRecharger} />}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {equipes.map((equipe) => {
-          const joueurs = joueursParEquipe[equipe.id] || [];
+          const inscrits = joueursParEquipe[equipe.id] || [];
+          const joueurs = inscrits.filter((j) => !j.retire);
+          const retires = inscrits.filter((j) => j.retire);
           return (
             <div key={equipe.id} className="glass-card group overflow-hidden border-b-4 border-b-primary-orange/50">
               <div className="p-6">
@@ -155,12 +161,14 @@ export function OngletEquipes({
                       >
                         ✎
                       </button>
-                      <button
-                        onClick={() => onSupprimerEquipe(equipe.id)}
-                        className="bg-red-500/10 p-2 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                      >
-                        ✕
-                      </button>
+                      {!equipeAJoue(matchs, equipe.id) && (
+                        <button
+                          onClick={() => onSupprimerEquipe(equipe.id)}
+                          className="bg-red-500/10 p-2 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -216,12 +224,21 @@ export function OngletEquipes({
                             >
                               ✎
                             </button>
-                            <button
-                              onClick={() => onSupprimerJoueur(joueur.id)}
-                              className="text-red-400 hover:text-red-500 transition-all"
-                            >
-                              ✕
-                            </button>
+                            {joueur.a_des_stats ? (
+                              <button
+                                onClick={() => onRetirerJoueur(joueur.id)}
+                                className="text-red-400 hover:text-red-500 transition-all text-[10px] font-black uppercase"
+                              >
+                                Retirer
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => onSupprimerJoueur(joueur.id)}
+                                className="text-red-400 hover:text-red-500 transition-all"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -232,6 +249,47 @@ export function OngletEquipes({
                     </p>
                   )}
                 </div>
+
+                {retires.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-white/5">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+                      Retirés de l'effectif
+                    </p>
+                    <div className="space-y-1">
+                      {retires.map((joueur) => (
+                        <div key={joueur.id} className="flex justify-between items-center gap-3 px-3 py-1 text-xs text-gray-500">
+                          <Link to={`/athlete/${joueur.athlete}`} className="min-w-0 truncate hover:text-white transition-colors">
+                            #{joueur.numero_maillot} {joueur.prenom} {joueur.nom}
+                          </Link>
+                          {isOwner && (
+                            <div className="flex items-center gap-3 shrink-0">
+                              <button
+                                onClick={() => onReintegrerJoueur(joueur.id)}
+                                className="text-primary-orange hover:text-white transition-all text-[10px] font-black uppercase"
+                              >
+                                Remettre
+                              </button>
+                              <button
+                                onClick={() => onEditerJoueur(joueur, equipe.id)}
+                                className="text-blue-400 hover:text-blue-500 transition-all"
+                              >
+                                ✎
+                              </button>
+                              {!joueur.a_des_stats && (
+                                <button
+                                  onClick={() => onSupprimerJoueur(joueur.id)}
+                                  className="text-red-400 hover:text-red-500 transition-all"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button

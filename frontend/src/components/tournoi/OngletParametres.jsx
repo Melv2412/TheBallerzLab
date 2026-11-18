@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { updateTournoi, resetPlayoffs, messageErreur } from "../../api";
 import { FormulaireReglement } from "../reglement/FormulaireReglement";
 import { usePresets } from "../reglement/presets";
-import { PHASES, erreurPhases } from "./phases";
+import { PHASES, erreurPhases, phasesCommencees, pointsVerrouilles } from "./phases";
 
 const formulaireDepuis = (tournoi) => ({
   has_8emes: tournoi.has_8emes,
@@ -20,55 +20,38 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
   const [form, setForm] = useState(() => formulaireDepuis(tournoi));
   const [enregistrement, setEnregistrement] = useState(false);
   const presets = usePresets();
+  const commencees = phasesCommencees(matchs);
+  const structureVerrouillee = commencees.size > 0;
+  const pointsBloques = pointsVerrouilles(matchs);
 
   useEffect(() => {
     setForm(formulaireDepuis(tournoi));
   }, [tournoi]);
 
-  // Les playoffs déjà joués deviennent incohérents si leur format change : on propose de les réinitialiser
+  // Tant qu'aucune phase n'a commencé, changer la structure efface seulement les matchs prévus
   const reinitialiserSiBesoin = async () => {
-    const structureModifiee = PHASES.some((p) => form[p.cle] !== tournoi[p.cle]);
-    if (structureModifiee) {
-      if (
-        !window.confirm(
-          "Modifier la structure des phases finales réinitialisera TOUS les matchs éliminatoires. Voulez-vous continuer ?",
-        )
-      ) {
-        return false;
-      }
-      try {
-        await resetPlayoffs(tournoi.slug);
-      } catch (err) {
-        console.error("Erreur lors de la réinitialisation des playoffs:", err);
-        alert("Erreur lors de la réinitialisation des playoffs");
-        return false;
-      }
-      return true;
-    }
-
-    // Première phase dont le nombre de victoires change alors que des matchs y ont été joués
-    const phaseAReinitialiser = PHASES.find(
-      (p) =>
-        form[p.victoires] !== tournoi[p.victoires] &&
-        matchs.some((m) => m.phase === p.phase && m.statut !== "a_venir"),
-    )?.phase;
-    if (!phaseAReinitialiser) return true;
-
+    if (!PHASES.some((p) => form[p.cle] !== tournoi[p.cle])) return true;
     if (
       !window.confirm(
-        `Modifier le nombre de victoires requises pour la phase de ${phaseAReinitialiser} alors que des matchs ont déjà été joués entraînera la réinitialisation de cette phase et des phases suivantes. Voulez-vous continuer ?`,
+        "Modifier la structure des phases finales supprimera les matchs éliminatoires prévus. Voulez-vous continuer ?",
       )
     ) {
       return false;
     }
     try {
-      await resetPlayoffs(tournoi.slug, phaseAReinitialiser);
+      await resetPlayoffs(tournoi.slug);
     } catch (err) {
-      console.error("Erreur lors de la réinitialisation en cascade:", err);
-      alert("Erreur lors de la réinitialisation en cascade");
+      console.error("Erreur lors de la réinitialisation des playoffs:", err);
+      alert(messageErreur(err, "Erreur lors de la réinitialisation des playoffs"));
       return false;
     }
     return true;
+  };
+
+  // Les boutons de règlement de base ne doivent pas changer des points verrouillés
+  const changerReglement = (reglement) => {
+    const { points_victoire, points_defaite } = tournoi.reglement;
+    setForm({ ...form, reglement: pointsBloques ? { ...reglement, points_victoire, points_defaite } : reglement });
   };
 
   const enregistrer = async (e) => {
@@ -103,28 +86,33 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
           <p className="text-xs text-gray-500 mb-6 italic">
             * S'applique aux matchs à venir. Les matchs en cours ou terminés gardent leur règlement, et chaque match
             peut être ajusté depuis son tableau de marque.
+            {pointsBloques && " Un match est terminé : les points au classement ne peuvent plus changer."}
           </p>
           <FormulaireReglement
             reglement={form.reglement}
             donnees={presets}
-            onChange={(reglement) => setForm({ ...form, reglement })}
+            verrouilles={pointsBloques ? ["points_victoire", "points_defaite"] : []}
+            onChange={changerReglement}
           />
         </div>
 
         <div className="border-b border-white/5 pb-6">
           <h3 className="text-lg font-black uppercase text-primary-orange mb-4 tracking-wider">Phases Finales Actives</h3>
           <p className="text-xs text-gray-500 mb-6 italic">
-            * Note : Modifier la structure des phases finales réinitialisera la progression des playoffs.
+            {structureVerrouillee
+              ? "* Les phases finales ont commencé : pour changer leur format, utilisez « Réinitialiser les Playoffs » dans l'onglet Phase Finale."
+              : "* Note : modifier la structure supprimera les matchs éliminatoires prévus."}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {PHASES.map((phase) => (
               <label
                 key={phase.cle}
-                className="flex flex-col items-center gap-3 bg-white/5 border border-white/10 p-5 rounded-2xl cursor-pointer hover:bg-white/10 hover:border-primary-orange/50 transition-all select-none"
+                className={`flex flex-col items-center gap-3 bg-white/5 border border-white/10 p-5 rounded-2xl transition-all select-none ${structureVerrouillee ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-white/10 hover:border-primary-orange/50"}`}
               >
                 <input
                   type="checkbox"
                   checked={form[phase.cle]}
+                  disabled={structureVerrouillee}
                   onChange={(e) => setForm({ ...form, [phase.cle]: e.target.checked })}
                   className="accent-primary-orange w-5 h-5"
                 />
@@ -152,9 +140,10 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
                   type="number"
                   min="1"
                   required
+                  disabled={commencees.has(phase.phase)}
                   value={form[phase.victoires]}
                   onChange={(e) => setForm({ ...form, [phase.victoires]: parseInt(e.target.value) || 1 })}
-                  className="w-full px-5 py-4 glass-input rounded-2xl focus:outline-none"
+                  className="w-full px-5 py-4 glass-input rounded-2xl focus:outline-none disabled:opacity-40"
                 />
               </div>
             ))}

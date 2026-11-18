@@ -20,17 +20,25 @@ def chercher_par_email(email):
     return Athlete.objects.filter(email=email).first() if email else None
 
 
-def verifier_un_par_tournoi(athlete, tournoi_id, sauf_joueur=None):
-    """Refuse qu'un athlète ait deux inscriptions dans le même tournoi."""
+def verifier_un_par_tournoi(athlete, tournoi_id, sauf_joueur=None, equipe_id=None):
+    """
+    Refuse qu'un athlète soit dans deux effectifs du même tournoi. Une inscription retirée ne compte pas
+    (il a pu changer d'équipe), sauf dans `equipe_id` : il faut alors la remettre, pas en créer une seconde.
+    """
     if athlete is None or athlete.pk is None:
         return
     autres = Joueur.objects.filter(athlete=athlete, equipe__tournoi_id=tournoi_id).select_related('equipe')
     if sauf_joueur is not None:
         autres = autres.exclude(pk=sauf_joueur.pk)
-    deja = autres.first()
+    deja = autres.filter(retire=False).first()
     if deja:
         raise ConflitAthlete(
             f"{athlete.prenom} {athlete.nom} joue déjà dans ce tournoi (équipe {deja.equipe.nom})."
+        )
+    if equipe_id is not None and autres.filter(equipe_id=equipe_id, retire=True).exists():
+        raise ConflitAthlete(
+            f"{athlete.prenom} {athlete.nom} a été retiré de cette équipe : "
+            "l'organisateur peut le remettre dans l'effectif."
         )
 
 
@@ -72,7 +80,7 @@ def fusionner(athletes):
     doublons = (
         Joueur.objects.filter(athlete__in=athletes)
         .values('equipe__tournoi__nom')
-        .annotate(n=Count('id'))
+        .annotate(n=Count('athlete', distinct=True))  # un joueur qui a changé d'équipe reste une seule personne
         .filter(n__gt=1)
     )
     if doublons:

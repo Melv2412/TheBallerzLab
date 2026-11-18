@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import EmailValidator
 from django.db import DatabaseError, connection, transaction
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -16,7 +16,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
-from . import inscription_equipes, invitations, journal, organisateurs
+from . import inscription_equipes, invitations, journal, organisateurs, protections
 from . import reglement as regles
 from .athletes import chercher_par_email
 from .carriere import profil_athlete
@@ -286,7 +286,9 @@ class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        queryset = Equipe.objects.select_related('tournoi').annotate(nb_joueurs=Count('joueurs')).order_by(*Equipe._meta.ordering)
+        queryset = Equipe.objects.select_related('tournoi').annotate(
+            nb_joueurs=Count('joueurs', filter=Q(joueurs__retire=False)),
+        ).order_by(*Equipe._meta.ordering)
         tournoi_param = self.request.query_params.get('tournoi', None)
         if tournoi_param:
             if tournoi_param.isdigit():
@@ -302,6 +304,15 @@ class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         code = invitations.code_invitation(equipe, regenerer=bool(request.data.get('regenerer')))
         return Response({'code': code})
 
+    def perform_destroy(self, equipe):
+        with transaction.atomic():
+            verrouiller_tournoi(equipe.tournoi)
+            if protections.equipe_a_joue(equipe):
+                raise ValidationError({'detail': (
+                    "Cette équipe a déjà un match commencé : la supprimer effacerait des résultats."
+                )})
+            equipe.delete()
+
 
 class RechercheAthleteThrottle(UserRateThrottle):
     """Limite par compte la recherche de fiches par email (pas de test d'emails en masse)."""
@@ -315,7 +326,9 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        queryset = Joueur.objects.select_related('equipe', 'equipe__tournoi', 'athlete').all()
+        queryset = protections.annoter_stats_joueurs(
+            Joueur.objects.select_related('equipe', 'equipe__tournoi', 'athlete')
+        )
         equipe_id = self.request.query_params.get('equipe', None)
         if equipe_id:
             queryset = queryset.filter(equipe_id=equipe_id)
@@ -359,6 +372,27 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             raise ValidationError({'detail': str(erreur)}) from erreur
         return Response(self.get_serializer(Joueur.objects.select_related('athlete').get(pk=joueur.pk)).data)
 
+    @action(detail=True, methods=['post'])
+    def retirer(self, request, pk=None):
+        """Retire le joueur de l'effectif : il ne joue plus, ses stats restent dans les matchs joués."""
+        joueur = protections.retirer_de_l_effectif(self.get_object())
+        return Response(self.get_serializer(self.get_queryset().get(pk=joueur.pk)).data)
+
+    @action(detail=True, methods=['post'])
+    def reintegrer(self, request, pk=None):
+        """Remet dans l'effectif un joueur retiré."""
+        joueur = protections.remettre_dans_l_effectif(self.get_object())
+        return Response(self.get_serializer(self.get_queryset().get(pk=joueur.pk)).data)
+
+    def perform_destroy(self, joueur):
+        with transaction.atomic():
+            verrouiller_tournoi(joueur.equipe.tournoi)
+            if protections.joueur_a_des_stats(Joueur.objects.get(pk=joueur.pk)):
+                raise ValidationError({'detail': (
+                    "Ce joueur a des stats : retire-le de l'effectif pour garder ses résultats."
+                )})
+            joueur.delete()
+
 
 class InvitationThrottle(UserRateThrottle):
     """Limite par compte les tentatives pour rejoindre une équipe."""
@@ -376,7 +410,7 @@ class InvitationViewSet(viewsets.GenericViewSet):
     def retrieve(self, request, code=None):
         equipe = self.get_object()
         tournoi = equipe.tournoi
-        joueurs = equipe.joueurs.select_related('athlete').order_by('numero_maillot')
+        joueurs = equipe.joueurs.filter(retire=False).select_related('athlete').order_by('numero_maillot')
         user = request.user
         moi = None
         if user.is_authenticated:
@@ -617,6 +651,13 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     def _reponse_match(self, match):
         return Response(MatchSerializer(self.get_queryset().get(pk=match.pk)).data)
 
+    def perform_destroy(self, match):
+        with transaction.atomic():
+            actuel = Match.objects.select_for_update().get(pk=match.pk)
+            if actuel.statut == 'termine':
+                raise ValidationError({'detail': "Match terminé : repassez-le « en cours » pour le supprimer."})
+            actuel.delete()
+
     def update(self, request, *args, **kwargs):
         """Modification relue sous verrou : elle n'écrase pas une stat ou un temps mort enregistré au même moment."""
         partial = kwargs.pop('partial', False)
@@ -639,7 +680,10 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         self._refuser_si_termine(match)
 
         stats_crees = []
-        for joueur in Joueur.objects.filter(equipe__in=[match.equipe_domicile_id, match.equipe_exterieur_id]).select_related('athlete'):
+        effectifs = Joueur.objects.filter(
+            equipe__in=[match.equipe_domicile_id, match.equipe_exterieur_id], retire=False,
+        ).select_related('athlete')
+        for joueur in effectifs:
             stat, created = StatistiqueJoueur.objects.get_or_create(joueur=joueur, match=match)
             if created:
                 stats_crees.append(stat)
@@ -718,9 +762,10 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
             if donnees['terminer']:
                 verrouiller_tournoi(actuel.tournoi)  # même ordre de verrous qu'un PATCH qui termine le match
             match = self._match_verrouille(pk)
+            # L'effectif actuel, plus les joueurs retirés qui ont déjà une ligne dans ce match
             joueurs = set(Joueur.objects.filter(
-                equipe_id__in=[match.equipe_domicile_id, match.equipe_exterieur_id],
-            ).values_list('id', flat=True))
+                equipe_id__in=[match.equipe_domicile_id, match.equipe_exterieur_id], retire=False,
+            ).values_list('id', flat=True)) | set(match.statistiques_joueurs.values_list('joueur_id', flat=True))
             exclusion = match.reglement['fautes_exclusion']
 
             for ligne in donnees['stats']:

@@ -37,14 +37,14 @@ def inscription_dans_le_tournoi(user, tournoi_id):
     if not user.is_authenticated:
         return None
     return (
-        Joueur.objects.filter(athlete__utilisateur=user, equipe__tournoi_id=tournoi_id)
+        Joueur.objects.filter(athlete__utilisateur=user, equipe__tournoi_id=tournoi_id, retire=False)
         .select_related('equipe').first()
     )
 
 
-def _verifier_pas_deja_inscrit(fiche, tournoi_id):
+def _verifier_pas_deja_inscrit(fiche, equipe):
     try:
-        verifier_un_par_tournoi(fiche, tournoi_id)
+        verifier_un_par_tournoi(fiche, equipe.tournoi_id, equipe_id=equipe.pk)
     except ConflitAthlete as erreur:
         raise InvitationRefusee(str(erreur).replace(f"{fiche.prenom} {fiche.nom} joue", "Tu joues")) from erreur
 
@@ -53,7 +53,7 @@ def _verifier_pas_deja_inscrit(fiche, tournoi_id):
 def reclamer(user, equipe, joueur_id):
     """« C'est moi » : relie le joueur saisi par l'organisateur au compte (même inscriptions fermées)."""
     verrouiller_tournoi(equipe.tournoi)
-    joueur = Joueur.objects.select_related('athlete').filter(pk=joueur_id, equipe=equipe).first()
+    joueur = Joueur.objects.select_related('athlete').filter(pk=joueur_id, equipe=equipe, retire=False).first()
     if joueur is None:
         raise InvitationRefusee("Ce joueur ne fait pas partie de l'équipe.")
     fiche_joueur = joueur.athlete
@@ -67,7 +67,7 @@ def reclamer(user, equipe, joueur_id):
         fiche_joueur.utilisateur = user
         fiche_joueur.save(update_fields=['utilisateur', 'updated_at'])
         return joueur
-    _verifier_pas_deja_inscrit(fiche, equipe.tournoi_id)
+    _verifier_pas_deja_inscrit(fiche, equipe)
     joueur.athlete = fiche  # le compte a déjà sa fiche : le joueur la rejoint
     joueur.save(update_fields=['athlete', 'updated_at'])
     supprimer_si_orpheline(fiche_joueur.pk)
@@ -83,12 +83,13 @@ def s_inscrire(user, equipe, numero_maillot, prenom='', nom=''):
         raise InvitationRefusee("Les inscriptions de ce tournoi sont fermées. Demande à l'organisateur.")
     fiche = fiche_du_compte(user)
     if fiche is not None:
-        _verifier_pas_deja_inscrit(fiche, equipe.tournoi_id)
+        _verifier_pas_deja_inscrit(fiche, equipe)
     elif not (prenom.strip() and nom.strip()):
         raise InvitationRefusee("Indique ton prénom et ton nom.")
-    if equipe.joueurs.count() >= settings.LIMITE_JOUEURS_PAR_EQUIPE:
+    effectif = equipe.joueurs.filter(retire=False)
+    if effectif.count() >= settings.LIMITE_JOUEURS_PAR_EQUIPE:
         raise InvitationRefusee(f"L'équipe est complète ({settings.LIMITE_JOUEURS_PAR_EQUIPE} joueurs maximum).")
-    if equipe.joueurs.filter(numero_maillot=numero_maillot).exists():
+    if effectif.filter(numero_maillot=numero_maillot).exists():
         raise InvitationRefusee(f"Le numéro {numero_maillot} est déjà pris dans l'équipe.")
 
     if fiche is None:

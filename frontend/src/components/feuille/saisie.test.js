@@ -23,6 +23,13 @@ describe("saisie de la feuille après coup", () => {
     expect(lignes[0].points).toBe(0);
   });
 
+  it("n'affiche un joueur retiré que s'il a déjà une ligne dans ce match", () => {
+    const avecRetire = [...joueurs, { id: 12, equipe: 1, numero_maillot: 9, prenom: "Max", nom: "Roy", retire: true }];
+    expect(lignesInitiales(avecRetire).map((l) => l.joueur)).not.toContain(12);
+    const stats = [{ joueur: 12, points: 4, rebonds: 0, passes: 0, contres: 0, fautes: 0 }];
+    expect(lignesInitiales(avecRetire, stats).map((l) => l.joueur)).toContain(12);
+  });
+
   it("propose autant de périodes que le règlement, ou reprend celles déjà saisies", () => {
     expect(periodesInitiales(match).domicile).toEqual(["", "", "", ""]);
     const saisi = { domicile: [1, 2, 3, 4, 5], exterieur: [5, 4, 3, 2, 0] };

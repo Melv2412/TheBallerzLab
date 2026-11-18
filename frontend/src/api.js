@@ -148,6 +148,8 @@ export const getJoueursTournoi = (tournoi) => toutesLesPages('/joueurs/', { tour
 export const createJoueur = (data) => api.post('/joueurs/', data)
 export const updateJoueur = (id, data) => api.patch(`/joueurs/${id}/`, data)
 export const deleteJoueur = (id) => api.delete(`/joueurs/${id}/`)
+export const retirerJoueur = (id) => api.post(`/joueurs/${id}/retirer/`)
+export const reintegrerJoueur = (id) => api.post(`/joueurs/${id}/reintegrer/`)
 // Profil public d'un athlète : carrière, tournois joués, palmarès
 export const getAthlete = (id) => api.get(`/athletes/${id}/`)
 export const envoyerPhotoAthlete = (id, fichier) => {

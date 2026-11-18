@@ -22,14 +22,15 @@ function Groupe({ titre, children }) {
 /**
  * Formulaire du règlement (tournoi ou match).
  * - `modifiables` : liste des réglages éditables (les autres sont grisés) ; tout est éditable si absent.
+ * - `verrouilles` : réglages grisés quoi qu'il arrive.
  * - `avecClassement` : affiche les points de classement (propres au tournoi).
  */
-export function FormulaireReglement({ reglement, onChange, donnees, modifiables, avecClassement = true }) {
+export function FormulaireReglement({ reglement, onChange, donnees, modifiables, verrouilles = [], avecClassement = true }) {
   if (!reglement || !donnees) return <div className="text-gray-500 italic text-sm">Chargement du règlement...</div>;
 
   const { presets, bornes } = donnees;
   const type = typeReglement(reglement, presets);
-  const libre = (cle) => !modifiables || modifiables.includes(cle);
+  const libre = (cle) => (!modifiables || modifiables.includes(cle)) && !verrouilles.includes(cle);
   const changer = (cle, valeur) => onChange({ ...reglement, [cle]: valeur });
 
   const nombre = (cle, label, aide) => {

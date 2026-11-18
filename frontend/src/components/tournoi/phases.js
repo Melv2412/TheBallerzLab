@@ -5,6 +5,15 @@ export const PHASES = [
   { cle: "has_finale", label: "Finale", phase: "finale", victoires: "victoires_requises_finale", labelVictoires: "Finale" },
 ];
 
+// Verrous affichés à l'écran ; le serveur reste seul juge
+export const phasesCommencees = (matchs) =>
+  new Set(matchs.filter((m) => m.phase !== "poule" && m.statut !== "a_venir").map((m) => m.phase));
+
+export const pointsVerrouilles = (matchs) => matchs.some((m) => m.statut === "termine");
+
+export const equipeAJoue = (matchs, equipeId) =>
+  matchs.some((m) => m.statut !== "a_venir" && (m.equipe_domicile === equipeId || m.equipe_exterieur === equipeId));
+
 // Même règle que le serveur : phases actives consécutives, jusqu'à la finale
 export const erreurPhases = (form) => {
   const actives = PHASES.filter((p) => form[p.cle]);

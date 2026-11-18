@@ -7,9 +7,11 @@ export const CHAMPS = [
   { cle: "fautes", label: "F" },
 ];
 
-// Une ligne par joueur des deux équipes, préremplie avec ses stats déjà enregistrées
+// Une ligne par joueur des deux équipes, préremplie avec ses stats déjà enregistrées.
+// Un joueur retiré de l'effectif n'apparaît que s'il a déjà une ligne dans ce match.
 export const lignesInitiales = (joueurs, statistiques = []) =>
-  [...joueurs]
+  joueurs
+    .filter((joueur) => !joueur.retire || statistiques.some((s) => s.joueur === joueur.id))
     .sort((a, b) => a.numero_maillot - b.numero_maillot)
     .map((joueur) => {
       const stat = statistiques.find((s) => s.joueur === joueur.id);

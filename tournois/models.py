@@ -17,7 +17,8 @@ class Tournoi(models.Model):
     """Modèle représentant un tournoi de basket."""
     nom = models.CharField(max_length=200)  # unique par organisateur (voir Meta) ; le slug reste unique
     slug = models.SlugField(max_length=250, unique=True, blank=True)
-    organisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tournois_crees', null=True, blank=True)
+    # Compte supprimé : le tournoi reste, sans organisateur (il passe alors au staff)
+    organisateur = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='tournois_crees', null=True, blank=True)
     date_debut = models.DateField()
     date_fin = models.DateField()
 
@@ -161,6 +162,8 @@ class Joueur(models.Model):
     numero_maillot = models.IntegerField(validators=[MinValueValidator(0)])
     equipe = models.ForeignKey(Equipe, on_delete=models.CASCADE, related_name='joueurs')
     photo = models.ImageField(upload_to='joueurs/photos/', null=True, blank=True)
+    # Retiré de l'effectif : absent des prochains matchs, ses stats restent dans ceux déjà joués
+    retire = models.BooleanField(default=False, db_default=False)  # l'ancien code peut encore inscrire pendant la mise en ligne
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -168,7 +171,13 @@ class Joueur(models.Model):
         verbose_name = "Joueur"
         verbose_name_plural = "Joueurs"
         ordering = ['equipe', 'numero_maillot']
-        unique_together = [['equipe', 'numero_maillot']]
+        constraints = [
+            # Le numéro d'un joueur retiré peut être repris
+            models.UniqueConstraint(
+                fields=['equipe', 'numero_maillot'], condition=models.Q(retire=False),
+                name='joueur_numero_unique_dans_effectif',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         # Un joueur créé sans fiche (admin, tests, anciens appels) en reçoit une nouvelle

@@ -235,8 +235,8 @@ class AthleteAdmin(admin.ModelAdmin):
 
 @admin.register(Joueur)
 class JoueurAdmin(admin.ModelAdmin):
-    list_display = ['prenom', 'nom', 'numero_maillot', 'equipe', 'athlete']
-    list_filter = ['equipe__tournoi', 'equipe']
+    list_display = ['prenom', 'nom', 'numero_maillot', 'equipe', 'athlete', 'retire']
+    list_filter = ['retire', 'equipe__tournoi', 'equipe']
     search_fields = ['prenom', 'nom', 'athlete__email']
     autocomplete_fields = ['athlete']
 

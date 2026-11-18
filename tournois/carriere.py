@@ -75,6 +75,8 @@ def profil_athlete(athlete, photo_url=None):
 
     tournois = []
     for joueur in joueurs:
+        if joueur.retire and not par_joueur[joueur.id]:
+            continue  # retiré sans avoir joué : ce tournoi ne fait pas partie de son parcours
         tournoi = joueur.equipe.tournoi
         ligne = _cumul(par_joueur[joueur.id])
         ligne.update({
@@ -89,7 +91,7 @@ def profil_athlete(athlete, photo_url=None):
         tournois.append(ligne)
 
     carriere = _cumul(stats)
-    carriere['tournois'] = len(tournois)
+    carriere['tournois'] = len({t['tournoi_slug'] for t in tournois})  # deux équipes du même tournoi = un tournoi
     carriere['mvp'] = sum(mvp_par_joueur[j.id] for j in joueurs)
     carriere['titres'] = sum(1 for t in tournois if t['resultat']['code'] == 'champion')
     return {

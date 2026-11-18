@@ -5,11 +5,18 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from . import athletes, organisateurs
+from . import athletes, organisateurs, protections
 from . import reglement as regles
 from .journal import TYPES_ANNULABLES
 from .models import ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
-from .phases_finales import ACTIVATION, LIBELLES, PHASES, avancer_phases_finales, phase_suivante_commencee
+from .phases_finales import (
+    ACTIVATION,
+    LIBELLES,
+    PHASES,
+    VICTOIRES_REQUISES,
+    avancer_phases_finales,
+    phase_suivante_commencee,
+)
 from .services import mvp_du_match
 
 
@@ -122,7 +129,47 @@ class TournoiSerializer(serializers.ModelSerializer):
                 )})
         if self.instance is None or any(champ in attrs for champ in ACTIVATION.values()):
             self.valider_phases_finales(attrs)
+        if self.instance is not None:
+            self.verifier_format_verrouille(attrs)
+            self.verifier_points_verrouilles(attrs)
         return attrs
+
+    def verifier_format_verrouille(self, attrs):
+        """Une phase commencée garde son format : il ne change qu'après réinitialisation des playoffs."""
+        tournoi = self.instance
+        structure_modifiee = any(
+            champ in attrs and attrs[champ] != getattr(tournoi, champ) for champ in ACTIVATION.values()
+        )
+        series_modifiees = [
+            phase for phase, champ in VICTOIRES_REQUISES.items()
+            if champ in attrs and attrs[champ] != getattr(tournoi, champ)
+        ]
+        if not structure_modifiee and not series_modifiees:
+            return
+        commencees = protections.phases_commencees(tournoi)
+        if structure_modifiee and commencees:
+            raise serializers.ValidationError({'detail': (
+                "Les phases finales ont commencé : réinitialise les playoffs pour changer les phases actives."
+            )})
+        for phase in series_modifiees:
+            if phase in commencees:
+                raise serializers.ValidationError({VICTOIRES_REQUISES[phase]: (
+                    f"Les {LIBELLES[phase].lower()} ont commencé : "
+                    "réinitialise les playoffs pour changer le nombre de victoires."
+                )})
+
+    def verifier_points_verrouilles(self, attrs):
+        """Le barème ne change plus après un résultat : le classement déjà acquis serait recalculé."""
+        reglement = attrs.get('reglement')
+        if reglement is None:
+            return
+        actuel = self.instance.reglement
+        if all(reglement[cle] == actuel.get(cle) for cle in ('points_victoire', 'points_defaite')):
+            return
+        if self.instance.matchs.filter(statut='termine').exists():
+            raise serializers.ValidationError({'reglement': (
+                "Un match est terminé : les points de victoire et de défaite ne peuvent plus changer."
+            )})
 
     def valider_phases_finales(self, attrs):
         """Les phases actives doivent se suivre et mener à la finale (sinon le tableau ne s'apparie pas)."""
@@ -188,6 +235,8 @@ class EquipeSerializer(serializers.ModelSerializer):
     def validate_tournoi(self, tournoi):
         # Seulement à la création ou au changement de tournoi
         change_de_tournoi = self.instance is None or self.instance.tournoi_id != tournoi.pk
+        if change_de_tournoi and self.instance is not None and protections.equipe_a_joue(self.instance):
+            raise serializers.ValidationError("Cette équipe a déjà joué : elle ne peut plus changer de tournoi.")
         if change_de_tournoi and tournoi.equipes.count() >= settings.LIMITE_EQUIPES_PAR_TOURNOI:
             raise serializers.ValidationError(
                 f"Un tournoi ne peut pas dépasser {settings.LIMITE_EQUIPES_PAR_TOURNOI} équipes."
@@ -199,7 +248,7 @@ class EquipeSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'nb_joueurs'):  # calculé par la requête (voir EquipeViewSet)
             return obj.nb_joueurs
         if hasattr(obj, 'joueurs'):
-            return obj.joueurs.count() if hasattr(obj.joueurs, 'count') else len(obj.joueurs.all())
+            return obj.joueurs.filter(retire=False).count()
         return 0
 
 
@@ -213,19 +262,25 @@ class JoueurSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True, required=False, allow_blank=True, allow_null=True)
     # Le joueur a rejoint l'équipe avec son compte (lien d'invitation) : sa fiche lui appartient
     compte_lie = serializers.SerializerMethodField()
+    a_des_stats = serializers.SerializerMethodField()
 
     class Meta:
         model = Joueur
         fields = [
             'id', 'athlete', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'tournoi_nom',
-            'email', 'compte_lie', 'created_at', 'updated_at',
+            'email', 'compte_lie', 'retire', 'a_des_stats', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['athlete']
+        read_only_fields = ['athlete', 'retire']
         extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
+        validators = []  # numéro unique dans l'effectif : vérifié dans validate(), avec un message clair
 
     def validate_equipe(self, equipe):
         change_d_equipe = self.instance is None or self.instance.equipe_id != equipe.pk
-        if change_d_equipe and equipe.joueurs.count() >= settings.LIMITE_JOUEURS_PAR_EQUIPE:
+        if change_d_equipe and self.instance is not None and protections.joueur_a_des_stats(self.instance):
+            raise serializers.ValidationError(
+                "Ce joueur a des stats dans son équipe : retire-le de l'effectif, puis ajoute-le à la nouvelle équipe."
+            )
+        if change_d_equipe and equipe.joueurs.filter(retire=False).count() >= settings.LIMITE_JOUEURS_PAR_EQUIPE:
             raise serializers.ValidationError(
                 f"Une équipe ne peut pas dépasser {settings.LIMITE_JOUEURS_PAR_EQUIPE} joueurs."
             )
@@ -233,6 +288,9 @@ class JoueurSerializer(serializers.ModelSerializer):
 
     def get_compte_lie(self, obj):
         return obj.athlete.utilisateur_id is not None
+
+    def get_a_des_stats(self, obj):
+        return protections.joueur_a_des_stats(obj)
 
     def validate(self, attrs):
         email = athletes.normaliser_email(attrs.pop('email', None))
@@ -243,11 +301,19 @@ class JoueurSerializer(serializers.ModelSerializer):
         joueur = self.instance or Joueur(prenom=attrs.get('prenom', ''), nom=attrs.get('nom', ''))
         fiche = athletes.fiche_pour_email(joueur, email) if email else (self.instance.athlete if self.instance else None)
         equipe = attrs.get('equipe') or self.instance.equipe
+        self._fiche = fiche
+        if self.instance is not None and self.instance.retire:
+            return attrs  # hors effectif : ces règles s'appliqueront s'il y revient
         try:
-            athletes.verifier_un_par_tournoi(fiche, equipe.tournoi_id, sauf_joueur=self.instance)
+            athletes.verifier_un_par_tournoi(fiche, equipe.tournoi_id, sauf_joueur=self.instance, equipe_id=equipe.pk)
         except athletes.ConflitAthlete as erreur:
             raise serializers.ValidationError({'email' if email else 'equipe': str(erreur)}) from erreur
-        self._fiche = fiche
+        numero = attrs.get('numero_maillot', getattr(self.instance, 'numero_maillot', None))
+        memes_numeros = Joueur.objects.filter(equipe=equipe, numero_maillot=numero, retire=False)
+        if self.instance is not None:
+            memes_numeros = memes_numeros.exclude(pk=self.instance.pk)
+        if memes_numeros.exists():
+            raise serializers.ValidationError({'numero_maillot': f"Le numéro {numero} est déjà pris dans cette équipe."})
         return attrs
 
     def _enregistrer_fiche(self, validated_data):
@@ -269,8 +335,11 @@ class JoueurSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         ancienne = instance.athlete_id
+        ancienne_equipe = instance.equipe_id
         self._enregistrer_fiche(validated_data)
         joueur = super().update(instance, validated_data)
+        if joueur.equipe_id != ancienne_equipe:
+            joueur.statistiques.all().delete()  # uniquement des lignes à 0 : validate_equipe refuse les autres cas
         fiche = joueur.athlete
         if ancienne != fiche.pk:
             athletes.supprimer_si_orpheline(ancienne)

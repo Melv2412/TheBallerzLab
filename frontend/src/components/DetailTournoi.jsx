@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { deleteEquipe, deleteJoueur, deleteMatch } from "../api";
+import { deleteEquipe, deleteJoueur, deleteMatch, messageErreur, reintegrerJoueur, retirerJoueur } from "../api";
 import { useAuth } from "../AuthContext";
 import { peutModifier } from "../permissions";
 import { useTournoi } from "./tournoi/useTournoi";
@@ -26,18 +26,23 @@ function DetailTournoi() {
 
   const isOwner = Boolean(tournoi) && peutModifier(user, tournoi.organisateur);
 
-  const supprimer = (message, suppression) => async (id) => {
+  const apresConfirmation = (message, action) => async (id) => {
     if (!window.confirm(message)) return;
     try {
-      await suppression(id);
+      await action(id);
       recharger();
     } catch (error) {
-      console.error("Erreur:", error);
+      window.alert(messageErreur(error, "Action impossible."));
     }
   };
-  const supprimerEquipe = supprimer("Supprimer cette équipe ?", deleteEquipe);
-  const supprimerJoueur = supprimer("Supprimer ce joueur ?", deleteJoueur);
-  const supprimerMatch = supprimer("Supprimer ce match ?", deleteMatch);
+  const supprimerEquipe = apresConfirmation("Supprimer cette équipe ?", deleteEquipe);
+  const supprimerJoueur = apresConfirmation("Supprimer ce joueur ?", deleteJoueur);
+  const supprimerMatch = apresConfirmation("Supprimer ce match ?", deleteMatch);
+  const retirer = apresConfirmation(
+    "Retirer ce joueur de l'effectif ? Ses stats restent dans les matchs déjà joués.",
+    retirerJoueur,
+  );
+  const reintegrer = apresConfirmation("Remettre ce joueur dans l'effectif ?", reintegrerJoueur);
 
   const apresEnregistrement = () => {
     setModale(null);
@@ -188,6 +193,7 @@ function DetailTournoi() {
             tournoi={tournoi}
             onRecharger={recharger}
             equipes={equipes}
+            matchs={matchs}
             joueursParEquipe={joueursParEquipe}
             isOwner={isOwner}
             onNouvelleEquipe={() => setModale({ type: "equipe", equipe: null })}
@@ -196,6 +202,8 @@ function DetailTournoi() {
             onNouveauJoueur={(equipeId) => setModale({ type: "joueur", equipeId, joueur: null })}
             onEditerJoueur={(joueur, equipeId) => setModale({ type: "joueur", equipeId, joueur })}
             onSupprimerJoueur={supprimerJoueur}
+            onRetirerJoueur={retirer}
+            onReintegrerJoueur={reintegrer}
           />
         )}
 

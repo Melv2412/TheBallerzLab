@@ -71,7 +71,7 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
               Live
             </Link>
           )}
-          {isOwner && (
+          {isOwner && match.statut !== "termine" && (
             <button
               onClick={() => onDelete(match.id)}
               className="text-gray-500 hover:text-red-500 transition-all font-black text-sm sm:text-xs ml-2 px-2"
