@@ -3,13 +3,19 @@ Calculs métier du tournoi (classement, MVP), séparés des vues pour être test
 """
 from collections import Counter
 
-from django.db.models import Count, F, Sum
+from django.db.models import Count, F, Q, Sum
 
 from .classement import calculer_classement
 from .models import StatistiqueJoueur
 
 # Évaluation simplifiée d'une ligne de stats : PTS + AST + REB + BLK - FAUTES
 EVALUATION = F('points') + F('passes') + F('rebonds') + F('contres') - F('fautes')
+
+STATS_NON_NULLES = (
+    Q(points__gt=0) | Q(passes__gt=0) | Q(rebonds__gt=0) | Q(contres__gt=0) | Q(fautes__gt=0)
+)
+# A joué = au moins une stat, ou présence confirmée par l'organisateur
+A_JOUE = STATS_NON_NULLES | Q(presence_confirmee=True)
 
 
 def evaluation(stat):
@@ -36,11 +42,11 @@ def classement_du_tournoi(tournoi, type_classement=None):
 
 def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
     """
-    Joueurs à la meilleure évaluation moyenne sur les matchs terminés (2 requêtes).
+    Joueurs à la meilleure évaluation moyenne sur les matchs terminés où ils ont joué (2 requêtes).
     Pour éviter qu'un seul gros match suffise, un joueur doit avoir joué au moins la moitié des matchs de son équipe.
     """
     stats = filtrer_par_type(
-        StatistiqueJoueur.objects.filter(joueur__equipe__tournoi=tournoi, match__statut='termine'),
+        StatistiqueJoueur.objects.filter(A_JOUE, joueur__equipe__tournoi=tournoi, match__statut='termine'),
         type_classement,
         champ_phase='match__phase',
     )

@@ -384,6 +384,8 @@ class StatistiqueJoueur(models.Model):
     rebonds = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     contres = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     fautes = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    # Joueur à 0 partout que l'organisateur confirme avoir vu sur le terrain
+    presence_confirmee = models.BooleanField(default=False, db_default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

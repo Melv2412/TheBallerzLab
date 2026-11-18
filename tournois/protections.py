@@ -1,8 +1,8 @@
 """
 Protection des résultats : ce qui a été joué ne disparaît pas et ne change pas de sens après coup.
 
-Une ligne de stats à 0 partout ne compte pas comme une stat : « Initialiser les stats » en crée une pour
-chaque joueur, même s'il n'est jamais entré sur le terrain.
+Une ligne de stats à 0 partout ne compte pas, sauf présence confirmée : « Initialiser les stats » en crée
+une pour chaque joueur, même s'il n'est jamais entré sur le terrain.
 """
 from django.conf import settings
 from django.db import transaction
@@ -12,14 +12,11 @@ from rest_framework.exceptions import ValidationError
 from .athletes import ConflitAthlete, verifier_un_par_tournoi
 from .models import Joueur, Match, StatistiqueJoueur
 from .phases_finales import verrouiller_tournoi
-
-STATS_NON_NULLES = (
-    Q(points__gt=0) | Q(passes__gt=0) | Q(rebonds__gt=0) | Q(contres__gt=0) | Q(fautes__gt=0)
-)
+from .services import A_JOUE
 
 
 def stats_reelles():
-    return StatistiqueJoueur.objects.filter(STATS_NON_NULLES)
+    return StatistiqueJoueur.objects.filter(A_JOUE)
 
 
 def annoter_stats_joueurs(joueurs):
@@ -57,7 +54,7 @@ def retirer_de_l_effectif(joueur):
     joueur.retire = True
     joueur.save(update_fields=['retire', 'updated_at'])
     # Ses lignes vides des matchs pas terminés disparaissent : il n'apparaît plus à la table de marque
-    joueur.statistiques.exclude(match__statut='termine').exclude(STATS_NON_NULLES).delete()
+    joueur.statistiques.exclude(match__statut='termine').exclude(A_JOUE).delete()
     return joueur
 
 

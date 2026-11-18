@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import { peutModifier } from "../permissions";
 import { enTetePeriode } from "./feuille/feuille";
 import { CHAMPS, donneesAEnvoyer, erreurSaisie, lignesInitiales, periodesInitiales, totalEquipe } from "./feuille/saisie";
+import { ModalPresences } from "./match-live/ModalPresences";
 
 // Feuille de match remplie après coup (match joué sans tableau de marque en direct)
 export default function SaisieFeuille() {
@@ -17,6 +18,7 @@ export default function SaisieFeuille() {
   const [terminer, setTerminer] = useState(true);
   const [erreur, setErreur] = useState("");
   const [envoi, setEnvoi] = useState(false);
+  const [presences, setPresences] = useState(false);
 
   useEffect(() => {
     getMatch(id)
@@ -29,6 +31,9 @@ export default function SaisieFeuille() {
       .catch((e) => setErreur(messageErreur(e, "Match introuvable.")));
   }, [id]);
 
+  if (presences) {
+    return <ModalPresences matchId={id} automatique onFermer={() => navigate(`/match/${id}/feuille`)} />;
+  }
   if (!match) return <div className="text-center py-10 animate-pulse">{erreur || "Chargement..."}</div>;
   if (!peutModifier(user, match.organisateur_id)) {
     return <div className="text-center py-10">Seul l'organisateur du tournoi peut saisir la feuille.</div>;
@@ -61,7 +66,8 @@ export default function SaisieFeuille() {
     setEnvoi(true);
     try {
       await saisieFeuille(id, donneesAEnvoyer(lignes, periodes, terminer));
-      navigate(`/match/${id}/feuille`);
+      if (terminer) setPresences(true);
+      else navigate(`/match/${id}/feuille`);
     } catch (err) {
       setErreur(messageErreur(err, "La feuille n'a pas pu être enregistrée."));
       setEnvoi(false);

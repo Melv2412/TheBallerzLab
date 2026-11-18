@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from .models import StatistiqueJoueur
 from .phases_finales import phases_actives, series_de_la_phase
-from .services import evaluation
+from .services import A_JOUE, evaluation
 
 CHAMPS = ['points', 'passes', 'rebonds', 'contres', 'fautes']
 ELIMINATION = {
@@ -56,8 +56,9 @@ def profil_athlete(athlete, photo_url=None):
     joueurs = list(
         athlete.joueurs.select_related('equipe__tournoi').order_by('-equipe__tournoi__date_debut', '-id')
     )
+    # Seuls les matchs réellement joués comptent : une ligne à 0 sans présence confirmée est une absence
     stats = list(
-        StatistiqueJoueur.objects.filter(joueur__athlete=athlete, match__statut='termine')
+        StatistiqueJoueur.objects.filter(A_JOUE, joueur__athlete=athlete, match__statut='termine')
     )
     # MVP (même règle que la page du match) : il faut toutes les stats de chaque match joué
     stats_des_matchs = defaultdict(list)

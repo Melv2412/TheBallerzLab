@@ -121,7 +121,7 @@ export default function ProfilAthlete() {
           )}
           <p className="text-sm text-gray-400 mt-1">
             {carriere.tournois} tournoi{carriere.tournois > 1 ? "s" : ""} · {carriere.matchs} match
-            {carriere.matchs > 1 ? "s" : ""} terminé{carriere.matchs > 1 ? "s" : ""}
+            {carriere.matchs > 1 ? "s" : ""} joué{carriere.matchs > 1 ? "s" : ""}
           </p>
           {(carriere.titres > 0 || carriere.mvp > 0) && (
             <p className="mt-2 font-bold">
@@ -180,7 +180,7 @@ export default function ProfilAthlete() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-500">Aucun match terminé dans ce tournoi.</p>
+                <p className="text-xs text-gray-500">Aucun match joué dans ce tournoi.</p>
               )}
             </article>
           ))}

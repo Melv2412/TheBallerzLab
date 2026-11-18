@@ -23,6 +23,7 @@ from .carriere import profil_athlete
 from .models import Athlete, DemandeEquipe, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
 from .phases_finales import generer_phases_finales, resume_phases_finales, verrouiller_tournoi
+from .presences import enregistrer_presences, presences_du_match
 from .serializers import (
     ActionMatchSerializer,
     EquipeSerializer,
@@ -30,6 +31,7 @@ from .serializers import (
     MatchListSerializer,
     MatchSerializer,
     PhotoAthleteSerializer,
+    PresencesSerializer,
     SaisieFeuilleSerializer,
     StatistiqueJoueurSerializer,
     TournoiSerializer,
@@ -804,6 +806,16 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
                 fin.is_valid(raise_exception=True)
                 fin.save()
         return self._reponse_match(match)
+
+    @action(detail=True, methods=['get', 'post'])
+    def presences(self, request, pk=None):
+        """Joueurs sans aucune stat de ce match ; POST {"presents": [ids]} confirme ceux qui ont joué."""
+        match = self.get_object()  # permissions
+        if request.method == 'POST':
+            saisie = PresencesSerializer(data=request.data)
+            saisie.is_valid(raise_exception=True)
+            match = enregistrer_presences(match.pk, set(saisie.validated_data['presents']))
+        return Response(presences_du_match(match))
 
     @action(detail=True, methods=['patch'], url_path='stats/(?P<stat_id>[^/.]+)/update')
     def update_statistique(self, request, pk=None, stat_id=None):

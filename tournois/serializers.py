@@ -634,6 +634,11 @@ class LigneFeuilleSerializer(serializers.Serializer):
     fautes = serializers.IntegerField(min_value=0, max_value=20, default=0)
 
 
+class PresencesSerializer(serializers.Serializer):
+    """Joueurs sans stat que l'organisateur confirme avoir vus sur le terrain."""
+    presents = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=True, max_length=200)
+
+
 class SaisieFeuilleSerializer(serializers.Serializer):
     """Feuille de match saisie après coup : totaux des joueurs, score par période (facultatif), fin du match."""
     stats = LigneFeuilleSerializer(many=True, allow_empty=False)

@@ -5,6 +5,7 @@ import { useAuth } from '../AuthContext'
 import { usePolling } from '../usePolling'
 import { useTempsReelMatch } from '../tempsReel'
 import { peutModifier } from '../permissions'
+import { ModalPresences } from './match-live/ModalPresences'
 
 function DetailMatch() {
   const { user } = useAuth()
@@ -12,6 +13,8 @@ function DetailMatch() {
   const [match, setMatch] = useState(null)
   const [loading, setLoading] = useState(true)
   const [statsInitialisees, setStatsInitialisees] = useState(false)
+  // Fenêtre des présences : 'fin' juste après la fin du match, 'correction' depuis le bouton
+  const [presences, setPresences] = useState(null)
 
   const isOwner = Boolean(match) && peutModifier(user, match.organisateur_id);
 
@@ -57,6 +60,7 @@ function DetailMatch() {
     try {
       await updateMatch(id, { statut: nouveauStatut })
       loadMatch()
+      if (nouveauStatut === 'termine' && match.statut !== 'termine') setPresences('fin')
     } catch (error) {
       console.error('Erreur:', error)
       // ex. « Un match ne peut pas se terminer sur une égalité »
@@ -141,6 +145,14 @@ function DetailMatch() {
                  >
                    ✍️ Saisir la feuille
                  </Link>
+               )}
+               {isOwner && match.statut === 'termine' && (
+                 <button
+                   onClick={() => setPresences('correction')}
+                   className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+                 >
+                   Présences
+                 </button>
                )}
                 {isOwner && (
                   <select
@@ -258,6 +270,17 @@ function DetailMatch() {
         </div>
       )}
       </div>
+
+      {presences && (
+        <ModalPresences
+          matchId={id}
+          automatique={presences === 'fin'}
+          onFermer={() => {
+            setPresences(null)
+            loadMatch()
+          }}
+        />
+      )}
     </div>
   )
 }

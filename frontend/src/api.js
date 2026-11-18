@@ -173,6 +173,9 @@ export const updateMatch = (id, data) => api.patch(`/matchs/${id}/`, data)
 export const deleteMatch = (id) => api.delete(`/matchs/${id}/`)
 // Feuille saisie après coup : totaux de chaque joueur, score par période, fin du match
 export const saisieFeuille = (id, data) => api.post(`/matchs/${id}/saisie_feuille/`, data)
+// Joueurs sans stat d'un match terminé : liste, et confirmation de ceux qui ont joué
+export const getPresences = (id) => api.get(`/matchs/${id}/presences/`)
+export const enregistrerPresences = (id, presents) => api.post(`/matchs/${id}/presences/`, { presents })
 export const initialiserStatsMatch = (id) => api.post(`/matchs/${id}/initialiser_stats/`)
 export const tempsMort = (id, equipe) => api.post(`/matchs/${id}/temps_mort/`, { equipe })
 export const periodeSuivante = (id) => api.post(`/matchs/${id}/periode_suivante/`)
