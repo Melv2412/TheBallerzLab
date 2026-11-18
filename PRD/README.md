@@ -18,4 +18,4 @@ Product Requirements Document de **THE LAB**, application web de gestion de tour
 - Les parcours décrivent le comportement **actuel** de l'application, sauf mention « prévu ».
 - Mise à jour : à chaque phase terminée (voir la roadmap).
 
-*Dernière mise à jour : 17 novembre 2026 (fin de la phase 5.4).*
+*Dernière mise à jour : 18 novembre 2026 (fin du lot 5, fin de tournoi).*

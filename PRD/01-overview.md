@@ -23,6 +23,8 @@ Conséquences : classements contestés, statistiques perdues après le tournoi, 
 | Classer sans contestation | Classement FIBA calculé automatiquement, phases finales en séries générées toutes seules |
 | Informer le public | Pages publiques : scores en direct, classements, MVP, écran de salle plein écran |
 | Valoriser les joueurs | Profil athlète unique : stats de carrière, tournois joués, palmarès |
+| Garder des résultats fiables | Résultats protégés, présences confirmées, forfaits gérés, tournoi clôturé en lecture seule |
+| Préparer sans s'exposer | Tournoi public ou privé, au choix de l'organisateur |
 
 ## Proposition de valeur
 

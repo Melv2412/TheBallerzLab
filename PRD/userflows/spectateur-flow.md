@@ -5,7 +5,7 @@
 
 ## Étapes
 
-1. **Accueil** : liste des tournois, recherche par nom.
+1. **Accueil** : liste des tournois publics, recherche par nom.
 2. **Page du tournoi** :
    - **Classement** : poule ou phase finale, règles FIBA ;
    - **Calendrier** : matchs passés et à venir, scores ;
@@ -34,7 +34,6 @@ flowchart LR
 - Tout est en lecture seule.
 - Aucun email n'est affiché.
 - Les liens d'inscription et d'invitation ne sont pas visibles du public.
-
-## Prévu
-
-- ⏳ 6.1 : direct en temps réel au lieu du rafraîchissement périodique.
+- Un tournoi privé n'apparaît nulle part : ni dans la liste, ni par son adresse, ni sur les profils des joueurs.
+- Un tournoi clôturé reste consultable.
+- Un match perdu par forfait affiche « Forfait », sans feuille de stats.

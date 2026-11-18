@@ -37,14 +37,15 @@ flowchart TD
 - Une seule fiche athlète par personne : elle le suit dans tous ses tournois.
 - Un seul joueur par tournoi pour une même personne.
 - Un joueur déjà relié à un autre compte ne peut pas être réclamé.
-- S'inscrire avec un numéro demande des inscriptions ouvertes ; « C'est moi » marche même quand elles sont fermées.
+- S'inscrire avec un numéro demande des inscriptions ouvertes et un tournoi non clôturé ; « C'est moi » marche même quand elles sont fermées ou que le tournoi est clôturé.
+- Le lien marche aussi pour un tournoi privé, sans donner accès à sa page.
 - Le numéro doit être libre dans l'équipe ; 25 joueurs maximum par équipe.
 
 ## 2. Consulter son profil
 
 1. **👤 pseudo · Mon profil** dans la barre du haut → `/mon-profil`, qui ouvre `/athlete/<id>`.
    - Compte pas encore relié : page qui explique de rejoindre son équipe avec le lien d'invitation (aucune fiche créée), et bouton « Demander un compte organisateur ».
-2. Il voit : badge **✓ Compte vérifié**, cumul et moyennes de carrière (matchs terminés), titres de MVP, titres, et pour chaque tournoi : équipe, numéro, moyennes, résultat.
+2. Il voit : badge **✓ Compte vérifié**, cumul et moyennes de carrière (matchs réellement joués, hors forfaits et hors tournois privés), titres de MVP, titres, et pour chaque tournoi : équipe, numéro, moyennes, résultat.
 3. Le profil est public, l'email n'y apparaît jamais.
 4. Sur **son** profil : « Ajouter une photo », « Changer », « Retirer ». La photo est compressée dans le navigateur (800 px, WebP) avant l'envoi ; elle apparaît aussi sur les écrans de match quand l'organisateur n'en a pas mis.
 

@@ -4,8 +4,8 @@ Un fichier par parcours précis. Chaque parcours donne : l'acteur, le point de d
 
 | Parcours | Acteur | En bref |
 |---|---|---|
-| [admin-flow](admin-flow.md) | Administrateur THE LAB | Valider un organisateur, fusionner des doublons, corriger |
-| [organisateur-flow](organisateur-flow.md) | Organisateur | Du compte au tournoi terminé |
+| [admin-flow](admin-flow.md) | Administrateur THE LAB | Valider un organisateur, fusionner des doublons, corriger, rouvrir un tournoi |
+| [organisateur-flow](organisateur-flow.md) | Organisateur | Du compte au tournoi clôturé |
 | [capitaine-flow](capitaine-flow.md) | Capitaine | Inscrire son équipe par le lien du tournoi |
 | [joueur-flow](joueur-flow.md) | Joueur | Rejoindre son équipe par le lien d'invitation, voir son profil |
 | [marqueur-flow](marqueur-flow.md) | Marqueur | Tenir un match en direct ou saisir la feuille après coup |

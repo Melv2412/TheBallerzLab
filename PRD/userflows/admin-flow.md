@@ -39,13 +39,19 @@ flowchart TD
 
 ## 4. Corriger une donnée
 
-L'admin peut modifier tournois, équipes, joueurs, matchs et statistiques. Le règlement d'un tournoi ou d'un match s'affiche en clair (« Règlement (lisible) »).
+L'admin peut modifier tournois, équipes, joueurs, matchs et statistiques, et voit tous les tournois, privés compris. Le règlement d'un tournoi ou d'un match s'affiche en clair (« Règlement (lisible) »).
 ⚠️ Changer à la main la fiche d'un joueur ne vérifie pas la règle « un athlète par tournoi ».
 
 ## 5. Rouvrir un match terminé
 
 **Matchs** → filtre « Terminé » → cocher → action **« Rouvrir les matchs terminés »**. Le match repasse « en cours ».
 **Refusé si** : la phase suivante a déjà commencé (même règle que l'appli) ; le message dit quoi réinitialiser.
+
+## 6. Rouvrir un tournoi clôturé
+
+**Où** : sur le site, page du tournoi, bouton **« Rouvrir le tournoi »** dans le bandeau « Tournoi clôturé ».
+**Résultat** : le tournoi redevient modifiable par son organisateur et reprend une place de tournoi actif s'il n'est pas terminé.
+**Réservé** au staff : l'organisateur ne peut pas rouvrir seul. Tant que le tournoi reste clôturé, le staff est lui aussi en lecture seule.
 
 ## Tableau de bord
 

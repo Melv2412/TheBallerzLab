@@ -2,7 +2,7 @@
 
 | Persona | Rôle dans l'app | Compte | Parcours |
 |---|---|---|---|
-| **Administrateur** (équipe THE LAB) | Valide les organisateurs, corrige les données, fusionne les doublons | Superuser Django | [admin-flow](userflows/admin-flow.md) |
+| **Administrateur** (équipe THE LAB) | Valide les organisateurs, corrige les données, fusionne les doublons, rouvre les tournois clôturés | Superuser Django | [admin-flow](userflows/admin-flow.md) |
 | **Organisateur** | Crée et gère ses tournois de A à Z | Compte validé par l'admin | [organisateur-flow](userflows/organisateur-flow.md) |
 | **Marqueur** (souvent l'organisateur) | Tient le tableau de marque pendant un match, ou saisit la feuille après coup | Compte de l'organisateur | [marqueur-flow](userflows/marqueur-flow.md) |
 | **Capitaine** | Inscrit son équipe dans un tournoi et fait venir ses joueurs | Compte joueur | [capitaine-flow](userflows/capitaine-flow.md) |
@@ -14,13 +14,13 @@
 ### Administrateur
 - **Objectif** : garder la plateforme propre et éviter les abus.
 - **Frustrations à éviter** : faux organisateurs, doublons de joueurs, devoir passer par la base de données pour corriger.
-- **Outil** : l'admin Django, aux couleurs de THE LAB.
+- **Outils** : l'admin Django, aux couleurs de THE LAB, et le bouton « Rouvrir le tournoi » sur le site.
 
 ### Organisateur
 - **Profil** : bénévole d'association, organisateur de tournoi d'été ou de playground. Peu de temps, souvent sur téléphone le jour J.
 - **Objectif** : un tournoi qui se déroule sans contestation, avec le moins de saisie possible.
 - **Frustrations** : saisir 200 joueurs à la main, recalculer un classement, gérer les inscriptions sur WhatsApp.
-- **Limites** : 3 tournois actifs, 32 équipes par tournoi, 25 joueurs par équipe.
+- **Limites** : 3 tournois actifs (un tournoi clôturé ou dans la corbeille ne compte plus), 32 équipes par tournoi, 25 joueurs par équipe.
 
 ### Marqueur
 - **Contexte** : à la table de marque, pendant le match, souvent sur tablette ou téléphone.

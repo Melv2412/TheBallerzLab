@@ -7,7 +7,7 @@ Règle : on reste sur les **plans gratuits** tant qu'il n'y a pas de client paya
 | Phase | Contenu |
 |---|---|
 | 1 | Règlement configurable (FIBA, NBA, 3x3, personnalisé) |
-| 2 🆓 | Sauvegarde hebdomadaire chiffrée, compression des images |
+| 2 🆓 | Compression des images, workflow de sauvegarde hebdomadaire chiffrée (pas encore activé) |
 | 3 | Phases finales en séries, historique et annulation, feuille de match PDF, écran de salle |
 | 4.1 | Heure de Paris, limite d'exclusion, match « en cours » à la première stat |
 | 4.4 | Saisie de la feuille de match après coup |
@@ -19,11 +19,18 @@ Règle : on reste sur les **plans gratuits** tant qu'il n'y a pas de client paya
 | 5.4 | Inscription des équipes par lien de tournoi, validée par l'organisateur |
 | 6.1 🆓 | Direct plus léger : ETag/304, Supabase Realtime, RLS sur toutes les tables |
 | 6.2 🆓 | Admin (filtre « en attente », tableau de bord, règlement lisible, rouvrir un match), types de compte, bandeaux discrets, « Mon profil », photo de profil |
+| Lot 1 | Résultats protégés : équipes, joueurs et matchs liés à des résultats, formats et points verrouillés, tournoi conservé si le compte organisateur disparaît |
+| Lot 2 | Présences confirmées en fin de match, moyennes limitées aux joueurs présents |
+| Lot 3 | Forfait, double forfait et forfait général, sans effet sur les stats individuelles |
+| Lot 4 | Corbeille de 30 jours, confirmation renforcée, effacement des images, tâche quotidienne, affichage de secours |
+| — | Tournoi public ou privé |
+| Lot 5 | Clôture et réouverture d'un tournoi, égalité parfaite tranchée par l'organisateur ou par tirage au sort |
 
 ## À faire (gratuit)
 
 | Phase | Contenu | Dépend de |
 |---|---|---|
+| 2 | Activer la sauvegarde hebdomadaire, puis la tester une fois | Secrets GitHub (propriétaire) |
 | 4.2 | Mot de passe oublié | Compte Resend (propriétaire) |
 | 4.3 | Suivi des erreurs | Compte Sentry (propriétaire) |
 | 6.3 | Mode support avec bandeau et trace des modifications | — |

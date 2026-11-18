@@ -33,7 +33,8 @@ flowchart TD
 
 - Une seule demande par compte et par tournoi.
 - Le nom ne doit pas exister déjà dans le tournoi (majuscules ignorées), ni être en attente pour une autre équipe.
-- Refusé si le tournoi est complet ou si les inscriptions sont fermées.
+- Refusé si le tournoi est complet, clôturé, ou si les inscriptions sont fermées.
+- Le lien marche aussi pour un tournoi privé, sans donner accès à sa page.
 - Si l'organisateur supprime l'équipe plus tard, le capitaine peut refaire une demande.
 - Le capitaine n'est pas automatiquement joueur : il s'ajoute avec « Je joue aussi ».
 
@@ -44,7 +45,7 @@ flowchart TD
 | Nom vide | « Indique le nom de ton équipe. » |
 | Nom déjà pris | « Une équipe s'appelle déjà « X » dans ce tournoi. » |
 | Déjà inscrit | « Ton équipe est déjà inscrite dans ce tournoi. » |
-| Inscriptions fermées | « Les inscriptions de ce tournoi sont fermées. Contacte l'organisateur. » |
+| Inscriptions fermées ou tournoi clôturé | « Les inscriptions de ce tournoi sont fermées. Contacte l'organisateur. » |
 | Tournoi complet | « Le tournoi est complet (32 équipes maximum). » |
 | Lien remplacé ou désactivé | Page « Lien invalide » |
 
