@@ -116,9 +116,13 @@ export default function Invitation() {
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Invitation à rejoindre</p>
           <h1 className="text-3xl font-black uppercase italic tracking-tighter truncate">{equipe.nom}</h1>
-          <Link to={`/tournoi/${tournoi.slug}`} className="text-sm text-primary-orange font-bold hover:underline">
-            {tournoi.nom}
-          </Link>
+          {tournoi.visible ? (
+            <Link to={`/tournoi/${tournoi.slug}`} className="text-sm text-primary-orange font-bold hover:underline">
+              {tournoi.nom}
+            </Link>
+          ) : (
+            <span className="text-sm text-primary-orange font-bold">{tournoi.nom}</span>
+          )}
           <span className="text-sm text-gray-400">
             {" "}
             · {new Date(tournoi.date_debut).toLocaleDateString("fr-FR", { dateStyle: "long" })}

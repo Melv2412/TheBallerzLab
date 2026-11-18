@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getTournois, createTournoi, getCorbeille, devenirOrganisateur, messageErreur } from '../api'
+import { getTournois, createTournoi, getCorbeille, devenirOrganisateur, messageErreur, updateTournoi } from '../api'
 import { useAuth } from '../AuthContext'
-import { peutModifier } from '../permissions'
+import { estOrganisateur, peutModifier } from '../permissions'
 import { FormulaireReglement } from './reglement/FormulaireReglement'
 import { NOMS_PRESETS, typeReglement, usePresets } from './reglement/presets'
+import { BasculeVisibilite, ModalPasserPrive, confirmationPriveRequise } from './tournoi/BasculeVisibilite'
 import { ModalCorbeille } from './tournoi/ModalCorbeille'
 import { ModalSuppressionTournoi } from './tournoi/ModalSuppressionTournoi'
 
@@ -17,6 +18,7 @@ const FORMULAIRE_VIDE = {
   has_demis: false,
   has_finale: true,
   reglement: null, // null = FIBA (défaut du serveur)
+  prive: false,
 }
 
 function ListeTournois() {
@@ -69,6 +71,26 @@ function ListeTournois() {
   const [corbeille, setCorbeille] = useState([])
   const [voirCorbeille, setVoirCorbeille] = useState(false)
   const gereDesTournois = Boolean(user) && !compteJoueur
+  const [aRendrePrive, setARendrePrive] = useState(null)
+  const [visibiliteEnCours, setVisibiliteEnCours] = useState(null)
+
+  const changerVisibilite = async (tournoi, prive) => {
+    setVisibiliteEnCours(tournoi.id)
+    try {
+      const { data } = await updateTournoi(tournoi.slug, { prive })
+      setTournois((liste) => liste.map((t) => (t.id === tournoi.id ? { ...t, prive: data.prive } : t)))
+    } catch (error) {
+      setAvertissement(messageErreur(error, 'Impossible de changer la visibilité du tournoi.'))
+    } finally {
+      setVisibiliteEnCours(null)
+      setARendrePrive(null)
+    }
+  }
+
+  const basculerVisibilite = (tournoi) => {
+    if (confirmationPriveRequise(tournoi)) setARendrePrive(tournoi)
+    else changerVisibilite(tournoi, !tournoi.prive)
+  }
 
   const chargerCorbeille = async () => {
     try {
@@ -269,10 +291,17 @@ function ListeTournois() {
               
               <div className="p-8 flex-1">
                 <div className="flex justify-between items-start mb-6">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-2">
                     <div className="bg-primary-orange/10 text-primary-orange px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border border-primary-orange/20 w-fit">
-                      {tournoi.organisateur_nom || 'Public'}
+                      {tournoi.organisateur_nom || 'Sans organisateur'}
                     </div>
+                    {estOrganisateur(user, tournoi.organisateur) && (
+                      <BasculeVisibilite
+                        tournoi={tournoi}
+                        enCours={visibiliteEnCours === tournoi.id}
+                        onBascule={basculerVisibilite}
+                      />
+                    )}
                   </div>
                   {peutModifier(user, tournoi.organisateur) && (
                     <button
@@ -369,6 +398,26 @@ function ListeTournois() {
                 </div>
               </div>
 
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                <label className="block text-[10px] font-black text-primary-orange mb-4 uppercase tracking-[0.2em]">Visibilité</label>
+                <div className="flex gap-2">
+                  {[{ valeur: false, label: 'Public' }, { valeur: true, label: 'Privé' }].map(({ valeur, label }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      aria-pressed={formData.prive === valeur}
+                      onClick={() => setFormData({ ...formData, prive: valeur })}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${formData.prive === valeur ? 'bg-primary-orange text-white' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-500 mt-3">
+                  {formData.prive ? "Visible seulement par toi et l'équipe THE LAB. Les liens d'invitation restent actifs." : 'Visible par tout le monde.'}
+                </p>
+              </div>
+
               {/* Phases Selection */}
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
                 <label className="block text-[10px] font-black text-primary-orange mb-4 uppercase tracking-[0.2em]">Format de la Phase Finale</label>
@@ -460,6 +509,15 @@ function ListeTournois() {
             setASupprimer(null)
             await actualiserApresSuppression()
           }}
+        />
+      )}
+
+      {aRendrePrive && (
+        <ModalPasserPrive
+          tournoi={aRendrePrive}
+          enCours={visibiliteEnCours === aRendrePrive.id}
+          onAnnuler={() => setARendrePrive(null)}
+          onConfirmer={() => changerVisibilite(aRendrePrive, true)}
         />
       )}
 

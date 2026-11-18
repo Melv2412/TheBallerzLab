@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { peutModifier } from "./permissions";
+import { estOrganisateur, peutModifier } from "./permissions";
+
+describe("estOrganisateur", () => {
+  it("reconnaît seulement l'organisateur du tournoi, pas le staff", () => {
+    expect(estOrganisateur({ id: 7 }, 7)).toBe(true);
+    expect(estOrganisateur({ id: 1, is_staff: true }, 7)).toBe(false);
+  });
+
+  it("refuse un visiteur ou un tournoi sans organisateur", () => {
+    expect(estOrganisateur(null, 7)).toBe(false);
+    expect(estOrganisateur({ id: 1, is_staff: true }, null)).toBe(false);
+  });
+});
 
 describe("peutModifier", () => {
   const orga = { id: 7, is_staff: false };

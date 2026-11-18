@@ -125,6 +125,22 @@ def peut_modifier(user, tournoi):
     return tournoi.organisateur_id == user.id
 
 
+def filtre_visibles(user, chemin=''):
+    """Tournois que ce compte peut voir : les publics, les siens, et tous pour le staff."""
+    if user.is_authenticated and user.is_staff:
+        return Q()
+    visibles = Q(**{f'{chemin}prive': False})
+    if user.is_authenticated:
+        visibles |= Q(**{f'{chemin}organisateur': user})
+    return visibles
+
+
+def peut_voir(user, tournoi):
+    if not tournoi.prive or (user.is_authenticated and user.is_staff):
+        return True
+    return user.is_authenticated and tournoi.organisateur_id == user.id
+
+
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """Permission personnalisée : seul l'organisateur du tournoi peut modifier l'objet."""
     def has_object_permission(self, request, view, obj):
@@ -226,7 +242,9 @@ class TournoiViewSet(viewsets.ModelViewSet):
         # Un tournoi de la corbeille n'existe plus, sauf pour le restaurer ou l'effacer
         hors_corbeille = self.action not in self.ACTIONS_CORBEILLE
         # Les compteurs sont calculés par la base en une seule requête
-        return Tournoi.objects.filter(supprime_le__isnull=hors_corbeille).select_related('organisateur').annotate(
+        return Tournoi.objects.filter(
+            filtre_visibles(self.request.user), supprime_le__isnull=hors_corbeille,
+        ).select_related('organisateur').annotate(
             nb_equipes=Count('equipes', distinct=True),
             nb_matchs=Count('matchs', distinct=True),
         ).order_by(*Tournoi._meta.ordering)  # ordering du Meta ignoré avec annotate()
@@ -358,7 +376,9 @@ class EquipeViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        queryset = Equipe.objects.filter(tournoi__supprime_le__isnull=True).select_related('tournoi').annotate(
+        queryset = Equipe.objects.filter(
+            filtre_visibles(self.request.user, 'tournoi__'), tournoi__supprime_le__isnull=True,
+        ).select_related('tournoi').annotate(
             nb_joueurs=Count('joueurs', filter=Q(joueurs__retire=False)),
         ).order_by(*Equipe._meta.ordering)
         tournoi_param = self.request.query_params.get('tournoi', None)
@@ -404,8 +424,9 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = protections.annoter_stats_joueurs(
-            Joueur.objects.filter(equipe__tournoi__supprime_le__isnull=True)
-            .select_related('equipe', 'equipe__tournoi', 'athlete')
+            Joueur.objects.filter(
+                filtre_visibles(self.request.user, 'equipe__tournoi__'), equipe__tournoi__supprime_le__isnull=True,
+            ).select_related('equipe', 'equipe__tournoi', 'athlete')
         )
         equipe_id = self.request.query_params.get('equipe', None)
         if equipe_id:
@@ -437,7 +458,7 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         if fiche is None:
             return Response({'detail': "Aucune fiche avec cet email."}, status=status.HTTP_404_NOT_FOUND)
         tournois = (
-            fiche.joueurs.filter(equipe__tournoi__supprime_le__isnull=True)
+            fiche.joueurs.filter(equipe__tournoi__supprime_le__isnull=True, equipe__tournoi__prive=False)
             .values('equipe__tournoi_id').distinct().count()
         )
         return Response({'athlete': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom, 'nb_tournois': tournois})
@@ -511,6 +532,7 @@ class InvitationViewSet(viewsets.GenericViewSet):
             },
             'tournoi': {
                 'nom': tournoi.nom, 'slug': tournoi.slug, 'date_debut': tournoi.date_debut, 'date_fin': tournoi.date_fin,
+                'visible': peut_voir(user, tournoi),  # tournoi privé : le lien marche, la page reste fermée
             },
             'inscriptions_ouvertes': tournoi.inscriptions_ouvertes,
             'joueurs': [
@@ -586,6 +608,7 @@ class InscriptionViewSet(viewsets.GenericViewSet):
             'tournoi': {
                 'nom': tournoi.nom, 'slug': tournoi.slug, 'date_debut': tournoi.date_debut, 'date_fin': tournoi.date_fin,
                 'organisateur_nom': getattr(tournoi.organisateur, 'username', None),
+                'visible': peut_voir(request.user, tournoi),
             },
             'inscriptions_ouvertes': tournoi.inscriptions_ouvertes,
             'nb_equipes': tournoi.equipes.count(),
@@ -657,7 +680,7 @@ class AthleteViewSet(viewsets.GenericViewSet):
             photo = request.build_absolute_uri(athlete.photo.url)
         else:  # à défaut, la photo ajoutée par un organisateur sur une inscription
             avec_photo = (
-                athlete.joueurs.filter(equipe__tournoi__supprime_le__isnull=True)
+                athlete.joueurs.filter(equipe__tournoi__supprime_le__isnull=True, equipe__tournoi__prive=False)
                 .exclude(photo='').exclude(photo__isnull=True).order_by('-created_at').first()
             )
             photo = request.build_absolute_uri(avec_photo.photo.url) if avec_photo else None
@@ -694,9 +717,9 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         return MatchSerializer
 
     def get_queryset(self):
-        queryset = Match.objects.filter(tournoi__supprime_le__isnull=True).select_related(
-            'tournoi__organisateur', 'equipe_domicile', 'equipe_exterieur',
-        )
+        queryset = Match.objects.filter(
+            filtre_visibles(self.request.user, 'tournoi__'), tournoi__supprime_le__isnull=True,
+        ).select_related('tournoi__organisateur', 'equipe_domicile', 'equipe_exterieur')
         # La liste n'affiche pas les stats des joueurs : inutile de les charger
         if self.action != 'list':
             queryset = queryset.prefetch_related('statistiques_joueurs__joueur__equipe', 'statistiques_joueurs__joueur__athlete')
@@ -980,9 +1003,9 @@ class StatistiqueJoueurViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = StatistiqueJoueurSerializer
 
     def get_queryset(self):
-        queryset = StatistiqueJoueur.objects.filter(match__tournoi__supprime_le__isnull=True).select_related(
-            'joueur__equipe', 'joueur__athlete', 'match'
-        )
+        queryset = StatistiqueJoueur.objects.filter(
+            filtre_visibles(self.request.user, 'match__tournoi__'), match__tournoi__supprime_le__isnull=True,
+        ).select_related('joueur__equipe', 'joueur__athlete', 'match')
 
         match_id = self.request.query_params.get('match', None)
         if match_id:

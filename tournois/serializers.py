@@ -78,7 +78,7 @@ class TournoiSerializer(serializers.ModelSerializer):
             'id', 'nom', 'slug', 'organisateur', 'organisateur_nom', 'date_debut', 'date_fin',
             'equipes_count', 'matchs_count',
             'has_8emes', 'has_quarts', 'has_demis', 'has_finale', 'reglement', 'reglement_type',
-            'inscriptions_ouvertes', 'code_inscription',
+            'inscriptions_ouvertes', 'code_inscription', 'prive',
             'victoires_requises_8eme', 'victoires_requises_quart', 'victoires_requises_demi', 'victoires_requises_finale',
             'created_at', 'updated_at'
         ]

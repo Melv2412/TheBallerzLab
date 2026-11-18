@@ -21,6 +21,8 @@ class Tournoi(models.Model):
     organisateur = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='tournois_crees', null=True, blank=True)
     # Date de mise à la corbeille : le tournoi est alors masqué partout (voir corbeille.py)
     supprime_le = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
+    # Privé : visible par son organisateur et le staff ; les liens d'invitation restent actifs
+    prive = models.BooleanField(default=False)
     date_debut = models.DateField()
     date_fin = models.DateField()
 

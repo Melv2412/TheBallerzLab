@@ -54,7 +54,7 @@ def _cumul(stats):
 
 def profil_athlete(athlete, photo_url=None):
     joueurs = list(
-        athlete.joueurs.filter(equipe__tournoi__supprime_le__isnull=True)
+        athlete.joueurs.filter(equipe__tournoi__supprime_le__isnull=True, equipe__tournoi__prive=False)
         .select_related('equipe__tournoi').order_by('-equipe__tournoi__date_debut', '-id')
     )
     # Seuls les matchs réellement joués comptent : une ligne à 0 sans présence confirmée est une absence,
@@ -62,7 +62,7 @@ def profil_athlete(athlete, photo_url=None):
     stats = list(
         StatistiqueJoueur.objects.filter(
             A_JOUE, joueur__athlete=athlete, match__statut='termine', match__forfait='',
-            match__tournoi__supprime_le__isnull=True,
+            match__tournoi__supprime_le__isnull=True, match__tournoi__prive=False,
         )
     )
     # MVP (même règle que la page du match) : il faut toutes les stats de chaque match joué

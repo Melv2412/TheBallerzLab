@@ -132,9 +132,11 @@ export default function InscriptionEquipe() {
           {" · "}
           {page.nb_equipes}/{page.limite_equipes} équipes
         </p>
-        <Link to={`/tournoi/${tournoi.slug}`} className="inline-block mt-2 text-sm text-primary-orange font-bold hover:underline">
-          Voir le tournoi →
-        </Link>
+        {tournoi.visible && (
+          <Link to={`/tournoi/${tournoi.slug}`} className="inline-block mt-2 text-sm text-primary-orange font-bold hover:underline">
+            Voir le tournoi →
+          </Link>
+        )}
       </header>
 
       {erreur && (
