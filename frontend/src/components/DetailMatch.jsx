@@ -4,7 +4,7 @@ import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, messag
 import { useAuth } from '../AuthContext'
 import { usePolling } from '../usePolling'
 import { useTempsReelMatch } from '../tempsReel'
-import { peutModifier } from '../permissions'
+import { peutEditer } from '../permissions'
 import { ImageSecours } from './ImageSecours'
 import { ModalPresences } from './match-live/ModalPresences'
 import { ModalForfait } from './match-live/ModalForfait'
@@ -20,7 +20,7 @@ function DetailMatch() {
   const [presences, setPresences] = useState(null)
   const [forfaitOuvert, setForfaitOuvert] = useState(false)
 
-  const isOwner = Boolean(match) && peutModifier(user, match.organisateur_id);
+  const isOwner = Boolean(match) && peutEditer(user, match.organisateur_id, match.tournoi_cloture_le);
 
   // En temps réel : rechargé à chaque signal de la base, et toutes les 30 s par sécurité.
   // Sans temps réel : toutes les 3 s pendant le match, toutes les 30 s sinon (terminé ou à venir)

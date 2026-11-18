@@ -23,6 +23,10 @@ class Tournoi(models.Model):
     supprime_le = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
     # Privé : visible par son organisateur et le staff ; les liens d'invitation restent actifs
     prive = models.BooleanField(default=False)
+    # Date de clôture : le tournoi est alors en lecture seule (voir cloture.py)
+    cloture_le = models.DateTimeField(null=True, blank=True, editable=False)
+    # Égalités parfaites tranchées en poule : [{'equipes': [ids dans l'ordre], 'mode': ..., 'le': ...}]
+    departage_poule = models.JSONField(default=list, blank=True, editable=False)
     date_debut = models.DateField()
     date_fin = models.DateField()
 
@@ -56,6 +60,10 @@ class Tournoi(models.Model):
                 Lower('nom'), 'organisateur', name='tournoi_nom_unique_par_organisateur',
             ),
         ]
+
+    @property
+    def inscriptions_actives(self):
+        return self.inscriptions_ouvertes and self.cloture_le is None
 
     def save(self, *args, **kwargs):
         if not self.slug:

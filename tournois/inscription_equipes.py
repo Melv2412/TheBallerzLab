@@ -60,7 +60,7 @@ def demander(user, tournoi, nom):
     """Le capitaine propose son équipe (ou renomme sa demande en attente, ou retente après un refus)."""
     verrouiller_tournoi(tournoi)
     tournoi = Tournoi.objects.get(pk=tournoi.pk)  # relu après le verrou
-    if not (tournoi.inscriptions_ouvertes and tournoi.code_inscription):
+    if not (tournoi.inscriptions_actives and tournoi.code_inscription):
         raise InvitationRefusee("Les inscriptions de ce tournoi sont fermées. Contacte l'organisateur.")
     nom = ' '.join(str(nom or '').split())
     if not nom:

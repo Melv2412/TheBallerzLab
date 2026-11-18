@@ -74,6 +74,7 @@ export function OngletEquipes({
   matchs,
   joueursParEquipe,
   isOwner,
+  peutDelier,
   onNouvelleEquipe,
   onEditerEquipe,
   onSupprimerEquipe,
@@ -217,9 +218,9 @@ export function OngletEquipes({
                             </div>
                           </div>
                         </div>
-                        {isOwner && (
+                        {(isOwner || (peutDelier && joueur.compte_lie)) && (
                           <div className="flex gap-3 md:gap-2 md:opacity-0 md:group-hover/player:opacity-100 transition-all shrink-0">
-                            {joueur.compte_lie && (
+                            {peutDelier && joueur.compte_lie && (
                               <button
                                 onClick={() => delier(joueur)}
                                 className="text-gray-400 hover:text-white transition-all text-xs"
@@ -228,26 +229,30 @@ export function OngletEquipes({
                                 ⛓
                               </button>
                             )}
-                            <button
-                              onClick={() => onEditerJoueur(joueur, equipe.id)}
-                              className="text-blue-400 hover:text-blue-500 transition-all"
-                            >
-                              ✎
-                            </button>
-                            {joueur.a_des_stats ? (
-                              <button
-                                onClick={() => onRetirerJoueur(joueur.id)}
-                                className="text-red-400 hover:text-red-500 transition-all text-[10px] font-black uppercase"
-                              >
-                                Retirer
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => onSupprimerJoueur(joueur.id)}
-                                className="text-red-400 hover:text-red-500 transition-all"
-                              >
-                                ✕
-                              </button>
+                            {isOwner && (
+                              <>
+                                <button
+                                  onClick={() => onEditerJoueur(joueur, equipe.id)}
+                                  className="text-blue-400 hover:text-blue-500 transition-all"
+                                >
+                                  ✎
+                                </button>
+                                {joueur.a_des_stats ? (
+                                  <button
+                                    onClick={() => onRetirerJoueur(joueur.id)}
+                                    className="text-red-400 hover:text-red-500 transition-all text-[10px] font-black uppercase"
+                                  >
+                                    Retirer
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => onSupprimerJoueur(joueur.id)}
+                                    className="text-red-400 hover:text-red-500 transition-all"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         )}

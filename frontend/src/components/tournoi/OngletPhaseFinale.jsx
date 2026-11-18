@@ -1,16 +1,31 @@
-import React, { useState } from "react";
-import { genererPhasesFinales, messageErreur, resetPlayoffs } from "../../api";
+import React, { useEffect, useState } from "react";
+import { genererPhasesFinales, getEgaliteQualification, messageErreur, resetPlayoffs } from "../../api";
+import { EgaliteQualification } from "./EgaliteQualification";
 import { MatchCard } from "./MatchCard";
 import { CarteSerie, formatSerie, usePhasesFinales } from "./Series";
 
 export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMatch, onSupprimerMatch, recharger }) {
   const [enCours, setEnCours] = useState(false);
+  const [egalite, setEgalite] = useState(null);
   const phases = usePhasesFinales(tournoi.slug, matchs);
 
   const matchsPoule = matchs.filter((m) => m.phase === "poule");
   const restantsPoule = matchsPoule.filter((m) => m.statut !== "termine").length;
   const aDesMatchsEliminatoires = matchs.some((m) => m.phase !== "poule");
   const matchParId = Object.fromEntries(matchs.map((m) => [m.id, m]));
+  const tableauACreer = isOwner && phases.length > 0 && restantsPoule === 0 && !aDesMatchsEliminatoires;
+
+  useEffect(() => {
+    setEgalite(null);
+    if (!tableauACreer) return undefined;
+    let actif = true;
+    getEgaliteQualification(tournoi.slug)
+      .then((res) => actif && setEgalite(res.data.egalite))
+      .catch((err) => console.error("Erreur égalité:", err)); // le serveur bloque quand même la création
+    return () => {
+      actif = false;
+    };
+  }, [tableauACreer, tournoi.slug, matchs]);
 
   const executer = async (action, confirmation) => {
     if (confirmation && !window.confirm(confirmation)) return;
@@ -64,7 +79,9 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
           <div className="text-6xl mb-4">🔒</div>
           <h3 className="text-2xl font-black uppercase italic text-white mb-2">Phase Finale Verrouillée</h3>
           <p className="text-gray-400 text-sm mb-6">
-            Terminez tous les matchs de poule avant de lancer les phases éliminatoires.
+            {tournoi.cloture_le
+              ? "Le tournoi a été clôturé avant la phase finale."
+              : "Terminez tous les matchs de poule avant de lancer les phases éliminatoires."}
           </p>
           <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1.5 rounded-full">
             Matchs restants : {restantsPoule}
@@ -81,9 +98,17 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
                 {matchsPoule.length === 0 && " (sans match de poule : ordre alphabétique)"}. Ensuite, chaque série
                 se poursuit et le tour suivant se crée automatiquement à chaque résultat.
               </p>
+              {egalite && (
+                <EgaliteQualification
+                  key={egalite.decision?.le || "sans-decision"}
+                  slug={tournoi.slug}
+                  egalite={egalite}
+                  onDecision={recharger}
+                />
+              )}
               <button
                 onClick={generer}
-                disabled={enCours}
+                disabled={enCours || Boolean(egalite && !egalite.decision)}
                 className="btn-basketball px-10 py-4 text-xs font-black uppercase tracking-widest disabled:opacity-50"
               >
                 {enCours ? "Génération..." : "🚀 Générer le Tableau Final"}

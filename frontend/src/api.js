@@ -215,6 +215,13 @@ export const resetPlayoffs = (slug, phase = '') => api.post(`/tournois/${slug}/r
 // Phases finales : état des séries, et création du premier tour d'après le classement de poule
 export const getPhasesFinales = (slug) => api.get(`/tournois/${slug}/phases_finales/`)
 export const genererPhasesFinales = (slug) => api.post(`/tournois/${slug}/generer_phases_finales/`)
+// Égalité parfaite sur une place qualificative : `{ ordre: [ids] }` ou `{ tirage: true }`
+export const getEgaliteQualification = (slug) => api.get(`/tournois/${slug}/egalite_qualification/`)
+export const departagerQualification = (slug, decision) =>
+  api.post(`/tournois/${slug}/departager_qualification/`, decision)
+// Fin de tournoi : clôture par l'organisateur, réouverture par un administrateur
+export const cloturerTournoi = (slug) => api.post(`/tournois/${slug}/cloturer/`)
+export const rouvrirTournoi = (slug) => api.post(`/tournois/${slug}/rouvrir/`)
 
 
 

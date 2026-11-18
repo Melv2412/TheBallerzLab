@@ -7,9 +7,13 @@ Phases finales : séries au meilleur des N matchs et progression automatique du 
   (domicile et extérieur alternés) ; quand toutes les séries d'une phase sont décidées, la phase suivante
   est créée en appariant les vainqueurs comme dans un tableau classique (1re série contre dernière...).
 """
+import random
+
 from django.db import transaction
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from .cloture import exiger_tournoi_ouvert
 from .models import Match, Tournoi
 
 PHASES = ['8eme', 'quart', 'demi', 'finale']
@@ -71,12 +75,82 @@ def series_de_la_phase(tournoi, phase, matchs=None):
     return list(series.values())
 
 
+def egalite_qualification(tournoi):
+    """
+    Égalité parfaite à cheval sur la dernière place qualificative, une fois les poules terminées :
+    aucun critère FIBA ne dit quelle équipe se qualifie. None s'il n'y en a pas.
+    """
+    from .services import analyse_du_classement
+
+    actives = phases_actives(tournoi)
+    if not actives or tournoi.matchs.filter(phase='poule').exclude(statut='termine').exists():
+        return None
+    nombre = EQUIPES_PAR_PHASE[actives[0]]
+    classement, egalites = analyse_du_classement(tournoi, 'poule')
+    if len(classement) <= nombre:
+        return None
+    frontiere = {classement[nombre - 1]['id'], classement[nombre]['id']}
+    groupe = next((g for g in egalites if frontiere <= g), None)
+    if groupe is None:
+        return None
+    rangs = [rang for rang, equipe in enumerate(classement) if equipe['id'] in groupe]
+    decision = next((d for d in tournoi.departage_poule if set(d['equipes']) == groupe), None)
+    return {
+        'equipes': [{'id': classement[r]['id'], 'nom': classement[r]['nom']} for r in rangs],
+        'premiere_place': rangs[0] + 1,
+        'places_qualificatives': nombre - rangs[0],
+        'decision': {'mode': decision['mode'], 'le': decision['le']} if decision else None,
+    }
+
+
+def _ordre_valide(ordre, ids):
+    return (
+        isinstance(ordre, list)
+        and all(isinstance(i, int) and not isinstance(i, bool) for i in ordre)
+        and sorted(ordre) == sorted(ids)
+    )
+
+
+@transaction.atomic
+def departager_qualification(tournoi, ordre=None):
+    """
+    Tranche l'égalité : `ordre` choisi par l'organisateur, ou tirage au sort sans `ordre`.
+    Le choix de l'organisateur reste modifiable jusqu'à la création du tableau ; un tirage est définitif.
+    """
+    verrouiller_tournoi(tournoi)
+    tournoi.refresh_from_db(fields=['cloture_le', 'departage_poule'])
+    exiger_tournoi_ouvert(tournoi)
+    if tournoi.matchs.exclude(phase='poule').exists():
+        raise ValidationError({'detail': "Les phases finales ont déjà commencé : réinitialisez-les d'abord."})
+    egalite = egalite_qualification(tournoi)
+    if egalite is None:
+        raise ValidationError({'detail': "Aucune égalité parfaite à départager pour une place qualificative."})
+    if egalite['decision'] and egalite['decision']['mode'] == 'tirage':
+        raise ValidationError({'detail': "Le tirage au sort a déjà eu lieu : son résultat est définitif."})
+
+    ids = [equipe['id'] for equipe in egalite['equipes']]
+    if ordre is None:
+        mode, ordre = 'tirage', ids[:]
+        random.SystemRandom().shuffle(ordre)
+    elif _ordre_valide(ordre, ids):
+        mode = 'organisateur'
+    else:
+        raise ValidationError({'detail': "L'ordre doit contenir exactement les équipes à égalité."})
+
+    autres = [d for d in tournoi.departage_poule if set(d['equipes']) != set(ids)]
+    tournoi.departage_poule = [*autres, {'equipes': ordre, 'mode': mode, 'le': timezone.now().isoformat()}]
+    tournoi.save(update_fields=['departage_poule', 'updated_at'])
+    return egalite_qualification(tournoi)
+
+
 @transaction.atomic
 def generer_phases_finales(tournoi):
     """Crée le premier tour avec les meilleures équipes du classement de poule (1er contre dernier qualifié...)."""
     from .services import classement_du_tournoi
 
     verrouiller_tournoi(tournoi)
+    tournoi.refresh_from_db(fields=['cloture_le', 'departage_poule'])
+    exiger_tournoi_ouvert(tournoi)
     actives = phases_actives(tournoi)
     if not actives:
         raise ValidationError({'detail': "Aucune phase finale n'est activée dans les paramètres du tournoi."})
@@ -92,6 +166,13 @@ def generer_phases_finales(tournoi):
     if len(classement) < nombre:
         raise ValidationError({'detail': (
             f"Les {LIBELLES[depart].lower()} demandent {nombre} équipes : le tournoi n'en a que {len(classement)}."
+        )})
+    egalite = egalite_qualification(tournoi)
+    if egalite and not egalite['decision']:
+        noms = ', '.join(equipe['nom'] for equipe in egalite['equipes'])
+        raise ValidationError({'detail': (
+            f"Égalité parfaite pour une place qualificative ({noms}) : "
+            "choisissez l'ordre ou lancez le tirage au sort avant de créer le tableau."
         )})
     qualifies = [equipe['id'] for equipe in classement[:nombre]]
     for i in range(nombre // 2):

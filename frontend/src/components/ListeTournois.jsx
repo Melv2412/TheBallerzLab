@@ -52,7 +52,7 @@ function ListeTournois() {
     } else if (enAttenteValidation) {
       setAvertissement("Ton compte organisateur est en attente de validation par l'équipe THE LAB. Tu pourras créer des tournois dès qu'il sera validé.")
     } else if (limiteAtteinte) {
-      setAvertissement(`Tu as déjà ${user.limite_tournois_actifs} tournois en cours ou à venir. Un tournoi libère sa place une fois sa date de fin passée.`)
+      setAvertissement(`Tu as déjà ${user.limite_tournois_actifs} tournois en cours ou à venir. Un tournoi libère sa place une fois clôturé ou sa date de fin passée.`)
     } else {
       setShowModal(true)
     }
@@ -301,6 +301,11 @@ function ListeTournois() {
                         enCours={visibiliteEnCours === tournoi.id}
                         onBascule={basculerVisibilite}
                       />
+                    )}
+                    {tournoi.cloture_le && (
+                      <span className="bg-white/5 text-gray-300 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border border-white/10 w-fit">
+                        Clôturé
+                      </span>
                     )}
                   </div>
                   {peutModifier(user, tournoi.organisateur) && (

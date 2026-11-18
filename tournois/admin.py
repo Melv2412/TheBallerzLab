@@ -173,7 +173,7 @@ class UtilisateurAdmin(UserAdmin):
 
 @admin.register(Tournoi)
 class TournoiAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'organisateur', 'date_debut', 'date_fin', 'supprime_le']
+    list_display = ['nom', 'organisateur', 'date_debut', 'date_fin', 'cloture_le', 'supprime_le']
     list_filter = [TournoiActifFilter, 'date_debut', 'organisateur']
     search_fields = ['nom']
     readonly_fields = ['reglement_tableau']

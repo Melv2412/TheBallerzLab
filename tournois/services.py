@@ -5,7 +5,7 @@ from collections import Counter
 
 from django.db.models import Count, F, Q, Sum
 
-from .classement import calculer_classement
+from .classement import analyser_classement
 from .models import StatistiqueJoueur
 
 # Évaluation simplifiée d'une ligne de stats : PTS + AST + REB + BLK - FAUTES
@@ -31,15 +31,23 @@ def filtrer_par_type(matchs_ou_stats, type_classement, champ_phase='phase'):
     return matchs_ou_stats
 
 
-def classement_du_tournoi(tournoi, type_classement=None):
-    """Classement FIBA sur les matchs terminés (2 requêtes, calcul en mémoire)."""
+def analyse_du_classement(tournoi, type_classement=None):
+    """Classement FIBA sur les matchs terminés et égalités parfaites (2 requêtes, calcul en mémoire)."""
     matchs = filtrer_par_type(tournoi.matchs.filter(statut='termine'), type_classement)
     equipes = tournoi.equipes.values_list('id', 'nom')
     scores = matchs.values_list(
         'equipe_domicile_id', 'equipe_exterieur_id', 'score_domicile', 'score_exterieur', 'forfait',
     )
     reglement = tournoi.reglement
-    return calculer_classement(equipes, scores, reglement['points_victoire'], reglement['points_defaite'])
+    # Les égalités tranchées concernent les places qualificatives, donc le classement de poule
+    decisions = [d['equipes'] for d in tournoi.departage_poule] if type_classement == 'poule' else ()
+    return analyser_classement(
+        equipes, scores, reglement['points_victoire'], reglement['points_defaite'], decisions,
+    )
+
+
+def classement_du_tournoi(tournoi, type_classement=None):
+    return analyse_du_classement(tournoi, type_classement)[0]
 
 
 def meilleurs_joueurs(tournoi, type_classement=None, limite=5):

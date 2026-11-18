@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { updateStatistique, tempsMort, periodeSuivante, annulerDerniereAction, messageErreur } from "../api";
 import { useAuth } from "../AuthContext";
-import { peutModifier } from "../permissions";
+import { peutEditer } from "../permissions";
 import { useMatchLive } from "./match-live/useMatchLive";
 import { estExclu, meilleurJoueur } from "./match-live/chrono";
 import { TableauChrono } from "./match-live/TableauChrono";
@@ -56,7 +56,7 @@ function MatchLive() {
 
   if (match.forfait) return <MatchForfait match={match} />;
 
-  const isOwner = peutModifier(user, match.organisateur_id);
+  const isOwner = peutEditer(user, match.organisateur_id, match.tournoi_cloture_le);
   const statistiques = match.statistiques || [];
   const homeStats = statistiques.filter((s) => s.equipe_nom === match.equipe_domicile_nom);
   const awayStats = statistiques.filter((s) => s.equipe_nom === match.equipe_exterieur_nom);

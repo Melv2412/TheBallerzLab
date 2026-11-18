@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { aDesMatchsRestants, equipeAJoue, erreurPhases, phasesCommencees, pointsVerrouilles } from "./phases";
+import { aDesMatchsRestants, deplacer, equipeAJoue, erreurPhases, phasesCommencees, pointsVerrouilles } from "./phases";
+
+describe("deplacer", () => {
+  it("échange un élément avec son voisin sans toucher à la liste d'origine", () => {
+    const liste = ["a", "b", "c"];
+    expect(deplacer(liste, 2, -1)).toEqual(["a", "c", "b"]);
+    expect(deplacer(liste, 0, 1)).toEqual(["b", "a", "c"]);
+    expect(liste).toEqual(["a", "b", "c"]);
+  });
+
+  it("ne bouge rien hors des limites", () => {
+    expect(deplacer(["a", "b"], 0, -1)).toEqual(["a", "b"]);
+    expect(deplacer(["a", "b"], 1, 1)).toEqual(["a", "b"]);
+  });
+});
 
 describe("erreurPhases", () => {
   it("accepte des phases consécutives jusqu'à la finale, ou aucune phase", () => {

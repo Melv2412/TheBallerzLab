@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { estOrganisateur, peutModifier } from "./permissions";
+import { estOrganisateur, peutEditer, peutModifier } from "./permissions";
+
+describe("peutEditer", () => {
+  it("suit peutModifier tant que le tournoi est ouvert", () => {
+    expect(peutEditer({ id: 1 }, 1, null)).toBe(true);
+    expect(peutEditer({ id: 2 }, 1, null)).toBe(false);
+  });
+
+  it("refuse tout le monde une fois le tournoi clôturé", () => {
+    expect(peutEditer({ id: 1 }, 1, "2026-11-18T10:00:00Z")).toBe(false);
+    expect(peutEditer({ id: 9, is_staff: true }, null, "2026-11-18T10:00:00Z")).toBe(false);
+  });
+});
 
 describe("estOrganisateur", () => {
   it("reconnaît seulement l'organisateur du tournoi, pas le staff", () => {

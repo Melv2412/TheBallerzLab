@@ -9,6 +9,15 @@ export const PHASES = [
 export const phasesCommencees = (matchs) =>
   new Set(matchs.filter((m) => m.phase !== "poule" && m.statut !== "a_venir").map((m) => m.phase));
 
+// Copie de la liste avec l'élément déplacé ; hors limites, la liste reste identique
+export const deplacer = (liste, index, decalage) => {
+  const cible = index + decalage;
+  if (index < 0 || index >= liste.length || cible < 0 || cible >= liste.length) return liste;
+  const copie = [...liste];
+  [copie[index], copie[cible]] = [copie[cible], copie[index]];
+  return copie;
+};
+
 export const pointsVerrouilles = (matchs) => matchs.some((m) => m.statut === "termine");
 
 export const equipeAJoue = (matchs, equipeId) =>

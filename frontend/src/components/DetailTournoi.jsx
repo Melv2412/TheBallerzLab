@@ -8,9 +8,10 @@ import {
   messageErreur,
   reintegrerJoueur,
   retirerJoueur,
+  rouvrirTournoi,
 } from "../api";
 import { useAuth } from "../AuthContext";
-import { peutModifier } from "../permissions";
+import { peutEditer, peutModifier } from "../permissions";
 import { useTournoi } from "./tournoi/useTournoi";
 import { OngletClassement } from "./tournoi/OngletClassement";
 import { OngletCalendrier } from "./tournoi/OngletCalendrier";
@@ -18,13 +19,14 @@ import { OngletEquipes } from "./tournoi/OngletEquipes";
 import { OngletPhaseFinale } from "./tournoi/OngletPhaseFinale";
 import { OngletParametres } from "./tournoi/OngletParametres";
 import { ModalEquipe, ModalJoueur, ModalMatch } from "./tournoi/Modales";
+import { BandeauCloture, ModalCloture } from "./tournoi/ClotureTournoi";
 
 function DetailTournoi() {
   const { user } = useAuth();
   const { slug } = useParams();
   const [activeTab, setActiveTab] = useState("classement");
   const [typeClassement, setTypeClassement] = useState("poule");
-  // Modale ouverte : { type: "equipe", equipe } | { type: "joueur", equipeId, joueur } | { type: "match", phase }
+  // Modale ouverte : { type: "equipe", equipe } | { type: "joueur", equipeId, joueur } | { type: "match", phase } | { type: "cloture" }
   const [modale, setModale] = useState(null);
 
   const { tournoi, equipes, matchs, joueursParEquipe, classement, tournamentMVP, loading, recharger } = useTournoi(
@@ -32,7 +34,7 @@ function DetailTournoi() {
     typeClassement,
   );
 
-  const isOwner = Boolean(tournoi) && peutModifier(user, tournoi.organisateur);
+  const isOwner = Boolean(tournoi) && peutEditer(user, tournoi.organisateur, tournoi.cloture_le);
 
   const apresConfirmation = (message, action) => async (id) => {
     if (!window.confirm(message)) return;
@@ -60,6 +62,21 @@ function DetailTournoi() {
   const apresEnregistrement = () => {
     setModale(null);
     recharger();
+  };
+
+  const apresCloture = () => {
+    setActiveTab("classement"); // l'onglet Paramètres disparaît
+    apresEnregistrement();
+  };
+
+  const rouvrir = async () => {
+    if (!window.confirm("Rouvrir ce tournoi ? Son organisateur pourra de nouveau le modifier.")) return;
+    try {
+      await rouvrirTournoi(tournoi.slug);
+      recharger();
+    } catch (error) {
+      window.alert(messageErreur(error, "Réouverture impossible."));
+    }
   };
 
   if (loading) {
@@ -115,7 +132,11 @@ function DetailTournoi() {
       <div className="fixed inset-0 bg-gradient-to-b from-black/75 via-black/60 to-black/75 pointer-events-none z-0" />
 
       <div className="relative z-10">
-        {!isOwner && (
+        {tournoi.cloture_le && (
+          <BandeauCloture tournoi={tournoi} peutRouvrir={Boolean(user?.is_staff)} onRouvrir={rouvrir} />
+        )}
+
+        {!isOwner && !tournoi.cloture_le && (
           <p className="mb-4 no-print flex items-center gap-2 text-[11px] text-gray-500 border-l-2 border-blue-500/40 pl-3 py-0.5">
             <span className="truncate">
               Lecture seule · tournoi de{" "}
@@ -161,6 +182,12 @@ function DetailTournoi() {
                   </button>
                   <button onClick={() => setModale({ type: "match", phase: "poule" })} className="btn-basketball">
                     + Nouveau Match
+                  </button>
+                  <button
+                    onClick={() => setModale({ type: "cloture" })}
+                    className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-xs tracking-widest"
+                  >
+                    Clôturer
                   </button>
                 </>
               )}
@@ -209,6 +236,7 @@ function DetailTournoi() {
             matchs={matchs}
             joueursParEquipe={joueursParEquipe}
             isOwner={isOwner}
+            peutDelier={peutModifier(user, tournoi.organisateur)}
             onNouvelleEquipe={() => setModale({ type: "equipe", equipe: null })}
             onEditerEquipe={(equipe) => setModale({ type: "equipe", equipe })}
             onSupprimerEquipe={supprimerEquipe}
@@ -241,6 +269,9 @@ function DetailTournoi() {
           <OngletParametres tournoi={tournoi} matchs={matchs} recharger={recharger} />
         )}
 
+        {modale?.type === "cloture" && (
+          <ModalCloture tournoi={tournoi} matchs={matchs} onFermer={() => setModale(null)} onCloture={apresCloture} />
+        )}
         {modale?.type === "equipe" && (
           <ModalEquipe
             tournoi={tournoi}

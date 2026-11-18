@@ -9,3 +9,7 @@ export const peutModifier = (user, organisateurId) => {
   if (organisateurId == null) return Boolean(user.is_staff)
   return organisateurId === user.id
 }
+
+// Un tournoi clôturé est en lecture seule, même pour son organisateur
+export const peutEditer = (user, organisateurId, clotureLe) =>
+  !clotureLe && peutModifier(user, organisateurId)

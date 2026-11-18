@@ -9,7 +9,9 @@ Classement d'un tournoi selon les règles FIBA (Règlement officiel, annexe D - 
     4. différence de points sur tous les matchs ;
     5. points marqués sur tous les matchs.
   Dès qu'un critère sépare une partie des équipes, on recommence à 1 pour celles encore à égalité.
-- Égalité parfaite : la FIBA prévoit un tirage au sort ; ici, ordre alphabétique (stable et reproductible).
+- Égalité parfaite : ordre décidé pour ces équipes (organisateur ou tirage au sort, voir phases_finales.py) ;
+  sans décision, ordre alphabétique (stable et reproductible). Une décision ne vaut que pour le groupe exact
+  d'équipes à égalité : si les résultats changent, elle ne s'applique plus.
 
 Un match nul n'existe pas au basket : un match terminé sur une égalité (données anciennes) est ignoré.
 
@@ -58,8 +60,11 @@ def _bilan(ids, rencontres, bareme=BAREME_FIBA):
     return bilan
 
 
-def _departager(ids, rencontres, general, noms, bareme):
-    """Ordonne des équipes à égalité de points (critères FIBA, appliqués récursivement)."""
+def _departager(ids, rencontres, general, noms, bareme, decisions, egalites):
+    """
+    Ordonne des équipes à égalité de points (critères FIBA, appliqués récursivement).
+    Les groupes qu'aucun critère ne sépare sont ajoutés à `egalites`.
+    """
     if len(ids) <= 1:
         return list(ids)
 
@@ -78,25 +83,44 @@ def _departager(ids, rencontres, general, noms, bareme):
         if len(paliers) > 1:
             ordre = []
             for valeur in paliers:
-                ordre += _departager([i for i in ids if valeurs[i] == valeur], rencontres, general, noms, bareme)
+                ordre += _departager(
+                    [i for i in ids if valeurs[i] == valeur], rencontres, general, noms, bareme, decisions, egalites,
+                )
             return ordre
 
+    egalites.append(groupe)
+    for decision in decisions:
+        if len(decision) == len(ids) and set(decision) == groupe:
+            return list(decision)
     return sorted(ids, key=lambda i: noms[i].lower())
 
 
-def calculer_classement(equipes, scores, points_victoire=POINTS_VICTOIRE, points_defaite=POINTS_DEFAITE):
+def analyser_classement(
+    equipes, scores, points_victoire=POINTS_VICTOIRE, points_defaite=POINTS_DEFAITE, decisions=(),
+):
     """
     equipes : itérable de (id, nom)
     scores : itérable de (equipe_domicile_id, equipe_exterieur_id, score_domicile, score_exterieur[, forfait])
              des matchs terminés
+    decisions : ordres déjà décidés pour des égalités parfaites (listes d'ids)
+
+    Retourne (classement, égalités parfaites sous forme d'ensembles d'ids). Sans aucun résultat,
+    il n'y a pas d'égalité à trancher : l'ordre alphabétique suffit.
     """
     noms = dict(equipes)
     rencontres = [r for r in scores if (r[2] != r[3] or _forfait(r)) and r[0] in noms and r[1] in noms]
     bareme = (points_victoire, points_defaite)
     general = _bilan(noms, rencontres, bareme)
 
-    ordre = []
+    ordre, egalites = [], []
     for points in sorted({stats['points'] for stats in general.values()}, reverse=True):
-        ordre += _departager([i for i in noms if general[i]['points'] == points], rencontres, general, noms, bareme)
+        ordre += _departager(
+            [i for i in noms if general[i]['points'] == points], rencontres, general, noms, bareme, decisions, egalites,
+        )
 
-    return [{'id': i, 'nom': noms[i], **general[i]} for i in ordre]
+    classement = [{'id': i, 'nom': noms[i], **general[i]} for i in ordre]
+    return classement, egalites if rencontres else []
+
+
+def calculer_classement(equipes, scores, points_victoire=POINTS_VICTOIRE, points_defaite=POINTS_DEFAITE):
+    return analyser_classement(equipes, scores, points_victoire, points_defaite)[0]

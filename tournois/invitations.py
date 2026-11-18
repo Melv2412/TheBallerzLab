@@ -79,7 +79,7 @@ def s_inscrire(user, equipe, numero_maillot, prenom='', nom=''):
     """Nouveau joueur dans l'équipe, au nom de la fiche du compte (ou du prénom/nom donnés pour la première fois)."""
     verrouiller_tournoi(equipe.tournoi)
     equipe = Equipe.objects.select_related('tournoi').get(pk=equipe.pk)  # relu après le verrou
-    if not equipe.tournoi.inscriptions_ouvertes:
+    if not equipe.tournoi.inscriptions_actives:
         raise InvitationRefusee("Les inscriptions de ce tournoi sont fermées. Demande à l'organisateur.")
     fiche = fiche_du_compte(user)
     if fiche is not None:

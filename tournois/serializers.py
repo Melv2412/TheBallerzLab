@@ -78,7 +78,7 @@ class TournoiSerializer(serializers.ModelSerializer):
             'id', 'nom', 'slug', 'organisateur', 'organisateur_nom', 'date_debut', 'date_fin',
             'equipes_count', 'matchs_count',
             'has_8emes', 'has_quarts', 'has_demis', 'has_finale', 'reglement', 'reglement_type',
-            'inscriptions_ouvertes', 'code_inscription', 'prive',
+            'inscriptions_ouvertes', 'code_inscription', 'prive', 'cloture_le',
             'victoires_requises_8eme', 'victoires_requises_quart', 'victoires_requises_demi', 'victoires_requises_finale',
             'created_at', 'updated_at'
         ]
@@ -418,6 +418,7 @@ class MatchSerializer(serializers.ModelSerializer):
     organisateur_nom = serializers.CharField(source='tournoi.organisateur.username', read_only=True)
     # Permet au frontend de reconnaître l'organisateur par son id (et non son nom)
     organisateur_id = serializers.IntegerField(source='tournoi.organisateur_id', read_only=True)
+    tournoi_cloture_le = serializers.DateTimeField(source='tournoi.cloture_le', read_only=True)
     statistiques = StatistiqueJoueurSerializer(many=True, read_only=True, source='statistiques_joueurs')
     reglement = serializers.JSONField(required=False)
 
@@ -426,7 +427,8 @@ class MatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Match
         fields = [
-            'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'organisateur_nom', 'organisateur_id', 'phase', 'equipe_domicile', 'equipe_domicile_nom',
+            'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'tournoi_cloture_le', 'organisateur_nom', 'organisateur_id',
+            'phase', 'equipe_domicile', 'equipe_domicile_nom',
             'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'forfait', 'score_domicile',
             'score_exterieur', 'date_match', 'statistiques', 'mvp', 'reglement',
             'temps_restant_secondes', 'periode_actuelle', 'chrono_en_cours',

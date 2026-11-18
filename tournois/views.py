@@ -17,13 +17,19 @@ from rest_framework.exceptions import APIException, NotFound, PermissionDenied, 
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
-from . import corbeille, forfaits, inscription_equipes, invitations, journal, organisateurs, protections
+from . import cloture, corbeille, forfaits, inscription_equipes, invitations, journal, organisateurs, protections
 from . import reglement as regles
 from .athletes import chercher_par_email
 from .carriere import profil_athlete
 from .models import Athlete, DemandeEquipe, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .organisateurs import est_organisateur_valide, limite_tournois_atteinte, nb_tournois_actifs
-from .phases_finales import generer_phases_finales, resume_phases_finales, verrouiller_tournoi
+from .phases_finales import (
+    departager_qualification,
+    egalite_qualification,
+    generer_phases_finales,
+    resume_phases_finales,
+    verrouiller_tournoi,
+)
 from .presences import enregistrer_presences, presences_du_match
 from .serializers import (
     ActionMatchSerializer,
@@ -142,11 +148,17 @@ def peut_voir(user, tournoi):
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
-    """Permission personnalisée : seul l'organisateur du tournoi peut modifier l'objet."""
+    """Seul l'organisateur du tournoi peut modifier l'objet, et plus rien ne change une fois le tournoi clôturé."""
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return peut_modifier(request.user, get_tournoi(obj))
+        tournoi = get_tournoi(obj)
+        if not peut_modifier(request.user, tournoi):
+            return False
+        permis_si_cloture = getattr(view, 'permis_si_cloture', None)
+        if not (permis_si_cloture and permis_si_cloture(request)):
+            cloture.exiger_tournoi_ouvert(tournoi)
+        return True
 
 
 class OrganisateurRequisMixin:
@@ -170,6 +182,7 @@ class OrganisateurRequisMixin:
             raise NotFound("Ce tournoi est dans la corbeille.")
         if not peut_modifier(self.request.user, tournoi):
             raise PermissionDenied("Vous n'êtes pas l'organisateur de ce tournoi.")
+        cloture.exiger_tournoi_ouvert(tournoi)
 
     def perform_create(self, serializer):
         self.verifier_organisateur(serializer)
@@ -237,6 +250,13 @@ class TournoiViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['nom']
     ACTIONS_CORBEILLE = ('restaurer', 'supprimer_definitivement')
+    ACTIONS_SI_CLOTURE = ('destroy', *ACTIONS_CORBEILLE)
+
+    def permis_si_cloture(self, request):
+        """Un tournoi clôturé peut encore être supprimé, ou passer de public à privé et inversement."""
+        return self.action in self.ACTIONS_SI_CLOTURE or (
+            self.action == 'partial_update' and list(request.data) == ['prive']
+        )
 
     def get_queryset(self):
         # Un tournoi de la corbeille n'existe plus, sauf pour le restaurer ou l'effacer
@@ -266,7 +286,7 @@ class TournoiViewSet(viewsets.ModelViewSet):
         if limite_tournois_atteinte(user):
             raise ValidationError({'detail': (
                 f"Tu as déjà {settings.LIMITE_TOURNOIS_ACTIFS} tournois en cours ou à venir. "
-                "Un tournoi libère sa place une fois sa date de fin passée."
+                "Un tournoi libère sa place une fois clôturé ou sa date de fin passée."
             )})
         # L'organisateur est l'utilisateur connecté
         serializer.save(organisateur=user)
@@ -295,7 +315,8 @@ class TournoiViewSet(viewsets.ModelViewSet):
         tournoi = self.get_object()
         organisateur = tournoi.organisateur
         if (
-            organisateur is not None and tournoi.date_fin >= timezone.localdate()
+            organisateur is not None and tournoi.cloture_le is None
+            and tournoi.date_fin >= timezone.localdate()
             and organisateurs.limite_tournois_atteinte(organisateur)
         ):
             raise ValidationError({'detail': (
@@ -313,6 +334,16 @@ class TournoiViewSet(viewsets.ModelViewSet):
         tournoi.delete()
         return Response({'resultat': 'supprime'})
 
+    @action(detail=True, methods=['post'])
+    def cloturer(self, request, slug=None):
+        """L'organisateur passe le tournoi en lecture seule."""
+        return Response(self.get_serializer(cloture.cloturer(self.get_object())).data)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def rouvrir(self, request, slug=None):
+        """Réservé aux administrateurs : l'organisateur ne rouvre pas seul un tournoi clôturé."""
+        return Response(self.get_serializer(cloture.rouvrir(self.get_object())).data)
+
     @action(detail=True, methods=['get'])
     def classement(self, request, slug=None):
         """Classement des équipes du tournoi (?type=poule ou ?type=elimination)."""
@@ -327,6 +358,22 @@ class TournoiViewSet(viewsets.ModelViewSet):
     def phases_finales(self, request, slug=None):
         """État des séries de chaque phase finale (victoires, vainqueur, matchs)."""
         return Response(resume_phases_finales(self.get_object()))
+
+    @action(detail=True, methods=['get'])
+    def egalite_qualification(self, request, slug=None):
+        """Égalité parfaite sur une place qualificative, à trancher avant de créer le tableau."""
+        return Response({'egalite': egalite_qualification(self.get_object())})
+
+    @action(detail=True, methods=['post'])
+    def departager_qualification(self, request, slug=None):
+        """`{ordre: [ids]}` : choix de l'organisateur ; `{tirage: true}` : tirage au sort par le serveur."""
+        tournoi = self.get_object()
+        donnees = request.data if isinstance(request.data, dict) else {}
+        if donnees.get('tirage') is True:
+            return Response({'egalite': departager_qualification(tournoi)})
+        if donnees.get('ordre') is None:
+            raise ValidationError({'detail': "Choisissez un ordre ou le tirage au sort."})
+        return Response({'egalite': departager_qualification(tournoi, donnees['ordre'])})
 
     @action(detail=True, methods=['post'])
     def generer_phases_finales(self, request, slug=None):
@@ -464,6 +511,10 @@ class JoueurViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         return Response({'athlete': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom, 'nb_tournois': tournois})
 
 
+    def permis_si_cloture(self, request):
+        # « C'est moi » reste possible après la clôture : l'organisateur doit pouvoir corriger une erreur
+        return self.action == 'delier'
+
     @action(detail=True, methods=['post'])
     def delier(self, request, pk=None):
         """L'organisateur détache le compte relié à ce joueur (ce n'était pas la bonne personne)."""
@@ -534,7 +585,7 @@ class InvitationViewSet(viewsets.GenericViewSet):
                 'nom': tournoi.nom, 'slug': tournoi.slug, 'date_debut': tournoi.date_debut, 'date_fin': tournoi.date_fin,
                 'visible': peut_voir(user, tournoi),  # tournoi privé : le lien marche, la page reste fermée
             },
-            'inscriptions_ouvertes': tournoi.inscriptions_ouvertes,
+            'inscriptions_ouvertes': tournoi.inscriptions_actives,
             'joueurs': [
                 {
                     'id': j.pk, 'prenom': j.prenom, 'nom': j.nom, 'numero_maillot': j.numero_maillot,
@@ -610,7 +661,7 @@ class InscriptionViewSet(viewsets.GenericViewSet):
                 'organisateur_nom': getattr(tournoi.organisateur, 'username', None),
                 'visible': peut_voir(request.user, tournoi),
             },
-            'inscriptions_ouvertes': tournoi.inscriptions_ouvertes,
+            'inscriptions_ouvertes': tournoi.inscriptions_actives,
             'nb_equipes': tournoi.equipes.count(),
             'limite_equipes': settings.LIMITE_EQUIPES_PAR_TOURNOI,
             'ma_demande': _demande_json(demande, avec_lien=True) if demande else None,
@@ -653,8 +704,10 @@ class DemandeEquipeViewSet(viewsets.GenericViewSet):
         return Response([self._json(d) for d in self.get_queryset().filter(statut=statut)])
 
     def _traiter(self, fonction):
+        demande = self.get_object()
+        cloture.exiger_tournoi_ouvert(demande.tournoi)
         try:
-            demande = fonction(self.get_object())
+            demande = fonction(demande)
         except invitations.InvitationRefusee as erreur:
             raise ValidationError({'detail': str(erreur)}) from erreur
         return Response(self._json(DemandeEquipe.objects.select_related('capitaine', 'equipe').get(pk=demande.pk)))

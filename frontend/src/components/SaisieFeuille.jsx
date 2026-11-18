@@ -38,6 +38,9 @@ export default function SaisieFeuille() {
   if (!peutModifier(user, match.organisateur_id)) {
     return <div className="text-center py-10">Seul l'organisateur du tournoi peut saisir la feuille.</div>;
   }
+  if (match.tournoi_cloture_le) {
+    return <div className="text-center py-10">Ce tournoi est clôturé : la feuille ne peut plus être saisie.</div>;
+  }
   if (match.statut === "termine") {
     return (
       <div className="text-center py-10">
