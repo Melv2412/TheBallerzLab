@@ -881,6 +881,10 @@ class MatchViewSet(OrganisateurRequisMixin, viewsets.ModelViewSet):
         self.get_object()  # permissions
         with transaction.atomic():
             match = self._match_verrouille(pk)
+            if match.sans_prolongation():
+                raise ValidationError({'detail': (
+                    "Pas d'égalité : le match ne peut pas aller en prolongation. Termine le match."
+                )})
             match.figer_chrono(timezone.now())
             match.periode_actuelle += 1
             match.temps_restant_secondes = regles.duree_periode(match.reglement, match.periode_actuelle)

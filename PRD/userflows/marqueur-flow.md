@@ -3,12 +3,20 @@
 **Acteur** : la personne à la table de marque (le compte de l'organisateur).
 **Point de départ** : un match du calendrier.
 
-Deux façons de saisir un match :
+Trois façons de saisir un match :
+
+| Façon | Quand |
+|---|---|
+| **Tableau de marque en direct** | Une personne seule et rigoureuse tient chrono et stats |
+| **Stats séparées du chrono** | Deux personnes : l'une au chrono (tableau de marque), l'autre aux stats (page du match) |
+| **Feuille après coup** | Le site n'était pas disponible : le match a été noté à la main |
 
 ```mermaid
 flowchart TD
     A[Match à venir] --> B{Suivi en direct ?}
     B -->|oui| C["Tableau de marque (/match/id/live)"]
+    B -->|à deux| G["Stats sur la page du match"]
+    G --> E
     B -->|non| D["Feuille après coup (/match/id/saisie)"]
     C --> E[Match terminé]
     D -->|case « Terminer le match »| E
@@ -23,7 +31,7 @@ flowchart TD
    - **shot clock** (désactivable dans le règlement) ;
    - pour chaque joueur : points (1, 2, 3), rebonds, passes, interceptions, contres, balles perdues, **fautes** ;
    - **fautes d'équipe** et **bonus** par segment ; **temps morts** selon le règlement ;
-   - **période suivante**, puis **prolongations** en cas d'égalité ;
+   - **période suivante**, puis **prolongations** en cas d'égalité. Sans égalité, « Période +1 » est refusé après la dernière période ou une prolongation : un message demande de terminer le match ;
    - un joueur atteint la limite de fautes → **exclu**.
 3. Erreur de saisie → **« Annuler la dernière action »**.
 4. Le règlement de ce match peut être ajusté (⚙️).
@@ -32,9 +40,19 @@ flowchart TD
 
 **Écran de salle** : `/match/<id>/ecran`, plein écran, à afficher sur un grand écran pendant le direct.
 
-## B. Saisie de la feuille après coup
+## B. Stats séparées du chrono
 
-**Quand** : le match n'a pas été suivi en direct (papier, réseau absent).
+**Quand** : une personne tient le chrono, une autre les stats.
+
+1. Page du match → **Activer les feuilles de stats** : une fiche par joueur.
+2. Passer le match **en cours**.
+3. Pour chaque joueur : +1, +2, +3 et +/− sur chaque stat, fautes comprises (elles comptent aussi dans les fautes d'équipe).
+4. La période en cours s'affiche ; **Période suivante** la fait avancer, avec la même règle d'égalité que le direct. On ne revient pas en arrière : une erreur se corrige avec la feuille après coup.
+5. Fin : passer le match **terminé**, puis le pop-up de présences.
+
+## C. Saisie de la feuille après coup
+
+**Quand** : le site n'était pas disponible, le match a été noté à la main.
 
 1. Page du match → **Saisir la feuille** (organisateur, match non terminé).
 2. Pour chaque joueur, ses **totaux** du match.

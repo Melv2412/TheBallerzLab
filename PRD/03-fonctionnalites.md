@@ -42,6 +42,8 @@
 |---|---|---|
 | Tableau de marque en direct | ✅ | Chrono horodaté côté serveur, shot clock, fautes d'équipe et bonus, temps morts, prolongations, exclusion |
 | Annuler la dernière action | ✅ | Historique action par action |
+| Stats séparées du chrono | ✅ | « Activer les feuilles de stats » sur la page du match : stats action par action (+1, +2, +3, +/−), période en cours et bouton « Période suivante ». Permet de séparer la personne au chrono de celle aux stats |
+| Période suivante | ✅ | Libre pendant le temps réglementaire. Après la dernière période ou une prolongation, refusée s'il n'y a pas égalité, avec un message qui demande de terminer le match |
 | Saisie de la feuille après coup | ✅ 4.4 | Totaux par joueur, score par période facultatif, case « terminer le match » |
 | Feuille de match imprimable / PDF | ✅ | `/match/{id}/feuille` |
 | Écran de salle | ✅ | `/match/{id}/ecran`, plein écran |

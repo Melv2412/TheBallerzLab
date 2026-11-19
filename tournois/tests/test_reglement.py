@@ -211,6 +211,23 @@ class DeroulementMatchTests(BaseAPITestCase):
         self.assertEqual(reponse.data['temps_restant_secondes'], 300)
         self.assertEqual(reponse.data['fautes_domicile'], 1)
 
+    def test_prolongation_refusee_sans_egalite(self):
+        Match.objects.filter(pk=self.match.pk).update(periode_actuelle=4, score_domicile=2)
+        reponse = self.client.post(f'{self.url}periode_suivante/')
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Pas d'égalité", reponse.data['detail'])
+        self.assertEqual(self.etat()['periode_actuelle'], 4)
+
+        Match.objects.filter(pk=self.match.pk).update(periode_actuelle=5, score_exterieur=4)
+        self.assertEqual(self.client.post(f'{self.url}periode_suivante/').status_code, status.HTTP_400_BAD_REQUEST)
+
+        Match.objects.filter(pk=self.match.pk).update(score_domicile=4)  # égalité : nouvelle prolongation
+        self.assertEqual(self.client.post(f'{self.url}periode_suivante/').data['periode_actuelle'], 6)
+
+    def test_periodes_normales_libres_meme_avec_un_ecart(self):
+        Match.objects.filter(pk=self.match.pk).update(periode_actuelle=3, score_domicile=10)
+        self.assertEqual(self.client.post(f'{self.url}periode_suivante/').data['periode_actuelle'], 4)
+
     def test_correction_d_une_faute(self):
         self.faute()
         self.faute(action='decrement')

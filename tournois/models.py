@@ -310,6 +310,13 @@ class Match(models.Model):
     def __str__(self):
         return f"{self.equipe_domicile.nom} vs {self.equipe_exterieur.nom} ({self.tournoi.nom})"
 
+    def sans_prolongation(self):
+        """Temps réglementaire (ou prolongation) fini avec un vainqueur : aucune période de plus."""
+        return (
+            self.periode_actuelle >= self.reglement['nb_periodes']
+            and self.score_domicile != self.score_exterieur
+        )
+
     def etat_chrono(self, maintenant=None):
         """
         État réel du chrono à `maintenant`, sans rien enregistrer.
@@ -335,11 +342,7 @@ class Match(models.Model):
             # Violation du shot clock avant la fin de la période
             etat.update(temps_restant_secondes=temps - shot, shot_clock_secondes=0, chrono_en_cours=False)
         elif ecoule >= temps:
-            fin_du_match = (
-                self.periode_actuelle >= self.reglement['nb_periodes']
-                and self.score_domicile != self.score_exterieur
-            )
-            if fin_du_match:
+            if self.sans_prolongation():
                 etat.update(temps_restant_secondes=0, shot_clock_secondes=0, chrono_en_cours=False)
             else:
                 suivante = self.periode_actuelle + 1

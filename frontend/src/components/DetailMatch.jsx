@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, messageErreur } from '../api'
+import { getMatch, updateMatch, initialiserStatsMatch, updateStatistique, periodeSuivante, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
 import { usePolling } from '../usePolling'
 import { useTempsReelMatch } from '../tempsReel'
@@ -9,6 +9,7 @@ import { ImageSecours } from './ImageSecours'
 import { ModalPresences } from './match-live/ModalPresences'
 import { ModalForfait } from './match-live/ModalForfait'
 import { texteForfait } from './match-live/forfait'
+import { nomPeriode } from './match-live/chrono'
 
 function DetailMatch() {
   const { user } = useAuth()
@@ -57,6 +58,16 @@ function DetailMatch() {
       console.error('Erreur lors de la mise à jour:', error)
       // ex. match terminé, joueur exclu
       alert(messageErreur(error, 'Impossible de modifier cette statistique.'))
+    }
+  }
+
+  // Sans chrono : la période se change à la main, pour que le score par période reste juste
+  const handlePeriodeSuivante = async () => {
+    try {
+      await periodeSuivante(id)
+      loadMatch()
+    } catch (error) {
+      alert(messageErreur(error, 'Impossible de passer à la période suivante.'))
     }
   }
 
@@ -254,6 +265,22 @@ function DetailMatch() {
         </div>
       </div>
 
+      {statsInitialisees && !match.forfait && match.statut === 'en_cours' && (
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+          <span className="text-lg font-black uppercase tracking-widest italic text-white/60">
+            {nomPeriode(match.periode_actuelle, match.reglement?.nb_periodes)}
+          </span>
+          {isOwner && (
+            <button
+              onClick={handlePeriodeSuivante}
+              className="px-5 py-2 bg-primary-orange hover:bg-orange-600 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+            >
+              Période suivante
+            </button>
+          )}
+        </div>
+      )}
+
       {statsInitialisees && !match.forfait && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Home Stats */}
@@ -324,13 +351,13 @@ function StatCard({ stat, onUpdate, matchStatut, limiteFautes, isOwner }) {
   const jaugeFautes = limiteFautes || 5
 
   const StatBox = ({ label, value, field, color = "orange" }) => (
-    <div className={`p-4 rounded-2xl bg-white/3 border border-white/5 flex flex-col items-center justify-center relative group`}>
+    <div className="p-2 sm:p-4 rounded-2xl bg-white/3 border border-white/5 flex flex-col items-center justify-center">
        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</span>
        <span className="text-3xl font-black italic tracking-tighter text-white">{value}</span>
        {canEdit && (
-         <div className="flex flex-col gap-1 absolute -right-2 inset-y-0 translate-x-full opacity-0 group-hover:opacity-100 transition-all z-10">
-            <button onClick={() => onUpdate(stat.id, field, 'increment', 1)} className="bg-primary-orange text-white w-8 h-8 rounded-lg font-black text-sm shadow-lg">+</button>
-            <button onClick={() => onUpdate(stat.id, field, 'decrement', 1)} className="bg-red-500 text-white w-8 h-8 rounded-lg font-black text-sm shadow-lg">-</button>
+         <div className="flex gap-1 mt-2">
+            <button onClick={() => onUpdate(stat.id, field, 'decrement', 1)} aria-label={`${label} -1`} className="bg-white/10 hover:bg-red-500 text-white w-8 h-8 rounded-lg font-black text-sm">-</button>
+            <button onClick={() => onUpdate(stat.id, field, 'increment', 1)} aria-label={`${label} +1`} className="bg-primary-orange text-white w-8 h-8 rounded-lg font-black text-sm">+</button>
          </div>
        )}
     </div>
@@ -361,7 +388,7 @@ function StatCard({ stat, onUpdate, matchStatut, limiteFautes, isOwner }) {
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-2 sm:gap-4">
         <StatBox label="PTS" value={stat.points} field="points" />
         <StatBox label="AST" value={stat.passes} field="passes" />
         <StatBox label="REB" value={stat.rebonds} field="rebonds" />
