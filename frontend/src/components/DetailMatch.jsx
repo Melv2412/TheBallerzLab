@@ -9,7 +9,7 @@ import { ImageSecours } from './ImageSecours'
 import { ModalPresences } from './match-live/ModalPresences'
 import { ModalForfait } from './match-live/ModalForfait'
 import { texteForfait } from './match-live/forfait'
-import { nomPeriode } from './match-live/chrono'
+import { finAnticipee, nomPeriode } from './match-live/chrono'
 
 function DetailMatch() {
   const { user } = useAuth()
@@ -72,6 +72,8 @@ function DetailMatch() {
   }
 
   const handleChangeStatut = async (nouveauStatut) => {
+    const question = nouveauStatut === 'termine' && match.statut !== 'termine' ? finAnticipee(match) : null
+    if (question && !window.confirm(question)) return
     try {
       await updateMatch(id, { statut: nouveauStatut })
       loadMatch()

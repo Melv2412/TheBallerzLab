@@ -20,7 +20,7 @@ function TableauEquipe({ nom, stats, limiteFautes }) {
   const totaux = totauxEquipe(stats);
   const triees = [...stats].sort((a, b) => a.joueur_numero - b.joueur_numero);
   return (
-    <section className="mb-6 break-inside-avoid">
+    <section className="mb-6 break-inside-avoid overflow-x-auto">
       <h2 className="text-lg font-black uppercase mb-2">{nom}</h2>
       <table className="w-full border-collapse text-sm">
         <thead className="bg-gray-100">

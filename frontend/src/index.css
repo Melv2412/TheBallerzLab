@@ -162,6 +162,34 @@ h3,
   animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Barre de défilement masquée (le défilement au doigt reste possible) */
+.sans-barre {
+  scrollbar-width: none;
+}
+.sans-barre::-webkit-scrollbar {
+  display: none;
+}
+
+/* Feuille qui monte du bas (choix du joueur sur téléphone) */
+@keyframes monte {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@media (max-width: 639px) {
+  .feuille-monte {
+    animation: monte 260ms cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feuille-monte {
+    animation: none;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;

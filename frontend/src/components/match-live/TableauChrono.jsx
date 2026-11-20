@@ -1,8 +1,36 @@
 import React from "react";
-import { formaterTemps, nomPeriode } from "./chrono";
+import { finDuTemps, formaterTemps, nomPeriode } from "./chrono";
 
 const boutonControle =
   "px-3 sm:px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white/10";
+
+// Reset du shot clock, alternance et reset du temps (repliés derrière « Outils chrono » sur téléphone)
+export function OutilsChrono({ match, onResetShotClock, onTogglePossession, onResetChrono, classe = "" }) {
+  const reglement = match.reglement;
+  const bouton = `${boutonControle} ${classe}`;
+  return (
+    <>
+      {reglement.shot_clock_actif && (
+        <>
+          <button onClick={() => onResetShotClock(reglement.shot_clock_secondes)} className={bouton}>
+            Reset {reglement.shot_clock_secondes}s
+          </button>
+          {reglement.shot_clock_court_secondes !== reglement.shot_clock_secondes && (
+            <button onClick={() => onResetShotClock(reglement.shot_clock_court_secondes)} className={bouton}>
+              Reset {reglement.shot_clock_court_secondes}s
+            </button>
+          )}
+        </>
+      )}
+      <button onClick={onTogglePossession} className={bouton}>
+        Alternance
+      </button>
+      <button onClick={onResetChrono} className={`${bouton} hover:bg-red-500/20 text-red-500`}>
+        Reset Temps
+      </button>
+    </>
+  );
+}
 
 // Chronomètre, shot clock, période, flèche de possession et contrôles de l'organisateur
 export function TableauChrono({
@@ -17,8 +45,6 @@ export function TableauChrono({
 }) {
   const reglement = match.reglement;
   const shotClockActif = reglement.shot_clock_actif;
-  // Temps réglementaire ou prolongation fini avec un vainqueur : le chrono reste à 0
-  const finDuTemps = chrono.temps === 0 && !match.chrono_en_cours && match.periode_actuelle >= reglement.nb_periodes;
 
   return (
     <div className="flex flex-col items-center w-full lg:w-auto">
@@ -66,33 +92,18 @@ export function TableauChrono({
 
       <div className="flex items-center gap-4 mb-6">
         <div className="text-lg sm:text-2xl font-black text-white/40 uppercase tracking-widest italic">
-          {finDuTemps ? "Fin du temps de jeu" : nomPeriode(match.periode_actuelle, reglement.nb_periodes)}
+          {finDuTemps(match, chrono) ? "Fin du temps de jeu" : nomPeriode(match.periode_actuelle, reglement.nb_periodes)}
         </div>
       </div>
 
       {isOwner && (
         <div className="flex flex-wrap justify-center gap-3">
-          {shotClockActif && (
-            <>
-              <button onClick={() => onResetShotClock(reglement.shot_clock_secondes)} className={boutonControle}>
-                Reset {reglement.shot_clock_secondes}s
-              </button>
-              {reglement.shot_clock_court_secondes !== reglement.shot_clock_secondes && (
-                <button onClick={() => onResetShotClock(reglement.shot_clock_court_secondes)} className={boutonControle}>
-                  Reset {reglement.shot_clock_court_secondes}s
-                </button>
-              )}
-            </>
-          )}
-          <button onClick={onTogglePossession} className={boutonControle}>
-            Alternance
-          </button>
-          <button
-            onClick={onResetChrono}
-            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 text-red-500"
-          >
-            Reset Temps
-          </button>
+          <OutilsChrono
+            match={match}
+            onResetShotClock={onResetShotClock}
+            onTogglePossession={onTogglePossession}
+            onResetChrono={onResetChrono}
+          />
           <button
             onClick={onNextPeriode}
             className="px-4 py-2 bg-primary-orange rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-600"

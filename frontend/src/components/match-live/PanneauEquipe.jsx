@@ -22,6 +22,7 @@ export function PanneauEquipe({
   timeouts,
   joueurCible,
   isOwner,
+  correction = false,
   onStat,
   onRetirerCible,
   onTimeout,
@@ -35,8 +36,14 @@ export function PanneauEquipe({
         <>
           <div className="flex flex-wrap justify-center gap-2 mb-4">
             {[1, 2, 3].map((valeur) => (
-              <button key={valeur} onClick={() => onStat("points", valeur)} className={boutonPoints}>
-                +{valeur}
+              <button
+                key={valeur}
+                onClick={() => onStat("points", valeur)}
+                aria-label={`${correction ? "Retirer" : "Ajouter"} ${valeur} point${valeur > 1 ? "s" : ""} à ${nom}`}
+                className={`${boutonPoints} ${correction ? "!border-red-500 text-red-300" : ""}`}
+              >
+                {correction ? "−" : "+"}
+                {valeur}
               </button>
             ))}
           </div>
@@ -54,11 +61,11 @@ export function PanneauEquipe({
         </>
       )}
 
-      <div className="text-6xl sm:text-8xl lg:text-9xl font-black text-green-400 digital-font mb-4">{score}</div>
+      {/* Sur téléphone, le score est dans le bandeau fixé en haut */}
+      <div className="hidden sm:block text-6xl sm:text-8xl lg:text-9xl font-black text-green-400 digital-font mb-4">{score}</div>
 
       {/* Fautes d'équipe */}
       <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
-        <button className="text-red-500 text-xl sm:text-2xl">◀</button>
         <div className="text-center">
           <div className="text-xs text-gray-400 font-bold uppercase mb-1">Fautes</div>
           <div className="flex gap-1 justify-center mb-2" title={`Lancers francs à partir de la ${seuilBonus}e faute`}>
@@ -76,7 +83,6 @@ export function PanneauEquipe({
             )}
           </div>
         </div>
-        <button className="text-red-500 text-xl sm:text-2xl">▶</button>
       </div>
 
       {joueurCible && (

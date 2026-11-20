@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { updateStatistique, tempsMort, periodeSuivante, annulerDerniereAction, messageErreur } from "../api";
 import { useAuth } from "../AuthContext";
 import { peutEditer } from "../permissions";
 import { useMatchLive } from "./match-live/useMatchLive";
-import { estExclu, meilleurJoueur } from "./match-live/chrono";
+import { estExclu, formaterTemps, meilleurJoueur } from "./match-live/chrono";
 import { TableauChrono } from "./match-live/TableauChrono";
+import { BandeauMobile } from "./match-live/BandeauMobile";
 import { MvpLive } from "./match-live/MvpLive";
 import { PanneauEquipe } from "./match-live/PanneauEquipe";
 import { ListeJoueursEquipe } from "./match-live/ListeJoueursEquipe";
@@ -17,16 +18,6 @@ import { MatchForfait } from "./match-live/MatchForfait";
 
 const ALTERNANCE = { neutre: "domicile", domicile: "exterieur", exterieur: "domicile" };
 
-// Exécute une action et affiche le refus du serveur (match terminé, joueur exclu, plus de temps mort...)
-const essayer = async (action) => {
-  try {
-    await action();
-    return true;
-  } catch (error) {
-    alert(messageErreur(error, "Action impossible."));
-    return false;
-  }
-};
 
 function MatchLive() {
   const { user } = useAuth();
@@ -40,6 +31,27 @@ function MatchLive() {
   const [reglagesOuverts, setReglagesOuverts] = useState(false);
   // Ids des joueurs ciblés : leurs stats sont relues dans le match à jour
   const [cibles, setCibles] = useState({ home: null, away: null });
+  // Refus du serveur affiché dans la page (pas d'alerte du navigateur), effacé après quelques secondes
+  const [message, setMessage] = useState("");
+  const minuterieMessage = useRef(null);
+  useEffect(() => () => clearTimeout(minuterieMessage.current), []);
+
+  const signaler = (texte) => {
+    clearTimeout(minuterieMessage.current);
+    setMessage(texte);
+    minuterieMessage.current = setTimeout(() => setMessage(""), 5000);
+  };
+
+  // Exécute une action et affiche le refus du serveur (match terminé, joueur exclu, plus de temps mort...)
+  const essayer = async (action) => {
+    try {
+      await action();
+      return true;
+    } catch (error) {
+      signaler(messageErreur(error, "Action impossible."));
+      return false;
+    }
+  };
 
   if (loading) {
     return (
@@ -72,7 +84,7 @@ function MatchLive() {
   const handlePlayerSelect = async (stat) => {
     const { field, value, action } = actionEnAttente;
     if (action === "increment" && estExclu(stat, match)) {
-      alert("Ce joueur est exclu pour limite de fautes !");
+      signaler("Ce joueur est exclu pour limite de fautes.");
       return;
     }
     await essayer(() => updateStatistique(id, stat.id, field, action, value));
@@ -129,14 +141,36 @@ function MatchLive() {
       timeouts={timeouts}
       joueurCible={statParId(cibles[team])}
       isOwner={isOwner}
+      correction={isCorrectionMode}
       onStat={(champ, valeur) => ouvrirSelection(team, champ, valeur)}
       onRetirerCible={() => setCibles((precedent) => ({ ...precedent, [team]: null }))}
       onTimeout={() => handleTimeout(team)}
     />
   );
 
+  const peutAnnuler = isOwner && match.derniere_action && match.statut !== "termine";
+  const annuler = () => essayer(() => actionMatch(() => annulerDerniereAction(id)));
+  const libelleAnnulation =
+    peutAnnuler &&
+    `Annuler ${decrireAction(match.derniere_action, match.reglement.nb_periodes)}${match.derniere_action.joueur_libelle ? ` · ${match.derniere_action.joueur_libelle}` : ""}`;
+
+  const outils = {
+    onResetShotClock: (secondes) => essayer(() => patchMatch({ shot_clock_secondes: secondes })),
+    onTogglePossession: () =>
+      essayer(() => patchMatch({ possession_fleche: ALTERNANCE[match.possession_fleche || "neutre"] })),
+    onResetChrono: () => {
+      if (!window.confirm(`Remettre le chrono à ${formaterTemps(match.duree_periode_secondes)} ?`)) return;
+      essayer(() => patchMatch({ temps_restant_secondes: match.duree_periode_secondes, chrono_en_cours: false }));
+    },
+  };
+  const basculerChrono = () => essayer(() => patchMatch({ chrono_en_cours: !match.chrono_en_cours }));
+  const periodeSuivanteMatch = () => essayer(() => actionMatch(() => periodeSuivante(id)));
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-4 relative overflow-hidden">
+    // overflow-clip (et pas hidden) : le bandeau du téléphone peut rester collé en haut
+    <div
+      className={`min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-4 relative overflow-clip ${peutAnnuler ? "max-sm:pb-28" : ""}`}
+    >
       {/* Image de fond avec transparence */}
       <div
         className="absolute inset-0 bg-cover bg-center opacity-10 pointer-events-none"
@@ -149,8 +183,10 @@ function MatchLive() {
       {/* Overlay gradient pour meilleure lisibilité */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 pointer-events-none" />
 
-      <div className="relative z-10">
-        <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
+      {/* Sans z-index : les fenêtres de la page passent au-dessus de la barre du site */}
+      <div className="relative flex flex-col">
+        {/* Liens : en bas de page sur téléphone, pour laisser la place au direct */}
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-4 max-sm:order-last max-sm:mt-6 max-sm:mb-0">
           <Link
             to={`/match/${id}`}
             className="text-gray-400 hover:text-white transition-colors font-bold text-xs uppercase tracking-widest"
@@ -191,40 +227,43 @@ function MatchLive() {
           </p>
         )}
 
-        <div className="max-w-6xl mx-auto">
+        <BandeauMobile
+          match={match}
+          chrono={chrono}
+          isOwner={isOwner}
+          onToggleChrono={basculerChrono}
+          onNextPeriode={periodeSuivanteMatch}
+          outils={outils}
+        />
+
+        <div className="max-w-6xl mx-auto w-full">
           <div className="glass-card p-4 sm:p-8 mb-6">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-6 sm:mb-8">
               <div className="hidden lg:block w-12" aria-hidden="true" />
 
-              <TableauChrono
-                match={match}
-                chrono={chrono}
-                isOwner={isOwner}
-                onToggleChrono={() => essayer(() => patchMatch({ chrono_en_cours: !match.chrono_en_cours }))}
-                onResetShotClock={(secondes) => essayer(() => patchMatch({ shot_clock_secondes: secondes }))}
-                onTogglePossession={() =>
-                  essayer(() => patchMatch({ possession_fleche: ALTERNANCE[match.possession_fleche || "neutre"] }))
-                }
-                onResetChrono={() =>
-                  essayer(() => patchMatch({ temps_restant_secondes: match.duree_periode_secondes, chrono_en_cours: false }))
-                }
-                onNextPeriode={() => essayer(() => actionMatch(() => periodeSuivante(id)))}
-              />
+              {/* Sur téléphone, le chrono est dans le bandeau fixé en haut */}
+              <div className="hidden sm:block w-full lg:w-auto">
+                <TableauChrono
+                  match={match}
+                  chrono={chrono}
+                  isOwner={isOwner}
+                  onToggleChrono={basculerChrono}
+                  {...outils}
+                  onNextPeriode={periodeSuivanteMatch}
+                />
+              </div>
 
               <MvpLive mvp={meilleurJoueur(statistiques)} />
 
               <div className="flex gap-4 items-center">
-                {isOwner && match.derniere_action && match.statut !== "termine" && (
+                {peutAnnuler && (
                   <button
-                    onClick={() => essayer(() => actionMatch(() => annulerDerniereAction(id)))}
+                    onClick={annuler}
                     title="Annuler la dernière action"
-                    className="flex flex-col items-center justify-center p-3 rounded-xl border-2 bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-primary-orange transition-all max-w-[9rem]"
+                    className="hidden sm:flex flex-col items-center justify-center p-3 rounded-xl border-2 bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-primary-orange transition-all max-w-[9rem]"
                   >
                     <span className="text-xl">↩</span>
-                    <span className="text-[8px] font-black uppercase mt-1 text-center leading-tight">
-                      Annuler {decrireAction(match.derniere_action, match.reglement.nb_periodes)}
-                      {match.derniere_action.joueur_libelle && ` · ${match.derniere_action.joueur_libelle}`}
-                    </span>
+                    <span className="text-[8px] font-black uppercase mt-1 text-center leading-tight">{libelleAnnulation}</span>
                   </button>
                 )}
                 {isOwner && (
@@ -278,6 +317,31 @@ function MatchLive() {
 
           <DerouleMatch match={match} />
         </div>
+
+        {/* Téléphone : « Annuler » fixé en bas, à portée du pouce */}
+        {peutAnnuler && (
+          <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 px-3 pt-6 pb-3 bg-gradient-to-t from-black via-black/90 to-transparent">
+            <button
+              onClick={annuler}
+              className="w-full flex items-center gap-3 rounded-xl border border-white/15 bg-[#161618] px-4 py-3.5 text-white transition-all active:border-primary-orange"
+            >
+              <span className="text-xl" aria-hidden="true">↩</span>
+              <span className="min-w-0 truncate text-[11px] font-black uppercase tracking-widest">{libelleAnnulation}</span>
+            </button>
+          </div>
+        )}
+
+        {message && (
+          <div
+            role="alert"
+            className="fixed z-[70] top-20 inset-x-3 sm:left-auto sm:right-6 sm:max-w-md flex items-start gap-3 rounded-xl border border-yellow-500/40 bg-[#22180a] px-4 py-3 text-sm font-bold text-yellow-300 shadow-2xl animate-fade-in"
+          >
+            <span className="flex-1">{message}</span>
+            <button onClick={() => setMessage("")} aria-label="Fermer le message" className="text-yellow-300/70 hover:text-white">
+              ✕
+            </button>
+          </div>
+        )}
 
         {actionEnAttente && (
           <ModalSelectionJoueur

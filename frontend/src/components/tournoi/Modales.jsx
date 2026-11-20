@@ -5,7 +5,7 @@ import { ZoneImage } from "./ZoneImage";
 
 function Modal({ titre, centre = false, largeur = "max-w-md", children }) {
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[60] p-4">
       <div
         className={`bg-[#1a1a1b] border-2 border-primary-orange/30 rounded-3xl p-6 sm:p-10 w-full ${largeur} max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in relative ring-8 ring-primary-orange/5`}
       >
@@ -227,7 +227,9 @@ export function ModalMatch({ tournoi, equipes, phaseInitiale = "poule", onFermer
     }
     try {
       const donnees = { ...form, tournoi: parseInt(tournoi.id) };
-      if (!donnees.date_match) delete donnees.date_match;
+      // Heure saisie dans le fuseau du navigateur : envoyée avec ce fuseau, elle s'affiche telle quelle partout
+      if (donnees.date_match) donnees.date_match = new Date(donnees.date_match).toISOString();
+      else delete donnees.date_match;
       await createMatch(donnees);
       onEnregistre();
     } catch (error) {

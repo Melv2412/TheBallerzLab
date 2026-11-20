@@ -45,6 +45,24 @@ export const meilleurJoueur = (stats) =>
 // Fautes personnelles avant exclusion (0 = jamais exclu)
 export const limiteFautes = (match) => match.reglement?.fautes_exclusion ?? 5;
 
+// Temps réglementaire ou prolongation fini avec un vainqueur : le chrono reste à 0
+export const finDuTemps = (match, chrono) =>
+  chrono.temps === 0 && !match.chrono_en_cours && match.periode_actuelle >= match.reglement.nb_periodes;
+
+// Question à poser avant de terminer un match dont le temps de jeu n'est pas écoulé (null sinon).
+// Chrono jamais lancé dans la période (stats saisies sans chrono) : seule la période compte.
+export const finAnticipee = (match) => {
+  const nb = match.reglement?.nb_periodes ?? 4;
+  const temps = match.temps_restant_secondes;
+  const chronoEntame = temps > 0 && temps < match.duree_periode_secondes;
+  const reste = chronoEntame ? `, ${formaterTemps(Math.ceil(temps))} restantes` : "";
+  if (match.periode_actuelle < nb) {
+    return `Période en cours : ${nomPeriode(match.periode_actuelle, nb)} sur ${nb}${reste}. Terminer le match quand même ?`;
+  }
+  if (chronoEntame) return `Il reste ${formaterTemps(Math.ceil(temps))} au chrono. Terminer le match quand même ?`;
+  return null;
+};
+
 export const estExclu = (stat, match) => {
   const limite = limiteFautes(match);
   return limite > 0 && stat.fautes >= limite;
