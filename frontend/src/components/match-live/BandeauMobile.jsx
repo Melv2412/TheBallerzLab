@@ -19,8 +19,7 @@ export function BandeauMobile({ match, chrono, isOwner, onToggleChrono, onNextPe
 
   return (
     <div
-      className="sm:hidden sticky z-30 mb-4 rounded-2xl border border-primary-orange/30 bg-[#0b0b0c]/95 backdrop-blur-md px-3 py-2 shadow-2xl"
-      style={{ top: "calc(var(--hauteur-barre, 0px) + 0.5rem)" }}
+      className="sm:hidden sticky top-2 z-30 mb-4 rounded-2xl border border-primary-orange/30 bg-[#0b0b0c]/95 backdrop-blur-md px-3 py-2 shadow-2xl"
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
         <Score nom={match.equipe_domicile_nom} score={match.score_domicile} />

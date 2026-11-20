@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import PopupConnexion, { popupConnexionMasque } from './PopupConnexion'
@@ -8,17 +8,6 @@ function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [popupOuvert, setPopupOuvert] = useState(false)
-  // Hauteur de la barre (fixée en haut) : le bandeau du direct sur téléphone se colle juste dessous
-  const barreRef = useRef(null)
-  useEffect(() => {
-    const barre = barreRef.current
-    if (!barre || typeof ResizeObserver === 'undefined') return
-    const observateur = new ResizeObserver(() =>
-      document.documentElement.style.setProperty('--hauteur-barre', `${barre.offsetHeight}px`),
-    )
-    observateur.observe(barre)
-    return () => observateur.disconnect()
-  }, [])
 
   const handleConnexion = () => {
     if (popupConnexionMasque()) navigate('/login')
@@ -31,7 +20,7 @@ function Navbar() {
   }
 
   return (
-    <nav ref={barreRef} className="border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-50">
+    <nav className="border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-3">
           <Link to="/" className="text-2xl sm:text-3xl font-black italic tracking-tighter text-white hover:text-primary-orange transition-all uppercase whitespace-nowrap">

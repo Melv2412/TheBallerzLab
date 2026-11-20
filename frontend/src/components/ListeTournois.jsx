@@ -188,7 +188,7 @@ function ListeTournois() {
       <div className="fixed inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70 pointer-events-none z-0" />
       
       {/* Contenu principal */}
-      <div className="relative z-10">
+      <div className="relative">{/* Sans z-index : les fenêtres passent au-dessus de la barre du site */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <div className="card-title-accent">
           <h1 className="text-4xl sm:text-5xl font-black italic tracking-tighter">

@@ -40,6 +40,7 @@ flowchart TD
 - S'inscrire avec un numéro demande des inscriptions ouvertes et un tournoi non clôturé ; « C'est moi » marche même quand elles sont fermées ou que le tournoi est clôturé.
 - Le lien marche aussi pour un tournoi privé, sans donner accès à sa page.
 - Le numéro doit être libre dans l'équipe ; 25 joueurs maximum par équipe.
+- Sans photo sur sa fiche, un pop-up demande « Tu es sûr de continuer sans photo ? » avant de rejoindre (la photo aide l'organisateur à reconnaître le joueur pendant la prise de stats) : **Continuer sans** ou **Choisir une photo**. La photo choisie est compressée puis envoyée juste après l'inscription ; en cas d'échec, le joueur reste inscrit et peut l'ajouter depuis son profil.
 
 ## 2. Consulter son profil
 

@@ -334,7 +334,7 @@ function MatchLive() {
         {message && (
           <div
             role="alert"
-            className="fixed z-[70] top-20 inset-x-3 sm:left-auto sm:right-6 sm:max-w-md flex items-start gap-3 rounded-xl border border-yellow-500/40 bg-[#22180a] px-4 py-3 text-sm font-bold text-yellow-300 shadow-2xl animate-fade-in"
+            className="fixed z-[70] inset-x-3 bottom-24 sm:bottom-auto sm:top-20 sm:left-auto sm:right-6 sm:max-w-md flex items-start gap-3 rounded-xl border border-yellow-500/40 bg-[#22180a] px-4 py-3 text-sm font-bold text-yellow-300 shadow-2xl animate-fade-in"
           >
             <span className="flex-1">{message}</span>
             <button onClick={() => setMessage("")} aria-label="Fermer le message" className="text-yellow-300/70 hover:text-white">

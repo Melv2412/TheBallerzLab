@@ -33,7 +33,9 @@ flowchart TD
    - **fautes d'équipe** et **bonus** par segment ; **temps morts** selon le règlement ;
    - **période suivante**, puis **prolongations** en cas d'égalité. Sans égalité, « Période +1 » est refusé après la dernière période ou une prolongation : un message demande de terminer le match ;
    - un joueur atteint la limite de fautes → **exclu**.
-3. Erreur de saisie → **« Annuler la dernière action »**.
+3. Erreur de saisie → **« Annuler la dernière action »**. Un refus du serveur s'affiche dans un bandeau de la page.
+   - **Sur téléphone** : bandeau collé en haut (score, chrono, shot clock, période, outils du chrono repliables, Période +1) ; le joueur se choisit dans une feuille qui monte du bas, grille de numéros triés avec une petite photo ; un joueur exclu, ou qui n'a pas assez à retirer pour un −, est grisé ; « Annuler » reste en bas de l'écran.
+   - **Reset Temps** et **terminer un match avant la fin du temps** demandent une confirmation.
 4. Le règlement de ce match peut être ajusté (⚙️).
 5. Fin du match → **terminé**, stats et score figés. En phase finale, la série avance toute seule.
 6. **Présences** : un pop-up liste, par équipe, les joueurs à 0 partout. Personne n'est pré-coché : le marqueur coche ceux qui sont entrés sur le terrain. S'il ferme le pop-up, ils comptent comme n'ayant pas joué.

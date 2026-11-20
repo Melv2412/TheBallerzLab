@@ -51,7 +51,12 @@ export function ModalSelectionJoueur({ action, stats, match, onSelect, onAnnuler
               aria-label={`#${stat.joueur_numero} ${stat.joueur_nom}`}
               className={`h-[4.5rem] rounded-xl border bg-white/5 flex flex-col items-center justify-center gap-0.5 px-1 transition-all active:bg-primary-orange disabled:opacity-30 ${retrait ? "border-red-500/40" : "border-white/10"}`}
             >
-              <span className="text-2xl font-black leading-none text-primary-orange">#{stat.joueur_numero}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-[26px] h-[26px] shrink-0 rounded-full overflow-hidden bg-white/10 border border-white/15 flex items-center justify-center">
+                  <PhotoJoueur photo={stat.joueur_photo} classeIcone="text-sm" />
+                </span>
+                <span className="text-2xl font-black leading-none text-primary-orange">#{stat.joueur_numero}</span>
+              </span>
               <span className="max-w-full truncate text-[11px] font-bold uppercase text-white">
                 {stat.joueur_nom.split(" ")[0]}
               </span>
@@ -75,7 +80,7 @@ export function ModalSelectionJoueur({ action, stats, match, onSelect, onAnnuler
                 className={`w-full min-w-0 p-3 sm:p-4 rounded-lg bg-white/5 enabled:hover:bg-primary-orange transition-all text-left disabled:cursor-not-allowed ${grise && !exclu ? "opacity-40" : ""} ${retrait ? "border border-red-500/30" : ""}`}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-12 h-12 shrink-0 rounded-full bg-white/10 overflow-hidden border border-white/10 flex items-center justify-center relative">
                       <PhotoJoueur photo={stat.joueur_photo} />
                       {exclu && (
@@ -84,15 +89,21 @@ export function ModalSelectionJoueur({ action, stats, match, onSelect, onAnnuler
                         </div>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <span className={`font-black text-xl ${exclu ? "text-red-500 line-through" : "text-white"}`}>
-                        #{stat.joueur_numero}
-                      </span>
-                      <span className={`ml-2 text-lg font-bold leading-tight ${exclu ? "text-red-500" : "text-white"}`}>
-                        {stat.joueur_nom}
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      {/* Nom trop long coupé par « … » : il ne chevauche plus les stats */}
+                      <div className="flex items-baseline gap-2 min-w-0">
+                        <span className={`shrink-0 font-black text-xl ${exclu ? "text-red-500 line-through" : "text-white"}`}>
+                          #{stat.joueur_numero}
+                        </span>
+                        <span
+                          title={stat.joueur_nom}
+                          className={`truncate text-lg font-bold leading-tight ${exclu ? "text-red-500" : "text-white"}`}
+                        >
+                          {stat.joueur_nom}
+                        </span>
+                      </div>
                       {limiteFautes(match) > 0 && stat.fautes === limiteFautes(match) - 1 && (
-                        <span className="ml-2 text-[10px] text-yellow-500 font-black animate-pulse">! FOUL TROUBLE</span>
+                        <span className="block text-[10px] text-yellow-500 font-black animate-pulse">! FOUL TROUBLE</span>
                       )}
                     </div>
                   </div>

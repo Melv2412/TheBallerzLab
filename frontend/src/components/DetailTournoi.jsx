@@ -271,36 +271,37 @@ function DetailTournoi() {
         {activeTab === "settings" && isOwner && (
           <OngletParametres tournoi={tournoi} matchs={matchs} recharger={recharger} />
         )}
-
-        {modale?.type === "cloture" && (
-          <ModalCloture tournoi={tournoi} matchs={matchs} onFermer={() => setModale(null)} onCloture={apresCloture} />
-        )}
-        {modale?.type === "equipe" && (
-          <ModalEquipe
-            tournoi={tournoi}
-            equipe={modale.equipe}
-            onFermer={() => setModale(null)}
-            onEnregistre={apresEnregistrement}
-          />
-        )}
-        {modale?.type === "joueur" && (
-          <ModalJoueur
-            equipeId={modale.equipeId}
-            joueur={modale.joueur}
-            onFermer={() => setModale(null)}
-            onEnregistre={apresEnregistrement}
-          />
-        )}
-        {modale?.type === "match" && (
-          <ModalMatch
-            tournoi={tournoi}
-            equipes={equipes}
-            phaseInitiale={modale.phase}
-            onFermer={() => setModale(null)}
-            onEnregistre={apresEnregistrement}
-          />
-        )}
       </div>
+
+      {/* Hors du bloc z-10 : les fenêtres passent au-dessus de la barre du site */}
+      {modale?.type === "cloture" && (
+        <ModalCloture tournoi={tournoi} matchs={matchs} onFermer={() => setModale(null)} onCloture={apresCloture} />
+      )}
+      {modale?.type === "equipe" && (
+        <ModalEquipe
+          tournoi={tournoi}
+          equipe={modale.equipe}
+          onFermer={() => setModale(null)}
+          onEnregistre={apresEnregistrement}
+        />
+      )}
+      {modale?.type === "joueur" && (
+        <ModalJoueur
+          equipeId={modale.equipeId}
+          joueur={modale.joueur}
+          onFermer={() => setModale(null)}
+          onEnregistre={apresEnregistrement}
+        />
+      )}
+      {modale?.type === "match" && (
+        <ModalMatch
+          tournoi={tournoi}
+          equipes={equipes}
+          phaseInitiale={modale.phase}
+          onFermer={() => setModale(null)}
+          onEnregistre={apresEnregistrement}
+        />
+      )}
     </div>
   );
 }

@@ -40,7 +40,7 @@
 
 | Fonctionnalité | État | Règles |
 |---|---|---|
-| Tableau de marque en direct | ✅ | Chrono horodaté côté serveur, shot clock, fautes d'équipe et bonus, temps morts, prolongations, exclusion |
+| Tableau de marque en direct | ✅ | Chrono horodaté côté serveur, shot clock, fautes d'équipe et bonus, temps morts, prolongations, exclusion. Sur téléphone : bandeau collé en haut, choix du joueur dans une feuille du bas, « Annuler » fixe |
 | Annuler la dernière action | ✅ | Historique action par action |
 | Stats séparées du chrono | ✅ | « Activer les feuilles de stats » sur la page du match : stats action par action (+1, +2, +3, +/−), période en cours et bouton « Période suivante ». Permet de séparer la personne au chrono de celle aux stats |
 | Période suivante | ✅ | Libre pendant le temps réglementaire. Après la dernière période ou une prolongation, refusée s'il n'y a pas égalité, avec un message qui demande de terminer le match |
