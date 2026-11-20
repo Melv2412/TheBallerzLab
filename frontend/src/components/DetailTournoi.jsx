@@ -20,6 +20,7 @@ import { OngletPhaseFinale } from "./tournoi/OngletPhaseFinale";
 import { OngletParametres } from "./tournoi/OngletParametres";
 import { ModalEquipe, ModalJoueur, ModalMatch } from "./tournoi/Modales";
 import { BandeauCloture, ModalCloture } from "./tournoi/ClotureTournoi";
+import { RappelMatchsOublies } from "./tournoi/RappelMatchsOublies";
 
 function DetailTournoi() {
   const { user } = useAuth();
@@ -194,6 +195,8 @@ function DetailTournoi() {
             </div>
           </div>
         </div>
+
+        {isOwner && <RappelMatchsOublies matchs={matchs} />}
 
         {/* Onglets */}
         <div className="flex gap-4 mb-8 border-b border-white/5 no-print overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
