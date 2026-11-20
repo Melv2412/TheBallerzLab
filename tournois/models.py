@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.text import slugify
@@ -211,6 +211,17 @@ class Joueur(models.Model):
         if self.athlete_id is None:
             self.athlete = Athlete.objects.create(prenom=self.prenom, nom=self.nom)
         super().save(*args, **kwargs)
+        champs = kwargs.get('update_fields')
+        if not self.retire and (champs is None or {'retire', 'equipe'} & set(champs)):
+            self.rejoindre_matchs_en_cours()
+
+    def rejoindre_matchs_en_cours(self):
+        """Joueur inscrit après le lancement : il entre dans les matchs en cours de son équipe déjà activés."""
+        matchs = Match.objects.filter(
+            Q(equipe_domicile_id=self.equipe_id) | Q(equipe_exterieur_id=self.equipe_id),
+            statut='en_cours', forfait='', statistiques_joueurs__isnull=False,
+        ).exclude(statistiques_joueurs__joueur=self).distinct()
+        StatistiqueJoueur.objects.bulk_create([StatistiqueJoueur(joueur=self, match=match) for match in matchs])
 
     def __str__(self):
         return f"{self.prenom} {self.nom} (#{self.numero_maillot}) - {self.equipe.nom}"

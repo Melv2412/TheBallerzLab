@@ -196,7 +196,7 @@ export function OngletEquipes({
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center">
                             <ImageSecours
-                              src={joueur.photo}
+                              src={joueur.photo_affichee}
                               alt="photo"
                               secours={<span className="text-lg font-black text-gray-700">👤</span>}
                             />

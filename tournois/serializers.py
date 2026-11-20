@@ -267,16 +267,26 @@ class JoueurSerializer(serializers.ModelSerializer):
     # Le joueur a rejoint l'équipe avec son compte (lien d'invitation) : sa fiche lui appartient
     compte_lie = serializers.SerializerMethodField()
     a_des_stats = serializers.SerializerMethodField()
+    photo_affichee = serializers.SerializerMethodField()
 
     class Meta:
         model = Joueur
         fields = [
-            'id', 'athlete', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'tournoi_nom',
+            'id', 'athlete', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'photo_affichee',
+            'tournoi_nom',
             'email', 'compte_lie', 'retire', 'a_des_stats', 'created_at', 'updated_at',
         ]
         read_only_fields = ['athlete', 'retire']
         extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
         validators = []  # numéro unique dans l'effectif : vérifié dans validate(), avec un message clair
+
+    def get_photo_affichee(self, obj):
+        """Photo de l'inscription, sinon celle de la fiche athlète."""
+        image = obj.photo or obj.athlete.photo
+        if not image:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(image.url) if request else image.url
 
     def validate_equipe(self, equipe):
         change_d_equipe = self.instance is None or self.instance.equipe_id != equipe.pk

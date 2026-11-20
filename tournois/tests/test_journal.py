@@ -11,7 +11,7 @@ class HistoriqueTests(BaseAPITestCase):
         self.client.force_authenticate(self.orga)
         Match.objects.filter(pk=self.match.pk).update(statut='en_cours')
         self.url = f'/api/matchs/{self.match.id}/'
-        self.stat_ext = StatistiqueJoueur.objects.create(
+        self.stat_ext, _ = StatistiqueJoueur.objects.get_or_create(
             joueur=Joueur.objects.create(prenom='Paul', nom='Martin', numero_maillot=7, equipe=self.ext),
             match=self.match,
         )
