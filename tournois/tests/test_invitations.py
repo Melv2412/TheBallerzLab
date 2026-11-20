@@ -59,6 +59,12 @@ class InvitationsTests(BaseAPITestCase):
         self.assertEqual(ailleurs.data['athlete'], fiche.pk)
         self.assertEqual(ailleurs.data['nom'], 'Martin')
 
+    def test_fiche_indique_si_le_joueur_a_une_photo(self):
+        self.assertEqual(self.rejoindre(numero_maillot=8, prenom='Paul', nom='Martin').status_code, 201)
+        self.assertIs(self.client.get(self.url).data['moi']['fiche']['a_photo'], False)
+        Athlete.objects.filter(utilisateur=self.paul).update(photo='athletes/photos/paul.webp')
+        self.assertIs(self.client.get(self.url).data['moi']['fiche']['a_photo'], True)
+
     def test_numero_pris_et_inscriptions_fermees(self):
         self.assertIn('déjà pris', str(self.rejoindre(numero_maillot=4, prenom='P', nom='M').data))
         self.tournoi.inscriptions_ouvertes = False

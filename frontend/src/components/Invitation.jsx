@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getInvitation, messageErreur, rejoindreEquipe } from "../api";
+import { envoyerPhotoAthlete, getInvitation, messageErreur, rejoindreEquipe } from "../api";
+import { compresserImage } from "../images";
 import { useAuth } from "../AuthContext";
 import { ImageSecours } from "./ImageSecours";
 import { erreurInscription, suggestions } from "./invitation/invitation";
+import { ModalPhoto } from "./invitation/ModalPhoto";
 
 const CHAMP =
   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold";
@@ -34,6 +36,8 @@ export default function Invitation() {
   const [form, setForm] = useState({ numero: "", prenom: "", nom: "" });
   const [erreur, setErreur] = useState("");
   const [envoi, setEnvoi] = useState(false);
+  // Inscription mise en attente le temps de proposer la photo
+  const [enAttente, setEnAttente] = useState(null);
 
   const charger = useCallback(
     () =>
@@ -67,11 +71,21 @@ export default function Invitation() {
   const proposes = suggestions(joueurs, fiche);
   const suite = encodeURIComponent(`/invitation/${code}`);
 
-  const envoyer = async (donnees) => {
+  const envoyer = async (donnees, photo = null) => {
+    setEnAttente(null);
     setErreur("");
     setEnvoi(true);
     try {
-      await rejoindreEquipe(code, donnees);
+      const { data: joueur } = await rejoindreEquipe(code, donnees);
+      if (photo) {
+        try {
+          await envoyerPhotoAthlete(joueur.athlete, await compresserImage(photo));
+        } catch (error) {
+          setErreur(
+            `Tu as bien rejoint l'équipe, mais la photo n'a pas pu être enregistrée (${messageErreur(error, "erreur")}). Ajoute-la depuis ton profil.`,
+          );
+        }
+      }
       await rafraichirProfil();
       await charger();
     } catch (error) {
@@ -81,9 +95,12 @@ export default function Invitation() {
     }
   };
 
+  // Sans photo sur sa fiche : on la propose avant de rejoindre
+  const rejoindre = (donnees) => (fiche?.a_photo ? envoyer(donnees) : setEnAttente(donnees));
+
   const cEstMoi = (joueur) => {
     if (window.confirm(`Confirmer : tu es #${joueur.numero_maillot} ${joueur.prenom} ${joueur.nom} ?`)) {
-      envoyer({ joueur: joueur.id });
+      rejoindre({ joueur: joueur.id });
     }
   };
 
@@ -94,7 +111,7 @@ export default function Invitation() {
       setErreur(probleme);
       return;
     }
-    envoyer({ numero_maillot: Number(form.numero), prenom: form.prenom, nom: form.nom });
+    rejoindre({ numero_maillot: Number(form.numero), prenom: form.prenom, nom: form.nom });
   };
 
   const boutonCEstMoi = (joueur) => (
@@ -109,6 +126,14 @@ export default function Invitation() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {enAttente && (
+        <ModalPhoto
+          onContinuerSans={() => envoyer(enAttente)}
+          onPhoto={(fichier) => envoyer(enAttente, fichier)}
+          onFermer={() => setEnAttente(null)}
+        />
+      )}
+
       <header className="glass-card p-6 flex items-center gap-5">
         <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
           <ImageSecours src={equipe.logo} alt={equipe.nom} secours={<span className="text-3xl">🛡️</span>} />

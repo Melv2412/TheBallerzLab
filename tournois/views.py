@@ -570,7 +570,10 @@ class InvitationViewSet(viewsets.GenericViewSet):
             fiche = invitations.fiche_du_compte(user)
             inscrit = invitations.inscription_dans_le_tournoi(user, tournoi.pk)
             moi = {
-                'fiche': {'id': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom} if fiche else None,
+                # a_photo : sans photo, la page propose d'en choisir une avant de rejoindre l'équipe
+                'fiche': {
+                    'id': fiche.pk, 'prenom': fiche.prenom, 'nom': fiche.nom, 'a_photo': bool(fiche.photo),
+                } if fiche else None,
                 'inscription': {
                     'joueur': inscrit.pk, 'equipe': inscrit.equipe_id, 'equipe_nom': inscrit.equipe.nom,
                     'numero_maillot': inscrit.numero_maillot,
