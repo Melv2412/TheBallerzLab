@@ -25,7 +25,7 @@ export function ModalSelectionJoueur({ action, stats, match, onSelect, onAnnuler
         <p className="text-gray-400 text-sm mb-4 uppercase font-bold tracking-widest">
           Sélectionner le joueur concerné :
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 overflow-y-auto min-h-0 flex-1 mb-4 pr-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 overflow-y-auto min-h-0 flex-1 mb-4 pr-1">
           {stats.map((stat) => {
             const exclu = estExclu(stat, match);
             return (

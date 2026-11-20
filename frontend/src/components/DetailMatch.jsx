@@ -139,7 +139,7 @@ function DetailMatch() {
             </div>
             <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-6 md:mt-0">
                <div className={`px-4 py-2 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 ${match.statut === 'en_cours' ? 'bg-red-500 animate-pulse' : 'bg-white/10'}`}>
-                {match.forfait ? 'FORFAIT' : match.statut === 'en_cours' ? '🔴 LIVE' : match.statut === 'termine' ? '✅ TERMINE' : '⏳ A VENIR'}
+                {match.forfait ? 'FORFAIT' : match.statut === 'en_cours' ? '🔴 LIVE' : match.statut === 'termine' ? '✅ TERMINÉ' : '⏳ À VENIR'}
                </div>
                {!match.forfait && (
                <>

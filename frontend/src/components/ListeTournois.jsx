@@ -217,7 +217,7 @@ function ListeTournois() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-12 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-600 font-bold"
             />
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary-orange transition-colors"><IconeLoupe /></span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-orange transition-colors"><IconeLoupe /></span>
           </div>
 
           {user && (

@@ -22,7 +22,8 @@ export function useTournoi(slug, typeClassement) {
 
   const recharger = async () => {
     if (!slug) return;
-    setLoading(true);
+    // Écran de chargement au premier affichage seulement : un rechargement après une action garde la page où elle est
+    if (tournoi?.slug !== slug) setLoading(true);
     try {
       // Toutes les requêtes partent en même temps : l'API accepte le slug partout
       const [tournoiRes, equipesRes, matchsRes, classementRes, mvpRes, joueursRes] = await Promise.allSettled([
