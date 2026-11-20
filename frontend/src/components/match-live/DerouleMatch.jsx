@@ -56,15 +56,16 @@ export function DerouleMatch({ match }) {
           {visibles.map((action) => (
             <li
               key={action.id}
-              className={`flex items-baseline gap-3 py-1 border-b border-white/5 ${action.annulee ? "opacity-40 line-through" : ""}`}
+              className={`flex items-baseline gap-3 py-1 border-b border-white/5 ${action.annulee ? "opacity-50" : ""}`}
             >
               <span className="shrink-0 w-20 font-mono text-[11px] text-gray-500">{repereAction(action, nbPeriodes)}</span>
               <span
-                className={`shrink-0 font-black ${action.type === "periode" ? "text-gray-400" : action.champ === "fautes" ? "text-red-400" : "text-primary-orange"}`}
+                className={`shrink-0 font-black ${action.annulee ? "line-through" : ""} ${action.type === "periode" ? "text-gray-400" : action.champ === "fautes" ? "text-red-400" : "text-primary-orange"}`}
               >
                 {decrireAction(action, nbPeriodes)}
               </span>
-              <span className="min-w-0 truncate text-white">{action.joueur_libelle}</span>
+              <span className={`min-w-0 truncate text-white ${action.annulee ? "line-through" : ""}`}>{action.joueur_libelle}</span>
+              {action.annulee && <span className="shrink-0 text-[11px] font-bold uppercase text-gray-400">annulée</span>}
               {action.cote && <span className="ml-auto shrink-0 text-[10px] uppercase text-gray-500">{nomEquipe(action.cote)}</span>}
             </li>
           ))}

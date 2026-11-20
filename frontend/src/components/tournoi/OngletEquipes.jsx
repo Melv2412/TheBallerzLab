@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { delierJoueur, lienInvitation, messageErreur, updateTournoi } from "../../api";
 import { ImageSecours } from "../ImageSecours";
+import { IconeAjoutJoueur, IconeJoueur } from "../Icones";
 import { InscriptionsEquipes } from "./InscriptionsEquipes";
 import { LogoEquipe } from "./LogoEquipe";
 import { aDesMatchsRestants, equipeAJoue } from "./phases";
@@ -155,8 +156,10 @@ export function OngletEquipes({
                       <button
                         onClick={() => onNouveauJoueur(equipe.id)}
                         className="bg-primary-orange/10 p-2 rounded-lg text-primary-orange hover:bg-primary-orange hover:text-white transition-all"
+                        aria-label="Ajouter un joueur"
+                        title="Ajouter un joueur"
                       >
-                        👤+
+                        <IconeAjoutJoueur className="text-lg" />
                       </button>
                       <button
                         onClick={() => onEditerEquipe(equipe)}
@@ -198,7 +201,7 @@ export function OngletEquipes({
                             <ImageSecours
                               src={joueur.photo_affichee}
                               alt="photo"
-                              secours={<span className="text-lg font-black text-gray-700">👤</span>}
+                              secours={<span className="text-lg text-gray-500"><IconeJoueur /></span>}
                             />
                           </div>
                           <div className="flex flex-col">

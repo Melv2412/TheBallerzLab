@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ImageSecours } from "../ImageSecours";
+import { IconeJoueur } from "../Icones";
 
 const AUCUNE_CORRECTION = { points: 0, rebonds: 0, passes: 0, fautes: 0 };
 
@@ -24,7 +25,7 @@ export function ModalCorrection({ stat, onConfirmer, onAnnuler }) {
           <div className="w-20 h-20 rounded-full border-2 border-red-500 overflow-hidden mb-4">
             <ImageSecours
               src={stat.joueur_photo}
-              secours={<div className="w-full h-full bg-white/10 flex items-center justify-center text-2xl">👤</div>}
+              secours={<div className="w-full h-full bg-white/10 flex items-center justify-center text-2xl text-gray-500"><IconeJoueur /></div>}
             />
           </div>
           <h3 className="text-xl font-black text-white uppercase italic">

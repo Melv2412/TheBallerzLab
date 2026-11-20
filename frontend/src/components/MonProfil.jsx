@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { devenirOrganisateur, messageErreur } from '../api'
 import { useAuth } from '../AuthContext'
+import { IconeJoueur } from './Icones'
 
 // Une explication par type de compte (voir organisateurs.py côté serveur)
 function TypeDeCompte({ user }) {
@@ -62,7 +63,7 @@ export default function MonProfil() {
   return (
     <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
       <header className="glass-card p-6 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-3xl shrink-0">👤</div>
+        <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-3xl text-gray-500 shrink-0"><IconeJoueur /></div>
         <div className="min-w-0">
           <h1 className="text-2xl font-black uppercase italic tracking-tighter truncate">{user.username}</h1>
           <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Mon profil</p>

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import PopupConnexion, { popupConnexionMasque } from './PopupConnexion'
+import { IconeJoueur } from './Icones'
 
 function Navbar() {
   const { user, logout } = useAuth()
@@ -33,7 +34,7 @@ function Navbar() {
                   title="Mon profil"
                   className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary-orange bg-primary-orange/10 px-3 py-1.5 rounded-full border border-primary-orange/20 min-w-0 hover:bg-primary-orange/20 transition-all"
                 >
-                  <span aria-hidden="true" className="text-xs">👤</span>
+                  <IconeJoueur className="text-sm" />
                   <span className="truncate max-w-[70px] sm:max-w-none">{user.username}</span>
                   <span className="hidden md:inline text-primary-orange/60">· Mon profil</span>
                 </Link>
