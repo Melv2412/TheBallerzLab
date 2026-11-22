@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { useMatchLive } from "./match-live/useMatchLive";
 import { formaterTemps, nomPeriode } from "./match-live/chrono";
 import { MatchForfait } from "./match-live/MatchForfait";
+import { QrCode } from "./partage/QrCode";
+import { lienAbsolu } from "./partage/partage";
 
 function Equipe({ nom, score, fautes, bonus, tempsMorts, seuilBonus, possession }) {
   return (
@@ -112,6 +114,14 @@ function EcranSalle() {
       <div className="text-center pb-[1vw] text-[1.2vw] font-black italic uppercase tracking-widest text-white/20">
         THE <span className="text-primary-orange/60">LAB</span>
       </div>
+
+      {/* Le public scanne pour suivre le direct sur son téléphone (inutile pour un tournoi privé) */}
+      {!match.tournoi_prive && (
+        <div className="absolute bottom-[1.5vw] right-[1.5vw] flex flex-col items-center gap-[0.4vw]">
+          <QrCode url={lienAbsolu(`/match/${id}/live`)} titre="QR code du direct" className="w-[8vw] min-w-[72px] p-[0.3vw]" />
+          <span className="text-[max(0.9vw,9px)] font-black uppercase tracking-widest text-white/40">Suivre en direct</span>
+        </div>
+      )}
     </div>
   );
 }

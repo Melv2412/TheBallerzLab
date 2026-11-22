@@ -429,6 +429,8 @@ class MatchSerializer(serializers.ModelSerializer):
     # Permet au frontend de reconnaître l'organisateur par son id (et non son nom)
     organisateur_id = serializers.IntegerField(source='tournoi.organisateur_id', read_only=True)
     tournoi_cloture_le = serializers.DateTimeField(source='tournoi.cloture_le', read_only=True)
+    # Le QR code du direct prévient que le lien d'un tournoi privé ne s'ouvre pas pour le public
+    tournoi_prive = serializers.BooleanField(source='tournoi.prive', read_only=True)
     statistiques = StatistiqueJoueurSerializer(many=True, read_only=True, source='statistiques_joueurs')
     reglement = serializers.JSONField(required=False)
 
@@ -437,7 +439,8 @@ class MatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Match
         fields = [
-            'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'tournoi_cloture_le', 'organisateur_nom', 'organisateur_id',
+            'id', 'tournoi', 'tournoi_nom', 'tournoi_slug', 'tournoi_cloture_le', 'tournoi_prive',
+            'organisateur_nom', 'organisateur_id',
             'phase', 'equipe_domicile', 'equipe_domicile_nom',
             'equipe_exterieur', 'equipe_exterieur_nom', 'statut', 'forfait', 'score_domicile',
             'score_exterieur', 'date_match', 'statistiques', 'mvp', 'reglement',

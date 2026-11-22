@@ -22,6 +22,7 @@ import { ModalEquipe, ModalJoueur, ModalMatch } from "./tournoi/Modales";
 import { BandeauCloture, ModalCloture } from "./tournoi/ClotureTournoi";
 import { RappelMatchsOublies } from "./tournoi/RappelMatchsOublies";
 import { useRetours } from "./retours/contexte";
+import { BoutonPartage } from "./partage/ModalPartage";
 
 function DetailTournoi() {
   const { user } = useAuth();
@@ -185,6 +186,14 @@ function DetailTournoi() {
               >
                 Rapport PDF
               </button>
+              <BoutonPartage
+                libelle="📲 Partager"
+                className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-xs tracking-widest"
+                titre={tournoi.nom}
+                texte="Classement, matchs et stats en direct sur THE LAB"
+                chemin={`/tournoi/${tournoi.slug}`}
+                prive={tournoi.prive}
+              />
               {isOwner && (
                 <>
                   <button onClick={() => setModale({ type: "equipe", equipe: null })} className="btn-basketball text-xs">

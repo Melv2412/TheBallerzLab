@@ -11,6 +11,8 @@ import { ModalForfait } from './match-live/ModalForfait'
 import { texteForfait } from './match-live/forfait'
 import { finAnticipee, nomPeriode } from './match-live/chrono'
 import { useRetours } from './retours/contexte'
+import { BoutonPartage } from './partage/ModalPartage'
+import { imageResultat } from './partage/imageResultat'
 
 function DetailMatch() {
   const { user } = useAuth()
@@ -161,6 +163,16 @@ function DetailMatch() {
                </Link>
                </>
                )}
+               <BoutonPartage
+                 libelle="📲 Partager"
+                 className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+                 titre={`${match.equipe_domicile_nom} vs ${match.equipe_exterieur_nom}`}
+                 texte={match.statut === 'termine' ? `Résultat : ${match.equipe_domicile_nom} ${match.score_domicile} - ${match.score_exterieur} ${match.equipe_exterieur_nom}` : `Suis le match en direct sur THE LAB`}
+                 // Terminé : la fiche avec les stats ; sinon le direct avec le chrono
+                 chemin={match.statut === 'termine' ? `/match/${id}` : `/match/${id}/live`}
+                 prive={match.tournoi_prive}
+                 image={match.statut === 'termine' ? () => imageResultat(match) : null}
+               />
                {isOwner && match.statut !== 'termine' && (
                  <Link
                    to={`/match/${id}/saisie`}

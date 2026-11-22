@@ -46,7 +46,8 @@
 | Période suivante | ✅ | Libre pendant le temps réglementaire. Après la dernière période ou une prolongation, refusée s'il n'y a pas égalité, avec un message qui demande de terminer le match |
 | Saisie de la feuille après coup | ✅ 4.4 | Totaux par joueur, score par période facultatif, case « terminer le match » |
 | Feuille de match imprimable / PDF | ✅ | `/match/{id}/feuille` |
-| Écran de salle | ✅ | `/match/{id}/ecran`, plein écran |
+| Écran de salle | ✅ | `/match/{id}/ecran`, plein écran. QR code « Suivre en direct » dans le coin (masqué pour un tournoi privé) |
+| Partage et QR code | ✅ | Bouton « Partager » sur la page du match et celle du tournoi : QR code, partage natif du téléphone (sinon copie du lien), image PNG du QR à imprimer. Match en cours ou à venir : lien vers le direct ; terminé : vers la fiche, plus une image carrée du résultat (score, vainqueur, MVP). Tournoi privé : avertissement, le lien ne s'ouvre que pour l'organisateur |
 | Match terminé figé | ✅ | Plus de stats ni de score modifiables, suppression directe interdite ; seules les présences restent corrigeables |
 | Rouvrir un match terminé | ✅ 6.2 | Depuis l'admin (action « Rouvrir »), avec les mêmes contrôles que l'appli |
 | Direct plus léger | ✅ 6.1 | ETag/304 et temps réel Supabase (💳 au-delà des limites gratuites) |
