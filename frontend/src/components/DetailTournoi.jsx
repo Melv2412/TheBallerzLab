@@ -21,10 +21,12 @@ import { OngletParametres } from "./tournoi/OngletParametres";
 import { ModalEquipe, ModalJoueur, ModalMatch } from "./tournoi/Modales";
 import { BandeauCloture, ModalCloture } from "./tournoi/ClotureTournoi";
 import { RappelMatchsOublies } from "./tournoi/RappelMatchsOublies";
+import { useRetours } from "./retours/contexte";
 
 function DetailTournoi() {
   const { user } = useAuth();
   const { slug } = useParams();
+  const { erreur, confirmer } = useRetours();
   const [activeTab, setActiveTab] = useState("classement");
   const [typeClassement, setTypeClassement] = useState("poule");
   // Modale ouverte : { type: "equipe", equipe } | { type: "joueur", equipeId, joueur } | { type: "match", phase } | { type: "cloture" }
@@ -37,13 +39,13 @@ function DetailTournoi() {
 
   const isOwner = Boolean(tournoi) && peutEditer(user, tournoi.organisateur, tournoi.cloture_le);
 
-  const apresConfirmation = (message, action) => async (id) => {
-    if (!window.confirm(message)) return;
+  const apresConfirmation = (message, action, libelleOk = "Supprimer", danger = true) => async (id) => {
+    if (!(await confirmer({ message, libelleOk, danger }))) return;
     try {
       await action(id);
       recharger();
     } catch (error) {
-      window.alert(messageErreur(error, "Action impossible."));
+      erreur(messageErreur(error, "Action impossible."));
     }
   };
   const supprimerEquipe = apresConfirmation("Supprimer cette équipe ?", deleteEquipe);
@@ -52,12 +54,14 @@ function DetailTournoi() {
   const retirer = apresConfirmation(
     "Retirer ce joueur de l'effectif ? Ses stats restent dans les matchs déjà joués.",
     retirerJoueur,
+    "Retirer",
   );
-  const reintegrer = apresConfirmation("Remettre ce joueur dans l'effectif ?", reintegrerJoueur);
+  const reintegrer = apresConfirmation("Remettre ce joueur dans l'effectif ?", reintegrerJoueur, "Réintégrer", false);
   const forfaitGeneral = (equipe) =>
     apresConfirmation(
       `Déclarer ${equipe.nom} forfait général ? Tous ses matchs restants seront perdus par forfait (20-0).`,
       declarerForfaitGeneral,
+      "Déclarer forfait",
     )(equipe.id);
 
   const apresEnregistrement = () => {
@@ -71,12 +75,17 @@ function DetailTournoi() {
   };
 
   const rouvrir = async () => {
-    if (!window.confirm("Rouvrir ce tournoi ? Son organisateur pourra de nouveau le modifier.")) return;
+    const ok = await confirmer({
+      titre: "Rouvrir le tournoi ?",
+      message: "Son organisateur pourra de nouveau le modifier.",
+      libelleOk: "Rouvrir",
+    });
+    if (!ok) return;
     try {
       await rouvrirTournoi(tournoi.slug);
       recharger();
     } catch (error) {
-      window.alert(messageErreur(error, "Réouverture impossible."));
+      erreur(messageErreur(error, "Réouverture impossible."));
     }
   };
 

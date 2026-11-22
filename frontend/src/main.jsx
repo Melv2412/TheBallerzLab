@@ -4,6 +4,7 @@ import App from './App'
 import './index.css'
 
 import { AuthProvider } from './AuthContext'
+import { RetoursProvider } from './components/retours/RetoursProvider'
 
 // La molette ne change jamais un champ numérique (numéro de maillot, scores) : elle fait défiler la page
 document.addEventListener('wheel', (e) => {
@@ -14,7 +15,9 @@ document.addEventListener('wheel', (e) => {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
+      <RetoursProvider>
+        <App />
+      </RetoursProvider>
     </AuthProvider>
   </React.StrictMode>,
 )

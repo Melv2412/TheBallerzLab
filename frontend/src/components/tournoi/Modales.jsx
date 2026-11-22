@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { createEquipe, updateEquipe, createJoueur, updateJoueur, createMatch, messageErreur, rechercherAthlete } from "../../api";
 import { compresserImage } from "../../images";
 import { ZoneImage } from "./ZoneImage";
+import { useRetours } from "../retours/contexte";
 
 function Modal({ titre, centre = false, largeur = "max-w-md", children }) {
   return (
@@ -45,6 +46,7 @@ const petiteEtiquette = "block text-[10px] font-black text-primary-orange mb-2 u
 export function ModalEquipe({ tournoi, equipe, onFermer, onEnregistre }) {
   const [nom, setNom] = useState(equipe?.nom || "");
   const [logo, setLogo] = useState(null);
+  const retours = useRetours();
 
   const enregistrer = async (e) => {
     e.preventDefault();
@@ -62,7 +64,7 @@ export function ModalEquipe({ tournoi, equipe, onFermer, onEnregistre }) {
       onEnregistre();
     } catch (error) {
       console.error("Erreur:", error);
-      alert(messageErreur(error, "Erreur lors de l'enregistrement de l'équipe"));
+      retours.erreur(messageErreur(error, "Erreur lors de l'enregistrement de l'équipe"));
     }
   };
 
@@ -94,6 +96,7 @@ export function ModalJoueur({ equipeId, joueur, onFermer, onEnregistre }) {
   // Email facultatif : retrouve la fiche de l'athlète s'il a déjà joué ailleurs
   const [email, setEmail] = useState("");
   const [recherche, setRecherche] = useState(null);
+  const retours = useRetours();
 
   const chercher = async () => {
     if (!email.trim()) return;
@@ -114,7 +117,7 @@ export function ModalJoueur({ equipeId, joueur, onFermer, onEnregistre }) {
     e.preventDefault();
     const numero = parseInt(form.numero_maillot);
     if (isNaN(numero) || numero < 0) {
-      alert("Le numéro de maillot ne peut pas être négatif");
+      retours.erreur("Le numéro de maillot ne peut pas être négatif");
       return;
     }
     try {
@@ -134,7 +137,7 @@ export function ModalJoueur({ equipeId, joueur, onFermer, onEnregistre }) {
       onEnregistre();
     } catch (error) {
       console.error("Erreur:", error);
-      alert(messageErreur(error, "Erreur lors de l'enregistrement du joueur"));
+      retours.erreur(messageErreur(error, "Erreur lors de l'enregistrement du joueur"));
     }
   };
 
@@ -218,11 +221,12 @@ export function ModalMatch({ tournoi, equipes, phaseInitiale = "poule", onFermer
     statut: "a_venir",
     phase: phaseInitiale,
   });
+  const retours = useRetours();
 
   const enregistrer = async (e) => {
     e.preventDefault();
     if (!form.equipe_domicile || !form.equipe_exterieur) {
-      alert("Veuillez sélectionner les deux équipes");
+      retours.erreur("Veuillez sélectionner les deux équipes");
       return;
     }
     try {
@@ -234,7 +238,7 @@ export function ModalMatch({ tournoi, equipes, phaseInitiale = "poule", onFermer
       onEnregistre();
     } catch (error) {
       console.error("Erreur détaillée lors de la création du match:", error.response?.data);
-      alert(messageErreur(error, "Erreur lors de la création du match"));
+      retours.erreur(messageErreur(error, "Erreur lors de la création du match"));
     }
   };
 

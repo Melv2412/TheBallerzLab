@@ -6,14 +6,20 @@ import { IconeAjoutJoueur, IconeJoueur } from "../Icones";
 import { InscriptionsEquipes } from "./InscriptionsEquipes";
 import { LogoEquipe } from "./LogoEquipe";
 import { aDesMatchsRestants, equipeAJoue } from "./phases";
+import { useRetours } from "../retours/contexte";
 
 // Lien d'invitation d'une équipe, à envoyer au capitaine (WhatsApp…) : chaque joueur s'y inscrit avec son compte
 function LienInvitation({ equipe }) {
   const [code, setCode] = useState(null);
   const [message, setMessage] = useState("");
+  const retours = useRetours();
 
   const obtenir = async (regenerer = false) => {
-    if (regenerer && !window.confirm("Créer un nouveau lien ? L'ancien ne marchera plus.")) return;
+    if (
+      regenerer &&
+      !(await retours.confirmer({ titre: "Nouveau lien ?", message: "L'ancien lien ne marchera plus.", libelleOk: "Créer" }))
+    )
+      return;
     try {
       const { data } = await lienInvitation(equipe.id, regenerer);
       setCode(data.code);
@@ -87,6 +93,7 @@ export function OngletEquipes({
   onForfaitGeneral,
 }) {
   const [equipesOuvertes, setEquipesOuvertes] = useState({});
+  const retours = useRetours();
   const basculer = (equipeId) => setEquipesOuvertes((prev) => ({ ...prev, [equipeId]: !prev[equipeId] }));
 
   const basculerInscriptions = async () => {
@@ -94,18 +101,18 @@ export function OngletEquipes({
       await updateTournoi(tournoi.slug, { inscriptions_ouvertes: !tournoi.inscriptions_ouvertes });
       onRecharger();
     } catch (error) {
-      window.alert(messageErreur(error));
+      retours.erreur(messageErreur(error));
     }
   };
 
   const delier = async (joueur) => {
     const question = `Délier le compte de ${joueur.prenom} ${joueur.nom} ? Le joueur reste dans l'équipe, mais ce compte n'y sera plus relié.`;
-    if (!window.confirm(question)) return;
+    if (!(await retours.confirmer({ message: question, libelleOk: "Délier", danger: true }))) return;
     try {
       await delierJoueur(joueur.id);
       onRecharger();
     } catch (error) {
-      window.alert(messageErreur(error));
+      retours.erreur(messageErreur(error));
     }
   };
 

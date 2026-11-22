@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { accepterDemande, getDemandesEquipes, lienInscription, messageErreur, refuserDemande } from "../../api";
+import { useRetours } from "../retours/contexte";
 
 const BOUTON = "py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all";
 
@@ -9,6 +10,7 @@ export function InscriptionsEquipes({ tournoi, onRecharger }) {
   const [demandes, setDemandes] = useState([]);
   const [message, setMessage] = useState("");
   const [occupe, setOccupe] = useState(false);
+  const retours = useRetours();
 
   const chargerDemandes = useCallback(
     () =>
@@ -25,7 +27,7 @@ export function InscriptionsEquipes({ tournoi, onRecharger }) {
   useEffect(() => setCode(tournoi.code_inscription), [tournoi.code_inscription]);
 
   const changerLien = async (options, confirmation) => {
-    if (confirmation && !window.confirm(confirmation)) return;
+    if (confirmation && !(await retours.confirmer({ message: confirmation, libelleOk: "Continuer", danger: true }))) return;
     try {
       const { data } = await lienInscription(tournoi.slug, options);
       setCode(data.code);
@@ -46,14 +48,18 @@ export function InscriptionsEquipes({ tournoi, onRecharger }) {
   };
 
   const traiter = async (demande, accepter) => {
-    if (!accepter && !window.confirm(`Refuser l'équipe « ${demande.nom} » ?`)) return;
+    if (
+      !accepter &&
+      !(await retours.confirmer({ message: `Refuser l'équipe « ${demande.nom} » ?`, libelleOk: "Refuser", danger: true }))
+    )
+      return;
     setOccupe(true);
     try {
       await (accepter ? accepterDemande(demande.id) : refuserDemande(demande.id));
       await chargerDemandes();
       if (accepter) onRecharger();
     } catch (error) {
-      window.alert(messageErreur(error));
+      retours.erreur(messageErreur(error));
     } finally {
       setOccupe(false);
     }

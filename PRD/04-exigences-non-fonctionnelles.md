@@ -56,4 +56,5 @@
 - Responsive : téléphone, tablette (table de marque), grand écran (écran de salle).
 - Messages d'erreur en français, lisibles, sans jargon technique.
 - Actions destructrices confirmées (suppression, nouveau lien, délier, refuser) ; pour supprimer un tournoi, il faut retaper son nom.
+- Pas de boîte du navigateur (`alert`, `confirm`) : les erreurs et succès s'affichent en notification en bas de l'écran, les confirmations dans une fenêtre aux couleurs de l'app (`components/retours/`, hook `useRetours`).
 - Une image manquante ne casse pas la page : un affichage de secours la remplace.

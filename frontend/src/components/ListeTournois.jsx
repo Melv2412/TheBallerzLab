@@ -9,6 +9,7 @@ import { BasculeVisibilite, ModalPasserPrive, confirmationPriveRequise } from '.
 import { ModalCorbeille } from './tournoi/ModalCorbeille'
 import { ModalSuppressionTournoi } from './tournoi/ModalSuppressionTournoi'
 import { IconeLoupe } from './Icones'
+import { useRetours } from './retours/contexte'
 
 const FORMULAIRE_VIDE = {
   nom: '',
@@ -24,6 +25,7 @@ const FORMULAIRE_VIDE = {
 
 function ListeTournois() {
   const { user, rafraichirProfil } = useAuth()
+  const { erreur: notifierErreur, succes } = useRetours()
   // undefined = profil pas encore chargé : on laisse essayer, le serveur tranchera
   const enAttenteValidation = user?.type_compte === 'organisateur_en_attente'
   const compteJoueur = user?.type_compte === 'joueur'
@@ -155,11 +157,12 @@ function ListeTournois() {
       setFormData(FORMULAIRE_VIDE)
       setPersonnaliser(false)
       rafraichirProfil()
+      succes('Tournoi créé !')
       setTimeout(() => {
         loadTournois()
       }, 100)
     } catch (error) {
-      alert(messageErreur(error, 'Erreur lors de la création du tournoi.'))
+      notifierErreur(messageErreur(error, 'Erreur lors de la création du tournoi.'))
     }
   }
 

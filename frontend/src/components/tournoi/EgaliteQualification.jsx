@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { departagerQualification, messageErreur } from "../../api";
 import { deplacer } from "./phases";
+import { useRetours } from "../retours/contexte";
 
 const LIBELLES_DECISION = {
   organisateur: "Ordre choisi par l'organisateur.",
@@ -11,17 +12,18 @@ const LIBELLES_DECISION = {
 export function EgaliteQualification({ slug, egalite, onDecision }) {
   const [equipes, setEquipes] = useState(egalite.equipes);
   const [enCours, setEnCours] = useState(false);
+  const retours = useRetours();
   const { decision, places_qualificatives: places, premiere_place: premierePlace } = egalite;
   const definitif = decision?.mode === "tirage";
 
   const envoyer = async (donnees, confirmation) => {
-    if (!window.confirm(confirmation)) return;
+    if (!(await retours.confirmer({ titre: "Départager l'égalité", message: confirmation }))) return;
     setEnCours(true);
     try {
       await departagerQualification(slug, donnees);
       onDecision();
     } catch (erreur) {
-      alert(messageErreur(erreur, "Décision impossible."));
+      retours.erreur(messageErreur(erreur, "Décision impossible."));
       setEnCours(false);
     }
   };

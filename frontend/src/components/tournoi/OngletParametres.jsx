@@ -3,6 +3,7 @@ import { updateTournoi, resetPlayoffs, messageErreur } from "../../api";
 import { FormulaireReglement } from "../reglement/FormulaireReglement";
 import { usePresets } from "../reglement/presets";
 import { PHASES, erreurPhases, phasesCommencees, pointsVerrouilles } from "./phases";
+import { useRetours } from "../retours/contexte";
 
 const formulaireDepuis = (tournoi) => ({
   has_8emes: tournoi.has_8emes,
@@ -20,6 +21,7 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
   const [form, setForm] = useState(() => formulaireDepuis(tournoi));
   const [enregistrement, setEnregistrement] = useState(false);
   const presets = usePresets();
+  const retours = useRetours();
   const commencees = phasesCommencees(matchs);
   const structureVerrouillee = commencees.size > 0;
   const pointsBloques = pointsVerrouilles(matchs);
@@ -31,18 +33,18 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
   // Tant qu'aucune phase n'a commencé, changer la structure efface seulement les matchs prévus
   const reinitialiserSiBesoin = async () => {
     if (!PHASES.some((p) => form[p.cle] !== tournoi[p.cle])) return true;
-    if (
-      !window.confirm(
-        "Modifier la structure des phases finales supprimera les matchs éliminatoires prévus. Voulez-vous continuer ?",
-      )
-    ) {
-      return false;
-    }
+    const ok = await retours.confirmer({
+      titre: "Changer les phases finales ?",
+      message: "Modifier la structure des phases finales supprimera les matchs éliminatoires prévus.",
+      libelleOk: "Continuer",
+      danger: true,
+    });
+    if (!ok) return false;
     try {
       await resetPlayoffs(tournoi.slug);
     } catch (err) {
       console.error("Erreur lors de la réinitialisation des playoffs:", err);
-      alert(messageErreur(err, "Erreur lors de la réinitialisation des playoffs"));
+      retours.erreur(messageErreur(err, "Erreur lors de la réinitialisation des playoffs"));
       return false;
     }
     return true;
@@ -59,7 +61,7 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
     // Vérifié avant la réinitialisation : un refus du serveur ne doit pas effacer les playoffs pour rien
     const erreur = erreurPhases(form);
     if (erreur) {
-      alert(erreur);
+      retours.erreur(erreur);
       return;
     }
     if (!(await reinitialiserSiBesoin())) return;
@@ -67,11 +69,11 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
     setEnregistrement(true);
     try {
       await updateTournoi(tournoi.slug, form);
-      alert("Paramètres enregistrés avec succès !");
+      retours.succes("Paramètres enregistrés.");
       recharger();
     } catch (err) {
       console.error("Erreur lors de la mise à jour du tournoi:", err);
-      alert(messageErreur(err, "Erreur lors de l'enregistrement des paramètres"));
+      retours.erreur(messageErreur(err, "Erreur lors de l'enregistrement des paramètres"));
     } finally {
       setEnregistrement(false);
     }

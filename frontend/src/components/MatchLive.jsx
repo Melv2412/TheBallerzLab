@@ -15,6 +15,7 @@ import { ModalCorrection } from "./match-live/ModalCorrection";
 import { ModalReglesMatch } from "./match-live/ModalReglesMatch";
 import { DerouleMatch, decrireAction } from "./match-live/DerouleMatch";
 import { MatchForfait } from "./match-live/MatchForfait";
+import { useRetours } from "./retours/contexte";
 
 const ALTERNANCE = { neutre: "domicile", domicile: "exterieur", exterieur: "domicile" };
 
@@ -23,6 +24,7 @@ function MatchLive() {
   const { user } = useAuth();
   const { id } = useParams();
   const { match, loading, chrono, loadMatch, patchMatch, actionMatch } = useMatchLive(id);
+  const { confirmer } = useRetours();
 
   const [isCorrectionMode, setIsCorrectionMode] = useState(false);
   // Action en attente du choix d'un joueur : { team, field, value, action }
@@ -158,8 +160,13 @@ function MatchLive() {
     onResetShotClock: (secondes) => essayer(() => patchMatch({ shot_clock_secondes: secondes })),
     onTogglePossession: () =>
       essayer(() => patchMatch({ possession_fleche: ALTERNANCE[match.possession_fleche || "neutre"] })),
-    onResetChrono: () => {
-      if (!window.confirm(`Remettre le chrono à ${formaterTemps(match.duree_periode_secondes)} ?`)) return;
+    onResetChrono: async () => {
+      const ok = await confirmer({
+        titre: "Remettre le chrono ?",
+        message: `Le chrono repartira de ${formaterTemps(match.duree_periode_secondes)}, à l'arrêt.`,
+        libelleOk: "Remettre",
+      });
+      if (!ok) return;
       essayer(() => patchMatch({ temps_restant_secondes: match.duree_periode_secondes, chrono_en_cours: false }));
     },
   };

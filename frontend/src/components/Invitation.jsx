@@ -6,6 +6,7 @@ import { useAuth } from "../AuthContext";
 import { ImageSecours } from "./ImageSecours";
 import { erreurInscription, suggestions } from "./invitation/invitation";
 import { ModalPhoto } from "./invitation/ModalPhoto";
+import { useRetours } from "./retours/contexte";
 
 const CHAMP =
   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-orange transition-all font-bold";
@@ -31,6 +32,7 @@ function LigneJoueur({ joueur, action }) {
 export default function Invitation() {
   const { code } = useParams();
   const { user, rafraichirProfil } = useAuth();
+  const { confirmer } = useRetours();
   const [invitation, setInvitation] = useState(null);
   const [introuvable, setIntrouvable] = useState(false);
   const [form, setForm] = useState({ numero: "", prenom: "", nom: "" });
@@ -98,10 +100,13 @@ export default function Invitation() {
   // Sans photo sur sa fiche : on la propose avant de rejoindre
   const rejoindre = (donnees) => (fiche?.a_photo ? envoyer(donnees) : setEnAttente(donnees));
 
-  const cEstMoi = (joueur) => {
-    if (window.confirm(`Confirmer : tu es #${joueur.numero_maillot} ${joueur.prenom} ${joueur.nom} ?`)) {
-      rejoindre({ joueur: joueur.id });
-    }
+  const cEstMoi = async (joueur) => {
+    const ok = await confirmer({
+      titre: "C'est bien toi ?",
+      message: `#${joueur.numero_maillot} ${joueur.prenom} ${joueur.nom}`,
+      libelleOk: "Oui, c'est moi",
+    });
+    if (ok) rejoindre({ joueur: joueur.id });
   };
 
   const sInscrire = (e) => {

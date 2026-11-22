@@ -3,10 +3,12 @@ import { genererPhasesFinales, getEgaliteQualification, messageErreur, resetPlay
 import { EgaliteQualification } from "./EgaliteQualification";
 import { MatchCard } from "./MatchCard";
 import { CarteSerie, formatSerie, usePhasesFinales } from "./Series";
+import { useRetours } from "../retours/contexte";
 
 export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMatch, onSupprimerMatch, recharger }) {
   const [enCours, setEnCours] = useState(false);
   const [egalite, setEgalite] = useState(null);
+  const retours = useRetours();
   const phases = usePhasesFinales(tournoi.slug, matchs);
 
   const matchsPoule = matchs.filter((m) => m.phase === "poule");
@@ -28,13 +30,13 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
   }, [tableauACreer, tournoi.slug, matchs]);
 
   const executer = async (action, confirmation) => {
-    if (confirmation && !window.confirm(confirmation)) return;
+    if (confirmation && !(await retours.confirmer({ message: confirmation, libelleOk: "Continuer" }))) return;
     setEnCours(true);
     try {
       await action();
       recharger();
     } catch (erreur) {
-      alert(messageErreur(erreur, "Action impossible."));
+      retours.erreur(messageErreur(erreur, "Action impossible."));
     } finally {
       setEnCours(false);
     }

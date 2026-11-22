@@ -10,10 +10,12 @@ import { ModalPresences } from './match-live/ModalPresences'
 import { ModalForfait } from './match-live/ModalForfait'
 import { texteForfait } from './match-live/forfait'
 import { finAnticipee, nomPeriode } from './match-live/chrono'
+import { useRetours } from './retours/contexte'
 
 function DetailMatch() {
   const { user } = useAuth()
   const { id } = useParams()
+  const { erreur, confirmer } = useRetours()
   const [match, setMatch] = useState(null)
   const [loading, setLoading] = useState(true)
   const [statsInitialisees, setStatsInitialisees] = useState(false)
@@ -46,7 +48,7 @@ function DetailMatch() {
       loadMatch()
     } catch (error) {
       console.error('Erreur:', error)
-      alert(messageErreur(error, 'Erreur lors de l\'initialisation des stats'))
+      erreur(messageErreur(error, 'Erreur lors de l\'initialisation des stats'))
     }
   }
 
@@ -57,7 +59,7 @@ function DetailMatch() {
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error)
       // ex. match terminé, joueur exclu
-      alert(messageErreur(error, 'Impossible de modifier cette statistique.'))
+      erreur(messageErreur(error, 'Impossible de modifier cette statistique.'))
     }
   }
 
@@ -67,13 +69,13 @@ function DetailMatch() {
       await periodeSuivante(id)
       loadMatch()
     } catch (error) {
-      alert(messageErreur(error, 'Impossible de passer à la période suivante.'))
+      erreur(messageErreur(error, 'Impossible de passer à la période suivante.'))
     }
   }
 
   const handleChangeStatut = async (nouveauStatut) => {
     const question = nouveauStatut === 'termine' && match.statut !== 'termine' ? finAnticipee(match) : null
-    if (question && !window.confirm(question)) return
+    if (question && !(await confirmer({ titre: 'Terminer le match ?', message: question, libelleOk: 'Terminer' }))) return
     try {
       await updateMatch(id, { statut: nouveauStatut })
       loadMatch()
@@ -81,7 +83,7 @@ function DetailMatch() {
     } catch (error) {
       console.error('Erreur:', error)
       // ex. « Un match ne peut pas se terminer sur une égalité »
-      alert(messageErreur(error, 'Impossible de changer le statut du match.'))
+      erreur(messageErreur(error, 'Impossible de changer le statut du match.'))
     }
   }
 
