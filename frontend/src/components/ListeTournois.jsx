@@ -9,6 +9,8 @@ import { BasculeVisibilite, ModalPasserPrive, confirmationPriveRequise } from '.
 import { ModalCorbeille } from './tournoi/ModalCorbeille'
 import { ModalSuppressionTournoi } from './tournoi/ModalSuppressionTournoi'
 import { IconeLoupe } from './Icones'
+import { BandeauCarte } from './tournoi/BandeauCarte'
+import { TournoiVedette } from './TournoiVedette'
 import { useRetours } from './retours/contexte'
 
 const FORMULAIRE_VIDE = {
@@ -272,6 +274,8 @@ function ListeTournois() {
         </div>
       )}
 
+      {!searchTerm && <TournoiVedette />}
+
       {tournois.length === 0 ? (
         <div className="glass-card p-20 text-center">
           <h2 className="text-3xl font-bold mb-4">Aucun Tournoi Trouvé</h2>
@@ -292,7 +296,7 @@ function ListeTournois() {
               key={tournoi.id}
               className="glass-card group relative overflow-hidden flex flex-col hover-lift"
             >
-              
+              <BandeauCarte tournoi={tournoi} />
               <div className="p-8 flex-1">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex flex-col gap-2">
@@ -305,11 +309,6 @@ function ListeTournois() {
                         enCours={visibiliteEnCours === tournoi.id}
                         onBascule={basculerVisibilite}
                       />
-                    )}
-                    {tournoi.cloture_le && (
-                      <span className="bg-white/5 text-gray-300 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border border-white/10 w-fit">
-                        Clôturé
-                      </span>
                     )}
                   </div>
                   {peutModifier(user, tournoi.organisateur) && (

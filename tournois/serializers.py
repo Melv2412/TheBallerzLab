@@ -16,8 +16,16 @@ from .phases_finales import (
     VICTOIRES_REQUISES,
     avancer_phases_finales,
     phase_suivante_commencee,
+    series_de_la_phase,
 )
 from .services import mvp_du_match
+
+
+def url_image(requete, image):
+    """Adresse complète d'une image (comme les champs image des serializers), ou None."""
+    if not image:
+        return None
+    return requete.build_absolute_uri(image.url) if requete is not None else image.url
 
 
 def valider_taille_image(image):
@@ -71,6 +79,14 @@ class TournoiSerializer(serializers.ModelSerializer):
     organisateur_nom = serializers.CharField(source='organisateur.username', read_only=True)
     # Lien d'inscription des équipes : secret, montré à l'organisateur seulement
     code_inscription = serializers.SerializerMethodField()
+    # Carte du tournoi dans la liste : couleur de la palette (vide = couleur par défaut) ou photo
+    carte_couleur = serializers.ChoiceField(
+        choices=[''] + Tournoi.COULEURS_CARTE, required=False,
+        error_messages={'invalid_choice': "Choisis une couleur de la palette."},
+    )
+    carte_image = serializers.ImageField(required=False, allow_null=True, validators=[valider_taille_image])
+    # Tournoi clôturé : vainqueur de la finale, pour son logo sur la carte
+    champion = serializers.SerializerMethodField()
 
     class Meta:
         model = Tournoi
@@ -79,6 +95,7 @@ class TournoiSerializer(serializers.ModelSerializer):
             'equipes_count', 'matchs_count',
             'has_8emes', 'has_quarts', 'has_demis', 'has_finale', 'reglement', 'reglement_type',
             'inscriptions_ouvertes', 'code_inscription', 'prive', 'cloture_le',
+            'carte_couleur', 'carte_image', 'champion',
             'victoires_requises_8eme', 'victoires_requises_quart', 'victoires_requises_demi', 'victoires_requises_finale',
             'created_at', 'updated_at'
         ]
@@ -93,6 +110,16 @@ class TournoiSerializer(serializers.ModelSerializer):
 
     def get_reglement_type(self, obj):
         return regles.nom_preset(obj.reglement)
+
+    def get_champion(self, obj):
+        if obj.cloture_le is None or not obj.has_finale:
+            return None
+        series = series_de_la_phase(obj, 'finale')
+        vainqueur = series[-1]['vainqueur'] if series else None
+        equipe = obj.equipes.filter(pk=vainqueur).first() if vainqueur else None
+        if equipe is None:
+            return None
+        return {'id': equipe.id, 'nom': equipe.nom, 'logo': url_image(self.context.get('request'), equipe.logo)}
 
     def validate_reglement(self, valeur):
         # Modification partielle possible : les réglages absents gardent leur valeur actuelle

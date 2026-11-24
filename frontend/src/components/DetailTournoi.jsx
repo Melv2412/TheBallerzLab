@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import {
   declarerForfaitGeneral,
   deleteEquipe,
@@ -28,7 +28,11 @@ function DetailTournoi() {
   const { user } = useAuth();
   const { slug } = useParams();
   const { erreur, confirmer } = useRetours();
-  const [activeTab, setActiveTab] = useState("classement");
+  const [searchParams] = useSearchParams();
+  // ?onglet=matchs ouvre directement le calendrier (lien « Calendrier » de l'accueil)
+  const [activeTab, setActiveTab] = useState(() =>
+    ["classement", "matchs", "rosters", "brackets"].includes(searchParams.get("onglet")) ? searchParams.get("onglet") : "classement",
+  );
   const [typeClassement, setTypeClassement] = useState("poule");
   // Modale ouverte : { type: "equipe", equipe } | { type: "joueur", equipeId, joueur } | { type: "match", phase } | { type: "cloture" }
   const [modale, setModale] = useState(null);

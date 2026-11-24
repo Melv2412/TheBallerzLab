@@ -113,6 +113,8 @@ export const getTournois = (search = '', page = 1) =>
 export const getTournoi = (slug) => api.get(`/tournois/${slug}/`)
 export const createTournoi = (data) => api.post('/tournois/', data)
 export const updateTournoi = (slug, data) => api.patch(`/tournois/${slug}/`, data)
+// Tournoi en vedette de l'accueil (et son match en direct ou le dernier joué) ; `garder` = slug déjà tiré
+export const getTournoiVedette = (garder) => api.get('/tournois/vedette/', { params: garder ? { garder } : {} })
 export const deleteTournoi = (slug, confirmation) => api.delete(`/tournois/${slug}/`, { data: { confirmation } })
 export const getApercuSuppression = (slug) => api.get(`/tournois/${slug}/apercu_suppression/`)
 export const getCorbeille = () => api.get('/corbeille/')

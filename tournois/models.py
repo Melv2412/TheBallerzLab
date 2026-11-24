@@ -41,6 +41,11 @@ class Tournoi(models.Model):
     code_inscription = models.CharField(max_length=32, unique=True, null=True, blank=True)
     # Règlement (voir tournois/reglement.py) : copié sur chaque match à sa création
     reglement = models.JSONField(default=reglement_par_defaut)
+    # Carte du tournoi dans la liste : couleur choisie par l'organisateur (vide = couleur par défaut) ou photo.
+    # db_default : l'ancien code peut encore créer des tournois pendant la mise en ligne
+    COULEURS_CARTE = ['#ea580c', '#1d4ed8', '#15803d', '#b91c1c', '#6d28d9', '#0e7490', '#b45309', '#374151']
+    carte_couleur = models.CharField(max_length=7, blank=True, default='', db_default='')
+    carte_image = models.ImageField(upload_to='tournois/cartes/', null=True, blank=True)
 
     # Séries éliminatoires (nombre de victoires requises pour remporter la série)
     victoires_requises_8eme = models.IntegerField(default=1, validators=[MinValueValidator(1)])

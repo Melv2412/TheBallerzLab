@@ -45,6 +45,7 @@ from .serializers import (
     TournoiSerializer,
     UpdateStatistiqueSerializer,
     UserSerializer,
+    url_image,
 )
 from .services import classement_du_tournoi, meilleurs_joueurs
 
@@ -301,6 +302,50 @@ class TournoiViewSet(viewsets.ModelViewSet):
         tournoi = self.get_object()
         self._verifier_confirmation(request, tournoi)
         return Response({'resultat': corbeille.supprimer(tournoi), 'jours': corbeille.DUREE_CORBEILLE.days})
+
+    @action(detail=False, methods=['get'])
+    def vedette(self, request):
+        """
+        Tournoi en vedette de l'accueil : un tournoi en cours tiré au hasard, parmi ceux du compte connecté
+        (organisés ou joués), ou parmi les publics pour un visiteur. `?garder=<slug>` garde le tournoi déjà
+        tiré pendant la visite tant qu'il est encore en cours. Avec lui : le match en direct, sinon le dernier joué.
+        """
+        aujourd_hui = timezone.localdate()
+        candidats = self.get_queryset().filter(
+            cloture_le__isnull=True, date_debut__lte=aujourd_hui, date_fin__gte=aujourd_hui,
+        )
+        if request.user.is_authenticated:
+            siens = Tournoi.objects.filter(
+                Q(organisateur=request.user) | Q(equipes__joueurs__athlete__utilisateur=request.user),
+            ).values('pk')
+            candidats = candidats.filter(pk__in=siens)
+        else:
+            candidats = candidats.filter(prive=False)
+        garder = request.query_params.get('garder')
+        tournoi = (candidats.filter(slug=garder).first() if garder else None) or candidats.order_by('?').first()
+        if tournoi is None:
+            return Response({'tournoi': None, 'match': None})
+        donnees = self.get_serializer(tournoi).data
+        donnees['joueurs_count'] = Joueur.objects.filter(equipe__tournoi=tournoi, retire=False).count()
+        return Response({'tournoi': donnees, 'match': self._match_vedette(tournoi, request)})
+
+    @staticmethod
+    def _match_vedette(tournoi, request):
+        matchs = tournoi.matchs.select_related('equipe_domicile', 'equipe_exterieur')
+        match = matchs.filter(statut='en_cours', forfait='').order_by('-updated_at').first() or matchs.filter(
+            statut='termine',
+        ).order_by(F('date_match').desc(nulls_last=True), '-updated_at').first()
+        if match is None:
+            return None
+        chrono = match.etat_chrono()
+        equipe = lambda e: {'id': e.id, 'nom': e.nom, 'logo': url_image(request, e.logo)}  # noqa: E731
+        return {
+            'id': match.id, 'statut': match.statut, 'forfait': match.forfait, 'date_match': match.date_match,
+            'equipe_domicile': equipe(match.equipe_domicile), 'equipe_exterieur': equipe(match.equipe_exterieur),
+            'score_domicile': match.score_domicile, 'score_exterieur': match.score_exterieur,
+            'periode_actuelle': chrono['periode_actuelle'], 'nb_periodes': match.reglement.get('nb_periodes'),
+            'temps_restant_secondes': int(chrono['temps_restant_secondes']), 'chrono_en_cours': chrono['chrono_en_cours'],
+        }
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def apercu_suppression(self, request, slug=None):

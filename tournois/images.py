@@ -1,5 +1,5 @@
 """
-Effacement des images du stockage (logos, photos).
+Effacement des images du stockage (logos, photos, cartes des tournois).
 
 Une image à effacer est d'abord notée dans FichierASupprimer, dans la même transaction que la suppression
 en base : si celle-ci est annulée, rien n'est effacé, et si le stockage ne répond pas, rien n'est oublié.
@@ -18,7 +18,7 @@ from django.db.models import F
 from django.db.models.signals import post_delete, pre_delete, pre_save
 from django.utils import timezone
 
-from .models import Athlete, Equipe, FichierASupprimer, Joueur
+from .models import Athlete, Equipe, FichierASupprimer, Joueur, Tournoi
 
 try:
     from botocore.exceptions import BotoCoreError, ClientError
@@ -28,8 +28,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-CHAMPS_IMAGES = {Equipe: 'logo', Joueur: 'photo', Athlete: 'photo'}
-DOSSIERS = ('equipes/logos', 'joueurs/photos', 'athletes/photos')
+CHAMPS_IMAGES = {Equipe: 'logo', Joueur: 'photo', Athlete: 'photo', Tournoi: 'carte_image'}
+DOSSIERS = ('equipes/logos', 'joueurs/photos', 'athletes/photos', 'tournois/cartes')
 TAILLE_LOT = 50
 TEMPS_APRES_REQUETE = 8  # secondes accordées à l'effacement après une requête
 DUREE_MAX_REQUETE = 20  # au-delà, on laisse la suite à la tâche quotidienne

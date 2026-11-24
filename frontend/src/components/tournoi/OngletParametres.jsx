@@ -4,6 +4,7 @@ import { FormulaireReglement } from "../reglement/FormulaireReglement";
 import { usePresets } from "../reglement/presets";
 import { PHASES, erreurPhases, phasesCommencees, pointsVerrouilles } from "./phases";
 import { useRetours } from "../retours/contexte";
+import { ReglageCarte } from "./ReglageCarte";
 
 const formulaireDepuis = (tournoi) => ({
   has_8emes: tournoi.has_8emes,
@@ -82,6 +83,9 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
   return (
     <div className="animate-fade-in max-w-3xl mx-auto glass-card p-5 sm:p-10 border border-white/5 relative">
       <h2 className="text-2xl sm:text-4xl font-black italic mb-8 card-title-accent uppercase">Paramètres du Tournoi</h2>
+      <div className="mb-8">
+        <ReglageCarte tournoi={tournoi} recharger={recharger} />
+      </div>
       <form onSubmit={enregistrer} className="space-y-8">
         <div className="border-b border-white/5 pb-6">
           <h3 className="text-lg font-black uppercase text-primary-orange mb-2 tracking-wider">Règlement</h3>
