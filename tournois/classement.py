@@ -13,15 +13,25 @@ Classement d'un tournoi selon les règles FIBA (Règlement officiel, annexe D - 
   sans décision, ordre alphabétique (stable et reproductible). Une décision ne vaut que pour le groupe exact
   d'équipes à égalité : si les résultats changent, elle ne s'applique plus.
 
+Mode « pourcentage » (règlement `mode_classement`, preset NBA) :
+- ordre au pourcentage de victoires ; une équipe qui n'a joué aucun match est classée après les autres ;
+- à égalité : différence de points sur tous les matchs, puis points marqués (pas de confrontation directe) ;
+- même traitement des égalités parfaites (décision, sinon ordre alphabétique).
+Un forfait compte comme une défaite, avec son score (20-0 par défaut) dans la différence.
+
 Un match nul n'existe pas au basket : un match terminé sur une égalité (données anciennes) est ignoré.
 
 Forfait : le vainqueur reçoit ses points de victoire, l'équipe forfait 0. Un double forfait compte comme
 une défaite à 0 point pour chacune, sans vainqueur.
 """
 
+from fractions import Fraction
+
 POINTS_VICTOIRE = 2
 POINTS_DEFAITE = 1
 BAREME_FIBA = (POINTS_VICTOIRE, POINTS_DEFAITE)
+MODE_POINTS = 'points'
+MODE_POURCENTAGE = 'pourcentage'
 
 
 def _forfait(rencontre):
@@ -57,26 +67,35 @@ def _bilan(ids, rencontres, bareme=BAREME_FIBA):
                 stats['points'] += bareme[1]
     for stats in bilan.values():
         stats['difference'] = stats['points_pour'] - stats['points_contre']
+        stats['pourcentage'] = round(100 * stats['gagnes'] / stats['joues']) if stats['joues'] else None
     return bilan
 
 
-def _departager(ids, rencontres, general, noms, bareme, decisions, egalites):
+def _ratio(stats):
+    """Pourcentage exact (sans arrondi) ; -1 pour une équipe sans match, classée après les autres."""
+    return Fraction(stats['gagnes'], stats['joues']) if stats['joues'] else -1
+
+
+def _departager(ids, rencontres, general, noms, bareme, decisions, egalites, mode=MODE_POINTS):
     """
-    Ordonne des équipes à égalité de points (critères FIBA, appliqués récursivement).
+    Ordonne des équipes à égalité sur le critère principal (appliqué récursivement).
     Les groupes qu'aucun critère ne sépare sont ajoutés à `egalites`.
     """
     if len(ids) <= 1:
         return list(ids)
 
     groupe = set(ids)
-    entre_elles = _bilan(ids, [r for r in rencontres if r[0] in groupe and r[1] in groupe], bareme)
     criteres = (
-        lambda i: entre_elles[i]['points'],
-        lambda i: entre_elles[i]['difference'],
-        lambda i: entre_elles[i]['points_pour'],
         lambda i: general[i]['difference'],
         lambda i: general[i]['points_pour'],
     )
+    if mode == MODE_POINTS:
+        entre_elles = _bilan(ids, [r for r in rencontres if r[0] in groupe and r[1] in groupe], bareme)
+        criteres = (
+            lambda i: entre_elles[i]['points'],
+            lambda i: entre_elles[i]['difference'],
+            lambda i: entre_elles[i]['points_pour'],
+        ) + criteres
     for critere in criteres:
         valeurs = {i: critere(i) for i in ids}
         paliers = sorted(set(valeurs.values()), reverse=True)
@@ -85,6 +104,7 @@ def _departager(ids, rencontres, general, noms, bareme, decisions, egalites):
             for valeur in paliers:
                 ordre += _departager(
                     [i for i in ids if valeurs[i] == valeur], rencontres, general, noms, bareme, decisions, egalites,
+                    mode,
                 )
             return ordre
 
@@ -97,12 +117,14 @@ def _departager(ids, rencontres, general, noms, bareme, decisions, egalites):
 
 def analyser_classement(
     equipes, scores, points_victoire=POINTS_VICTOIRE, points_defaite=POINTS_DEFAITE, decisions=(),
+    mode=MODE_POINTS,
 ):
     """
     equipes : itérable de (id, nom)
     scores : itérable de (equipe_domicile_id, equipe_exterieur_id, score_domicile, score_exterieur[, forfait])
              des matchs terminés
     decisions : ordres déjà décidés pour des égalités parfaites (listes d'ids)
+    mode : 'points' (FIBA) ou 'pourcentage' (% de victoires)
 
     Retourne (classement, égalités parfaites sous forme d'ensembles d'ids). Sans aucun résultat,
     il n'y a pas d'égalité à trancher : l'ordre alphabétique suffit.
@@ -112,10 +134,12 @@ def analyser_classement(
     bareme = (points_victoire, points_defaite)
     general = _bilan(noms, rencontres, bareme)
 
+    principal = _ratio if mode == MODE_POURCENTAGE else (lambda stats: stats['points'])
+    valeurs = {i: principal(general[i]) for i in noms}
     ordre, egalites = [], []
-    for points in sorted({stats['points'] for stats in general.values()}, reverse=True):
+    for valeur in sorted(set(valeurs.values()), reverse=True):
         ordre += _departager(
-            [i for i in noms if general[i]['points'] == points], rencontres, general, noms, bareme, decisions, egalites,
+            [i for i in noms if valeurs[i] == valeur], rencontres, general, noms, bareme, decisions, egalites, mode,
         )
 
     classement = [{'id': i, 'nom': noms[i], **general[i]} for i in ordre]

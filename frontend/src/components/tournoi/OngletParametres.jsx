@@ -92,12 +92,12 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
           <p className="text-xs text-gray-500 mb-6 italic">
             * S'applique aux matchs à venir. Les matchs en cours ou terminés gardent leur règlement, et chaque match
             peut être ajusté depuis son tableau de marque.
-            {pointsBloques && " Un match est terminé : les points au classement ne peuvent plus changer."}
+            {pointsBloques && " Un match est terminé : le classement (mode et points) ne peut plus changer."}
           </p>
           <FormulaireReglement
             reglement={form.reglement}
             donnees={presets}
-            verrouilles={pointsBloques ? ["points_victoire", "points_defaite"] : []}
+            verrouilles={pointsBloques ? ["mode_classement", "points_victoire", "points_defaite"] : []}
             onChange={changerReglement}
           />
         </div>

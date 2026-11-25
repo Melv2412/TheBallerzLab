@@ -247,6 +247,7 @@ function DetailTournoi() {
               tournamentMVP={tournamentMVP}
               equipes={equipes}
               type={typeClassement}
+              reglement={tournoi.reglement}
               slug={tournoi.slug}
               matchs={matchs}
             />

@@ -190,16 +190,17 @@ class TournoiSerializer(serializers.ModelSerializer):
                 )})
 
     def verifier_points_verrouilles(self, attrs):
-        """Le barème ne change plus après un résultat : le classement déjà acquis serait recalculé."""
+        """Le barème et le mode de classement ne changent plus après un résultat : le classement serait recalculé."""
         reglement = attrs.get('reglement')
         if reglement is None:
             return
-        actuel = self.instance.reglement
-        if all(reglement[cle] == actuel.get(cle) for cle in ('points_victoire', 'points_defaite')):
+        actuel = {'mode_classement': 'points', **self.instance.reglement}
+        if all(reglement[cle] == actuel.get(cle) for cle in ('points_victoire', 'points_defaite', 'mode_classement')):
             return
         if self.instance.matchs.filter(statut='termine').exists():
             raise serializers.ValidationError({'reglement': (
-                "Un match est terminé : les points de victoire et de défaite ne peuvent plus changer."
+                "Un match est terminé : le mode de classement et les points de victoire et de défaite "
+                "ne peuvent plus changer."
             )})
 
     def valider_phases_finales(self, attrs):

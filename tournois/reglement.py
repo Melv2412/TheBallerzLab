@@ -22,7 +22,9 @@ FIBA = {
     'temps_morts_premiere_mi_temps': 2,
     'temps_morts_seconde_mi_temps': 3,
     'temps_morts_prolongation': 1,
-    # Points au classement
+    # Classement : 'points' (points de classement, puis confrontation directe) ou 'pourcentage' (% de victoires)
+    'mode_classement': 'points',
+    # Points au classement (mode 'points')
     'points_victoire': 2,
     'points_defaite': 1,
 }
@@ -36,6 +38,7 @@ PRESETS = {
         'temps_morts_premiere_mi_temps': 3,
         'temps_morts_seconde_mi_temps': 4,
         'temps_morts_prolongation': 2,
+        'mode_classement': 'pourcentage',
         'points_victoire': 1,
         'points_defaite': 0,
     },
@@ -57,6 +60,7 @@ PRESETS = {
 }
 
 RESETS_FAUTES = ('periode', 'mi_temps', 'match')
+MODES_CLASSEMENT = ('points', 'pourcentage')
 
 # (minimum, maximum) des réglages numériques
 BORNES = {
@@ -114,6 +118,9 @@ def valider_reglement(modifications, base=None):
         elif cle == 'fautes_equipe_reset':
             if valeur not in RESETS_FAUTES:
                 erreurs[cle] = "Choix possibles : periode, mi_temps, match."
+        elif cle == 'mode_classement':
+            if valeur not in MODES_CLASSEMENT:
+                erreurs[cle] = "Choix possibles : points, pourcentage."
         else:
             minimum, maximum = BORNES[cle]
             if isinstance(valeur, bool) or not isinstance(valeur, int) or not minimum <= valeur <= maximum:

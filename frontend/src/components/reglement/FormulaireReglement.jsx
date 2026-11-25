@@ -7,6 +7,11 @@ const RESETS = [
   { valeur: "match", label: "Jamais (tout le match)" },
 ];
 
+const MODES_CLASSEMENT = [
+  { valeur: "points", label: "Aux points (FIBA)" },
+  { valeur: "pourcentage", label: "Au % de victoires" },
+];
+
 const champ = "w-full px-4 py-3 glass-input rounded-xl focus:outline-none disabled:opacity-40";
 const etiquette = "block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest";
 
@@ -23,7 +28,7 @@ function Groupe({ titre, children }) {
  * Formulaire du règlement (tournoi ou match).
  * - `modifiables` : liste des réglages éditables (les autres sont grisés) ; tout est éditable si absent.
  * - `verrouilles` : réglages grisés quoi qu'il arrive.
- * - `avecClassement` : affiche les points de classement (propres au tournoi).
+ * - `avecClassement` : affiche le mode et les points de classement (propres au tournoi).
  */
 export function FormulaireReglement({ reglement, onChange, donnees, modifiables, verrouilles = [], avecClassement = true }) {
   if (!reglement || !donnees) return <div className="text-gray-500 italic text-sm">Chargement du règlement...</div>;
@@ -162,9 +167,33 @@ export function FormulaireReglement({ reglement, onChange, donnees, modifiables,
       </Groupe>
 
       {avecClassement && (
-        <Groupe titre="Points au classement">
-          {nombre("points_victoire", "Victoire")}
-          {nombre("points_defaite", "Défaite")}
+        <Groupe titre="Classement">
+          <div>
+            <label className={etiquette}>Ordre du classement</label>
+            <select
+              disabled={!libre("mode_classement")}
+              value={reglement.mode_classement || "points"}
+              onChange={(e) => changer("mode_classement", e.target.value)}
+              className={`${champ} appearance-none`}
+            >
+              {MODES_CLASSEMENT.map((m) => (
+                <option key={m.valeur} value={m.valeur} className="bg-black">
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-gray-600 mt-1">
+              {reglement.mode_classement === "pourcentage"
+                ? "Égalité : différence de points, puis points marqués"
+                : "Égalité : matchs entre elles, puis différence de points"}
+            </p>
+          </div>
+          {reglement.mode_classement !== "pourcentage" && (
+            <>
+              {nombre("points_victoire", "Points par victoire")}
+              {nombre("points_defaite", "Points par défaite")}
+            </>
+          )}
         </Groupe>
       )}
     </div>

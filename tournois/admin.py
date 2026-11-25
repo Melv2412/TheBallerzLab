@@ -70,10 +70,12 @@ LIBELLES_REGLEMENT = [
     ('temps_morts_premiere_mi_temps', 'Temps morts 1re mi-temps', ''),
     ('temps_morts_seconde_mi_temps', 'Temps morts 2de mi-temps', ''),
     ('temps_morts_prolongation', 'Temps morts par prolongation', ''),
+    ('mode_classement', 'Classement', 'mode'),
     ('points_victoire', 'Points au classement : victoire', ''),
     ('points_defaite', 'Points au classement : défaite', ''),
 ]
 RESETS = {'periode': 'à chaque période', 'mi_temps': 'à chaque mi-temps', 'match': 'jamais'}
+MODES = {'points': 'aux points (FIBA)', 'pourcentage': 'au % de victoires'}
 NOMS_PRESETS = {'fiba': 'FIBA', 'nba': 'NBA', '3x3': '3x3', 'personnalise': 'Personnalisé'}
 
 
@@ -87,6 +89,8 @@ def valeur_lisible(valeur, format_):
         return 'jamais'
     if format_ == 'reset':
         return RESETS.get(valeur, valeur)
+    if format_ == 'mode':
+        return MODES.get(valeur, valeur)
     return valeur
 
 

@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from tournois.classement import calculer_classement
+from tournois.classement import analyser_classement, calculer_classement
 
 EQUIPES = [(1, 'Alpha'), (2, 'Bravo'), (3, 'Charlie'), (4, 'Delta')]
 
@@ -53,3 +53,48 @@ class ClassementFibaTests(SimpleTestCase):
 
     def test_egalite_parfaite_ordre_alphabetique(self):
         self.assertEqual(ordre([], [(2, 'bravo'), (1, 'Alpha')]), ['Alpha', 'bravo'])
+
+
+def ordre_pourcentage(scores, equipes=EQUIPES):
+    classement, _ = analyser_classement(equipes, scores, mode='pourcentage')
+    return [e['nom'] for e in classement]
+
+
+class ClassementPourcentageTests(SimpleTestCase):
+    def test_un_sur_un_devant_une_victoire_une_defaite(self):
+        # Alpha 1V-1D (3 pts en FIBA), Bravo 1V-0D (2 pts) : au %, Bravo passe devant
+        scores = [(1, 3, 70, 60), (4, 1, 80, 60), (2, 3, 65, 60)]
+        self.assertEqual(ordre(scores)[:2], ['Alpha', 'Bravo'])
+        self.assertEqual(ordre_pourcentage(scores), ['Delta', 'Bravo', 'Alpha', 'Charlie'])
+
+    def test_equipe_sans_match_classee_apres_celles_qui_ont_joue(self):
+        # Delta n'a pas joué ; Charlie a tout perdu mais passe quand même devant
+        scores = [(1, 3, 70, 60), (2, 3, 70, 60)]
+        classement, _ = analyser_classement(EQUIPES, scores, mode='pourcentage')
+        self.assertEqual([e['nom'] for e in classement], ['Alpha', 'Bravo', 'Charlie', 'Delta'])
+        self.assertEqual([e['pourcentage'] for e in classement], [100, 100, 0, None])
+
+    def test_egalite_departagee_par_la_difference_generale_sans_confrontation_directe(self):
+        # Même cas que la confrontation directe en FIBA : au %, Charlie passe devant Bravo à la différence
+        scores = [(2, 3, 61, 60), (3, 4, 100, 50), (1, 2, 70, 60), (1, 4, 70, 60)]
+        self.assertEqual(ordre_pourcentage(scores), ['Alpha', 'Charlie', 'Bravo', 'Delta'])
+
+    def test_puis_les_points_marques(self):
+        # Alpha et Bravo à 100 % et +10 chacun : Alpha a marqué plus
+        scores = [(1, 3, 90, 80), (2, 4, 60, 50)]
+        self.assertEqual(ordre_pourcentage(scores)[:2], ['Alpha', 'Bravo'])
+
+    def test_forfait_compte_comme_defaite_avec_son_score(self):
+        # Bravo gagne par forfait 20-0, Alpha gagne de 5 : tous deux à 100 %, Bravo devant à la différence
+        scores = [(2, 3, 20, 0, 'exterieur'), (1, 4, 65, 60)]
+        classement, _ = analyser_classement(EQUIPES, scores, mode='pourcentage')
+        self.assertEqual([e['nom'] for e in classement], ['Bravo', 'Alpha', 'Delta', 'Charlie'])
+        charlie = classement[-1]
+        self.assertEqual((charlie['perdus'], charlie['difference'], charlie['pourcentage']), (1, -20, 0))
+
+    def test_pourcentage_arrondi_mais_ordre_exact(self):
+        # 2 sur 3 (67 %) devant 1 sur 2 (50 %)
+        scores = [(1, 2, 70, 60), (1, 3, 70, 60), (4, 1, 70, 60), (2, 3, 70, 60)]
+        classement, _ = analyser_classement(EQUIPES, scores, mode='pourcentage')
+        self.assertEqual(classement[0]['nom'], 'Delta')
+        self.assertEqual((classement[1]['nom'], classement[1]['pourcentage']), ('Alpha', 67))

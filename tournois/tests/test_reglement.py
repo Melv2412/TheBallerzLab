@@ -88,6 +88,20 @@ class ReglementTournoiTests(BaseAPITestCase):
         Match.objects.filter(pk=self.match.pk).update(statut='termine')
         classement = self.client.get(f'{self.url}classement/').data
         self.assertEqual([e['points'] for e in classement], [1, 0])
+        self.assertEqual([e['pourcentage'] for e in classement], [100, 0])
+
+    def test_mode_de_classement(self):
+        self.assertEqual(regles.PRESETS['nba']['mode_classement'], 'pourcentage')
+        self.assertEqual(regles.FIBA['mode_classement'], 'points')
+        with self.assertRaises(serializers.ValidationError):
+            regles.valider_reglement({'mode_classement': 'autre'})
+
+    def test_mode_verrouille_apres_un_match_termine(self):
+        reponse = self.client.patch(self.url, {'reglement': {'mode_classement': 'pourcentage'}}, format='json')
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK)
+        Match.objects.filter(pk=self.match.pk).update(statut='termine')
+        reponse = self.client.patch(self.url, {'reglement': {'mode_classement': 'points'}}, format='json')
+        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_presets_publics(self):
         self.client.force_authenticate(None)

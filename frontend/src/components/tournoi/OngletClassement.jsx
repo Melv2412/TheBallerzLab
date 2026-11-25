@@ -2,7 +2,11 @@ import React from "react";
 import { LogoEquipe } from "./LogoEquipe";
 import { ResumeSeries, usePhasesFinales } from "./Series";
 
-function TableauClassement({ classement, equipes, type }) {
+function TableauClassement({ classement, equipes, type, reglement }) {
+  const pourcentage = reglement?.mode_classement === "pourcentage";
+  const pv = reglement?.points_victoire ?? 2;
+  const pd = reglement?.points_defaite ?? 1;
+  const pts = (n) => `${n}pt${n > 1 ? "s" : ""}`;
   return (
     <div className="lg:col-span-2 glass-card overflow-hidden">
       <div className="p-5 sm:p-8 border-b border-white/5 flex items-center justify-between gap-3">
@@ -10,8 +14,14 @@ function TableauClassement({ classement, equipes, type }) {
           {type === "poule" ? "Classement Général" : "Classement Éliminatoires"}
         </h2>
         <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-[10px] font-black uppercase tracking-tighter text-gray-500 shrink-0">
-          <span title="Victoire (2pts)">V: 2pts</span>
-          <span title="Défaite (1pt)">D: 1pt</span>
+          {pourcentage ? (
+            <span>Au % de victoires</span>
+          ) : (
+            <>
+              <span>V: {pts(pv)}</span>
+              <span>D: {pts(pd)}</span>
+            </>
+          )}
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -24,7 +34,7 @@ function TableauClassement({ classement, equipes, type }) {
               <th className="p-2 sm:p-4 text-center">G</th>
               <th className="p-2 sm:p-4 text-center">P</th>
               <th className="hidden sm:table-cell p-4 text-center">Diff</th>
-              <th className="p-2 sm:p-4 text-center bg-primary-orange/20 text-primary-orange">Pts</th>
+              <th className="p-2 sm:p-4 text-center bg-primary-orange/20 text-primary-orange">{pourcentage ? "%" : "Pts"}</th>
             </tr>
           </thead>
           <tbody>
@@ -65,7 +75,7 @@ function TableauClassement({ classement, equipes, type }) {
                     {entry.difference > 0 ? `+${entry.difference}` : entry.difference}
                   </td>
                   <td className="p-2 sm:p-4 text-center font-black text-xl sm:text-2xl bg-white/3 italic text-primary-orange">
-                    {entry.points}
+                    {pourcentage ? (entry.pourcentage ?? "–") : entry.points}
                   </td>
                 </tr>
               ))
@@ -74,7 +84,9 @@ function TableauClassement({ classement, equipes, type }) {
         </table>
       </div>
       <p className="px-5 sm:px-8 py-3 text-[9px] font-bold text-gray-600 uppercase tracking-widest italic border-t border-white/5">
-        * Égalité de points : confrontation directe, puis différence de points (règles FIBA)
+        {pourcentage
+          ? "* Égalité : différence de points, puis points marqués. Une équipe sans match est classée après celles qui ont joué. Un forfait compte comme une défaite, score compris"
+          : "* Égalité de points : confrontation directe, puis différence de points (règles FIBA)"}
       </p>
     </div>
   );
@@ -137,13 +149,13 @@ function LeadersEvaluation({ joueurs, type }) {
 
 // S'affiche dans la grille du tableau de bord (voir DetailTournoi).
 // En phases éliminatoires, l'état des séries remplace le tableau de points.
-export function OngletClassement({ classement, tournamentMVP, equipes, type, slug, matchs }) {
+export function OngletClassement({ classement, tournamentMVP, equipes, type, reglement, slug, matchs }) {
   return (
     <>
       {type === "elimination" ? (
         <SeriesEliminatoires slug={slug} matchs={matchs} />
       ) : (
-        <TableauClassement classement={classement} equipes={equipes} type={type} />
+        <TableauClassement classement={classement} equipes={equipes} type={type} reglement={reglement} />
       )}
       <LeadersEvaluation joueurs={tournamentMVP} type={type} />
     </>
