@@ -399,7 +399,11 @@ class TournoiViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def mvp(self, request, slug=None):
         """Top 5 des joueurs à la meilleure évaluation moyenne (?type=poule ou ?type=elimination)."""
-        return Response(meilleurs_joueurs(self.get_object(), request.query_params.get('type')))
+        joueurs = meilleurs_joueurs(self.get_object(), request.query_params.get('type'))
+        for joueur in joueurs:
+            if joueur['photo']:
+                joueur['photo'] = request.build_absolute_uri(joueur['photo'])
+        return Response(joueurs)
 
     @action(detail=True, methods=['get'])
     def phases_finales(self, request, slug=None):

@@ -475,6 +475,8 @@ class PerformanceRequetesTests(BaseAPITestCase):
         meilleur = reponse.data[0]
         self.assertEqual(meilleur['moyenne_eval'], 7.0)  # 6 points + 1 passe sur 1 match
         self.assertEqual(meilleur['nb_matchs'], 1)
+        self.assertIsNotNone(meilleur['athlete'])  # lien vers le profil
+        self.assertIsNone(meilleur['photo'])  # sans photo : initiales côté interface
 
     def test_mvp_exige_la_moitie_des_matchs_de_l_equipe(self):
         # L'équipe A joue 2 autres matchs sans ce joueur : 1 match sur 3, il sort du classement

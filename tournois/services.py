@@ -3,6 +3,7 @@ Calculs métier du tournoi (classement, MVP), séparés des vues pour être test
 """
 from collections import Counter
 
+from django.core.files.storage import default_storage
 from django.db.models import Count, F, Q, Sum
 
 from .classement import analyser_classement
@@ -51,6 +52,10 @@ def classement_du_tournoi(tournoi, type_classement=None):
     return analyse_du_classement(tournoi, type_classement)[0]
 
 
+def _url_photo(nom):
+    return default_storage.url(nom) if nom else None
+
+
 def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
     """
     Joueurs à la meilleure évaluation moyenne sur les matchs terminés où ils ont joué, hors forfaits (2 requêtes).
@@ -66,7 +71,7 @@ def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
     totaux = (
         stats.values(
             'joueur_id', 'joueur__prenom', 'joueur__nom', 'joueur__numero_maillot',
-            'joueur__equipe_id', 'joueur__equipe__nom',
+            'joueur__equipe_id', 'joueur__equipe__nom', 'joueur__athlete_id', 'joueur__photo', 'joueur__athlete__photo',
         )
         .annotate(nb_matchs=Count('id'), total_eval=Sum(EVALUATION), total_points=Sum('points'))
         .order_by('joueur__equipe', 'joueur__numero_maillot')
@@ -82,6 +87,9 @@ def meilleurs_joueurs(tournoi, type_classement=None, limite=5):
             'nom': f"{t['joueur__prenom']} {t['joueur__nom']}",
             'numero': t['joueur__numero_maillot'],
             'equipe': t['joueur__equipe__nom'],
+            'athlete': t['joueur__athlete_id'],
+            # Photo de l'inscription, sinon celle de la fiche athlète (comme dans les effectifs)
+            'photo': _url_photo(t['joueur__photo'] or t['joueur__athlete__photo']),
             'moyenne_eval': round(t['total_eval'] / t['nb_matchs'], 1),
             'total_points': t['total_points'],
             'nb_matchs': t['nb_matchs'],

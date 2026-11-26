@@ -1,4 +1,6 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { ImageSecours } from "../ImageSecours";
 import { LogoEquipe } from "./LogoEquipe";
 import { ResumeSeries, usePhasesFinales } from "./Series";
 
@@ -92,57 +94,70 @@ function TableauClassement({ classement, equipes, type, reglement }) {
   );
 }
 
+const initiales = (nom) =>
+  nom
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((mot) => mot[0].toUpperCase())
+    .join("");
+
+// Leaders à l'évaluation : une ligne par joueur, le n°1 mis en avant, la moyenne d'éval en grand à droite
 function LeadersEvaluation({ joueurs, type }) {
   return (
     <div className="glass-card overflow-hidden h-fit">
       <div className="p-5 sm:p-8 border-b border-white/5">
-        <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight">
           {type === "poule" ? "Leaders Évaluation" : "Leaders Phase Finale"}
         </h2>
+        <p className="text-xs text-gray-400 mt-1">Moyenne d'évaluation par match</p>
       </div>
-      <div className="p-4 sm:p-6 space-y-4">
-        {joueurs.length === 0 ? (
-          <div className="text-center py-10 opacity-30 italic">Statistiques en cours d'analyse...</div>
-        ) : (
-          joueurs.map((player, index) => (
-            <div
-              key={player.id}
-              className="relative group bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-primary-orange/50 transition-all overflow-hidden"
-            >
-              <div
-                className={`absolute top-0 right-0 p-1 px-3 text-[9px] font-black uppercase italic ${index === 0 ? "bg-primary-orange text-white" : "bg-gray-800 text-gray-500"}`}
-              >
-                RANK #{index + 1}
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-3xl font-black italic text-primary-orange/50"># {player.numero}</div>
-                <div>
-                  <h3 className="font-black italic text-lg uppercase tracking-widest">{player.nom}</h3>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">{player.equipe}</p>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
-                <div className="flex gap-4">
-                  <div>
-                    <span className="block text-[8px] text-gray-500 font-black uppercase">Moy. Eval</span>
-                    <span className="text-xl font-black italic text-primary-orange">{player.moyenne_eval}</span>
+      {joueurs.length === 0 ? (
+        <div className="text-center py-10 opacity-30 italic">Statistiques en cours d'analyse...</div>
+      ) : (
+        <ol className="divide-y divide-white/5">
+          {joueurs.map((player, index) => {
+            const premier = index === 0;
+            return (
+              <li key={player.id} className={premier ? "bg-primary-orange/10" : undefined}>
+                <Link
+                  to={`/athlete/${player.athlete}`}
+                  aria-label={`${index + 1}e : ${player.nom}, ${player.moyenne_eval} d'évaluation moyenne`}
+                  className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 min-h-[64px] hover:bg-white/5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-orange"
+                >
+                  <div
+                    className={`shrink-0 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center font-black text-gray-300 ${
+                      premier ? "w-14 h-14 text-base" : "w-11 h-11 text-sm"
+                    }`}
+                  >
+                    <ImageSecours src={player.photo} alt="" secours={<span aria-hidden="true">{initiales(player.nom)}</span>} />
                   </div>
-                  <div>
-                    <span className="block text-[8px] text-gray-500 font-black uppercase">Points Total</span>
-                    <span className="text-xl font-black italic">{player.total_points}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black italic uppercase tracking-tight truncate">{player.nom}</p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {player.equipe} · n° {player.numero}
+                    </p>
                   </div>
-                </div>
-                <div className="text-[9px] font-bold text-gray-600 bg-white/5 px-2 py-1 rounded">
-                  {player.nb_matchs} MATCHS
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-        <p className="text-[9px] font-bold text-gray-700 uppercase tracking-widest italic text-center text-balance mt-4">
-          * Formule: (PTS + AST + REB + BLK) - FOU · au moins la moitié des matchs de l'équipe joués
-        </p>
-      </div>
+                  <div className="shrink-0 text-right">
+                    <p className="leading-none">
+                      <span className={`text-2xl sm:text-3xl font-black italic tabular-nums ${premier ? "text-primary-orange" : "text-white"}`}>
+                        {player.moyenne_eval.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                      </span>
+                      <span className="ml-1 text-[10px] font-bold text-gray-400">éval</span>
+                    </p>
+                    <p className="mt-1 text-[10px] text-gray-500 tabular-nums">
+                      {player.total_points} pts · {player.nb_matchs} match{player.nb_matchs > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      <p className="px-5 sm:px-8 py-3 text-[9px] font-bold text-gray-600 uppercase tracking-widest italic border-t border-white/5 text-balance">
+        * Formule : (PTS + AST + REB + BLK) - FOU · au moins la moitié des matchs de l'équipe joués
+      </p>
     </div>
   );
 }
