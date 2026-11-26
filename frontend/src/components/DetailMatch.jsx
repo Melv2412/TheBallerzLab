@@ -12,6 +12,7 @@ import { texteForfait } from './match-live/forfait'
 import { finAnticipee, nomPeriode } from './match-live/chrono'
 import { useRetours } from './retours/contexte'
 import { BoutonPartage } from './partage/ModalPartage'
+import { libellePostes } from "../postes";
 import { imageResultat } from './partage/imageResultat'
 
 function DetailMatch() {
@@ -390,9 +391,13 @@ function StatCard({ stat, onUpdate, matchStatut, limiteFautes, isOwner }) {
             <h3 className="text-xl font-black italic uppercase tracking-tighter">
               <Link to={`/athlete/${stat.athlete}`} className="hover:text-primary-orange transition-colors">{stat.joueur_nom}</Link>
             </h3>
-            <div className="flex gap-4 mt-1">
-               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Position: G/F</span>
-            </div>
+            {libellePostes(stat.joueur_postes) && (
+              <div className="flex gap-4 mt-1">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">
+                  Poste : {libellePostes(stat.joueur_postes)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
         {canEdit && (

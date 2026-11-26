@@ -152,6 +152,15 @@ class DemandeEquipe(models.Model):
         return f"{self.nom} ({self.tournoi.nom}, {self.get_statut_display()})"
 
 
+POSTES = [
+    ('meneur', 'Meneur'),
+    ('arriere', 'Arrière'),
+    ('ailier', 'Ailier'),
+    ('ailier_fort', 'Ailier fort'),
+    ('pivot', 'Pivot'),
+]
+
+
 class Athlete(models.Model):
     """
     La personne réelle, au-dessus de ses inscriptions (Joueur) dans les équipes de différents tournois.
@@ -166,6 +175,8 @@ class Athlete(models.Model):
     )
     # Photo de profil, choisie par le joueur relié (compressée par le navigateur avant l'envoi)
     photo = models.ImageField(upload_to='athletes/photos/', null=True, blank=True)
+    # Postes du joueur (un ou plusieurs parmi POSTES), choisis par lui-même ; valables dans tous ses tournois
+    postes = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

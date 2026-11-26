@@ -8,7 +8,7 @@ from rest_framework import serializers
 from . import athletes, forfaits, organisateurs, protections
 from . import reglement as regles
 from .journal import TYPES_ANNULABLES
-from .models import ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
+from .models import POSTES, ActionMatch, Athlete, Equipe, Joueur, Match, StatistiqueJoueur, Tournoi
 from .phases_finales import (
     ACTIVATION,
     LIBELLES,
@@ -299,13 +299,14 @@ class JoueurSerializer(serializers.ModelSerializer):
     compte_lie = serializers.SerializerMethodField()
     a_des_stats = serializers.SerializerMethodField()
     photo_affichee = serializers.SerializerMethodField()
+    postes = serializers.JSONField(source='athlete.postes', read_only=True)  # choisis par le joueur sur son profil
 
     class Meta:
         model = Joueur
         fields = [
             'id', 'athlete', 'prenom', 'nom', 'numero_maillot', 'equipe', 'equipe_nom', 'photo', 'photo_affichee',
             'tournoi_nom',
-            'email', 'compte_lie', 'retire', 'a_des_stats', 'created_at', 'updated_at',
+            'email', 'compte_lie', 'retire', 'a_des_stats', 'postes', 'created_at', 'updated_at',
         ]
         read_only_fields = ['athlete', 'retire']
         extra_kwargs = {'photo': {'validators': [valider_taille_image]}}
@@ -404,18 +405,36 @@ class PhotoAthleteSerializer(serializers.ModelSerializer):
         fields = ['photo']
 
 
+class PostesAthleteSerializer(serializers.Serializer):
+    """Postes choisis par le joueur relié : un ou plusieurs parmi les 5, ou aucun."""
+    postes = serializers.ListField(
+        child=serializers.ChoiceField(choices=POSTES), allow_empty=True, max_length=len(POSTES),
+    )
+
+    def validate_postes(self, postes):
+        ordre = [code for code, _ in POSTES]
+        return sorted(set(postes), key=ordre.index)  # sans doublon, dans l'ordre du terrain
+
+
+class NumeroJoueurSerializer(serializers.Serializer):
+    """Nouveau numéro du joueur relié dans l'une de ses équipes."""
+    joueur = serializers.IntegerField()
+    numero_maillot = serializers.IntegerField(min_value=0, max_value=99)
+
+
 class StatistiqueJoueurSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle StatistiqueJoueur."""
     joueur_nom = serializers.SerializerMethodField()
     joueur_numero = serializers.IntegerField(source='joueur.numero_maillot', read_only=True)
     athlete = serializers.IntegerField(source='joueur.athlete_id', read_only=True)
+    joueur_postes = serializers.JSONField(source='joueur.athlete.postes', read_only=True)
     joueur_photo = serializers.SerializerMethodField()
     equipe_nom = serializers.CharField(source='joueur.equipe.nom', read_only=True)
 
     class Meta:
         model = StatistiqueJoueur
         fields = [
-            'id', 'joueur', 'athlete', 'match', 'joueur_nom', 'joueur_numero', 'joueur_photo', 'equipe_nom',
+            'id', 'joueur', 'athlete', 'match', 'joueur_nom', 'joueur_numero', 'joueur_postes', 'joueur_photo', 'equipe_nom',
             'points', 'passes', 'rebonds', 'contres', 'fautes',
             'created_at', 'updated_at'
         ]

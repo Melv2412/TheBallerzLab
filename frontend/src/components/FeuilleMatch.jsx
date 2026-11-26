@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getActions, getMatch } from "../api";
+import { libellePostes } from "../postes";
 import { NOMS_PRESETS } from "./reglement/presets";
 import { MatchForfait } from "./match-live/MatchForfait";
 import {
@@ -38,6 +39,7 @@ function TableauEquipe({ nom, stats, limiteFautes }) {
               <td className={`${cellule} text-center font-bold`}>{s.joueur_numero}</td>
               <td className={cellule}>
                 {s.joueur_nom}
+                {libellePostes(s.joueur_postes) && <span className="ml-2 text-xs text-gray-500">{libellePostes(s.joueur_postes)}</span>}
                 {limiteFautes > 0 && s.fautes >= limiteFautes && <span className="ml-2 text-xs font-bold">(exclu)</span>}
               </td>
               {[s.points, s.passes, s.rebonds, s.contres, s.fautes, evaluationStat(s)].map((valeur, i) => (

@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import EmailValidator
-from django.db import DatabaseError, connection, transaction
+from django.db import DatabaseError, IntegrityError, connection, transaction
 from django.db.models import Count, F, Q
 from django.db.models.functions import Greatest
 from django.shortcuts import get_object_or_404
@@ -37,6 +37,8 @@ from .serializers import (
     ForfaitSerializer,
     JoueurSerializer,
     MatchListSerializer,
+    NumeroJoueurSerializer,
+    PostesAthleteSerializer,
     MatchSerializer,
     PhotoAthleteSerializer,
     PresencesSerializer,
@@ -802,6 +804,53 @@ class AthleteViewSet(viewsets.GenericViewSet):
             serializer = PhotoAthleteSerializer(athlete, data=request.data)
             serializer.is_valid(raise_exception=True)
             enregistrer_avec_fichiers(serializer)
+        return self.retrieve(request, pk)
+
+    def _fiche_du_joueur(self, request, message):
+        athlete = self.get_object()
+        if athlete.utilisateur_id != request.user.id:
+            raise PermissionDenied(message)
+        return athlete
+
+    @action(detail=True, methods=['put'], permission_classes=[permissions.IsAuthenticated])
+    def postes(self, request, pk=None):
+        """Le joueur relié choisit ses postes (un ou plusieurs parmi les 5) : ils valent pour tous ses tournois."""
+        athlete = self._fiche_du_joueur(request, "Seul le joueur relié à cette fiche peut choisir ses postes.")
+        serializer = PostesAthleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        athlete.postes = serializer.validated_data['postes']
+        athlete.save(update_fields=['postes', 'updated_at'])
+        return self.retrieve(request, pk)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def numero(self, request, pk=None):
+        """
+        Le joueur relié change son numéro dans l'une de ses équipes (un numéro par tournoi),
+        si personne d'autre ne le porte dans l'effectif et que le tournoi n'est pas clôturé.
+        """
+        athlete = self._fiche_du_joueur(request, "Seul le joueur relié à cette fiche peut changer son numéro.")
+        serializer = NumeroJoueurSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        numero = serializer.validated_data['numero_maillot']
+        joueur = (
+            athlete.joueurs.filter(pk=serializer.validated_data['joueur'], equipe__tournoi__supprime_le__isnull=True)
+            .select_related('equipe__tournoi').first()
+        )
+        if joueur is None:
+            raise NotFound("Inscription introuvable.")
+        if joueur.retire:
+            raise ValidationError({'detail': "Tu n'es plus dans l'effectif de cette équipe."})
+        cloture.exiger_tournoi_ouvert(joueur.equipe.tournoi)
+        if joueur.numero_maillot != numero:
+            pris = Joueur.objects.filter(equipe=joueur.equipe, numero_maillot=numero, retire=False).exclude(pk=joueur.pk)
+            if pris.exists():
+                raise ValidationError({'numero_maillot': f"Le numéro {numero} est déjà pris dans ton équipe."})
+            joueur.numero_maillot = numero
+            try:
+                with transaction.atomic():
+                    joueur.save(update_fields=['numero_maillot', 'updated_at'])
+            except IntegrityError as erreur:  # pris au même instant par un coéquipier
+                raise ValidationError({'numero_maillot': f"Le numéro {numero} est déjà pris dans ton équipe."}) from erreur
         return self.retrieve(request, pk)
 
 

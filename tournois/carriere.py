@@ -91,6 +91,9 @@ def profil_athlete(athlete, photo_url=None):
             'date_debut': tournoi.date_debut,
             'equipe_nom': joueur.equipe.nom,
             'numero': joueur.numero_maillot,
+            'joueur_id': joueur.id,
+            # Le joueur peut encore changer son numéro : inscrit dans l'effectif d'un tournoi pas clôturé
+            'numero_modifiable': not joueur.retire and tournoi.cloture_le is None,
             'mvp': mvp_par_joueur[joueur.id],
             'resultat': resultat_equipe(tournoi, joueur.equipe_id),
         })
@@ -105,6 +108,7 @@ def profil_athlete(athlete, photo_url=None):
         'prenom': athlete.prenom,
         'nom': athlete.nom,
         'photo': photo_url,
+        'postes': athlete.postes,
         'compte_verifie': athlete.utilisateur_id is not None,  # le joueur a relié son compte
         'carriere': carriere,
         'tournois': tournois,

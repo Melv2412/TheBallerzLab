@@ -173,7 +173,12 @@ export function FormulaireReglement({ reglement, onChange, donnees, modifiables,
             <select
               disabled={!libre("mode_classement")}
               value={reglement.mode_classement || "points"}
-              onChange={(e) => changer("mode_classement", e.target.value)}
+              onChange={(e) => {
+                // Au % de victoires, le barème suit EBL / NBA (1-0) ; retour aux points : barème FIBA (2-1)
+                const mode = e.target.value;
+                const bareme = mode === "pourcentage" ? { points_victoire: 1, points_defaite: 0 } : { points_victoire: 2, points_defaite: 1 };
+                onChange({ ...reglement, mode_classement: mode, ...bareme });
+              }}
               className={`${champ} appearance-none`}
             >
               {MODES_CLASSEMENT.map((m) => (

@@ -165,6 +165,10 @@ export const envoyerPhotoAthlete = (id, fichier) => {
   return api.post(`/athletes/${id}/photo/`, donnees)
 }
 export const supprimerPhotoAthlete = (id) => api.delete(`/athletes/${id}/photo/`)
+// Le joueur relié choisit ses postes (valables partout) et change son numéro dans l'une de ses équipes
+export const changerPostesAthlete = (id, postes) => api.put(`/athletes/${id}/postes/`, { postes })
+export const changerNumeroAthlete = (id, joueur, numero) =>
+  api.post(`/athletes/${id}/numero/`, { joueur, numero_maillot: numero })
 // Fiche athlète existante (email exact) : { athlete, prenom, nom, nb_tournois }, ou 404
 export const rechercherAthlete = (email) => api.get('/joueurs/recherche_athlete/', { params: { email } })
 

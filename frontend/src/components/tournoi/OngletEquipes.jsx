@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { delierJoueur, lienInvitation, messageErreur, updateTournoi } from "../../api";
+import { libellePostes } from "../../postes";
 import { ImageSecours } from "../ImageSecours";
 import { IconeAjoutJoueur, IconeJoueur } from "../Icones";
 import { InscriptionsEquipes } from "./InscriptionsEquipes";
@@ -226,6 +227,9 @@ function FicheEquipe({
                       >
                         {joueur.prenom} {joueur.nom}
                       </Link>
+                      {libellePostes(joueur.postes) && (
+                        <span className="text-[10px] text-gray-500 truncate">{libellePostes(joueur.postes)}</span>
+                      )}
                     </div>
                   </td>
                   {colonneCompte && (

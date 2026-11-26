@@ -1,5 +1,6 @@
 import React from "react";
 import { estExclu } from "./chrono";
+import { libellePostes } from "../../postes";
 import { PhotoJoueur } from "./PhotoJoueur";
 
 function MiniStat({ label, valeur, classeValeur = "text-white" }) {
@@ -40,6 +41,9 @@ export function ListeJoueursEquipe({ titre, stats, idSelectionne, match, isOwner
                   <div className="min-w-0 truncate">
                     <span className="font-black text-sm">#{stat.joueur_numero}</span>
                     <span className="ml-2 text-sm">{stat.joueur_nom}</span>
+                    {libellePostes(stat.joueur_postes) && (
+                      <span className="block text-[10px] text-gray-500 truncate">{libellePostes(stat.joueur_postes)}</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 text-[8px] font-black shrink-0">
