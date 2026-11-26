@@ -92,7 +92,8 @@ export function OngletParametres({ tournoi, matchs, recharger }) {
           <p className="text-xs text-gray-500 mb-6 italic">
             * S'applique aux matchs à venir. Les matchs en cours ou terminés gardent leur règlement, et chaque match
             peut être ajusté depuis son tableau de marque.
-            {pointsBloques && " Un match est terminé : le classement (mode et points) ne peut plus changer."}
+            {pointsBloques &&
+              " Le tableau des phases finales est créé : le classement (mode et points) ne peut plus changer. Réinitialise les playoffs pour le modifier."}
           </p>
           <FormulaireReglement
             reglement={form.reglement}

@@ -96,12 +96,11 @@ class ReglementTournoiTests(BaseAPITestCase):
         with self.assertRaises(serializers.ValidationError):
             regles.valider_reglement({'mode_classement': 'autre'})
 
-    def test_mode_verrouille_apres_un_match_termine(self):
+    def test_mode_modifiable_apres_un_match_de_poule(self):
+        Match.objects.filter(pk=self.match.pk).update(statut='termine', score_domicile=70, score_exterieur=60)
         reponse = self.client.patch(self.url, {'reglement': {'mode_classement': 'pourcentage'}}, format='json')
         self.assertEqual(reponse.status_code, status.HTTP_200_OK)
-        Match.objects.filter(pk=self.match.pk).update(statut='termine')
-        reponse = self.client.patch(self.url, {'reglement': {'mode_classement': 'points'}}, format='json')
-        self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.client.get(f'{self.url}classement/').data[0]['pourcentage'], 100)
 
     def test_presets_publics(self):
         self.client.force_authenticate(None)

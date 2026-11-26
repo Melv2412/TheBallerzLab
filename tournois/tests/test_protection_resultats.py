@@ -243,10 +243,17 @@ class PointsClassementTests(BaseProtection):
     def test_points_modifiables_avant_le_premier_resultat(self):
         self.assertEqual(self.patch({'points_victoire': 3}).status_code, status.HTTP_200_OK)
 
-    def test_points_verrouilles_apres_un_match_termine(self):
+    def test_classement_modifiable_pendant_la_poule(self):
         self.terminer()
+        self.assertEqual(self.patch({'points_victoire': 3}).status_code, status.HTTP_200_OK)
+        self.assertEqual(self.patch({'mode_classement': 'pourcentage'}).status_code, status.HTTP_200_OK)
+
+    def test_classement_verrouille_des_que_le_tableau_existe(self):
+        self.terminer()
+        self.match_final()
         self.assertEqual(self.patch({'points_victoire': 3}).status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.patch({'points_defaite': 0}).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.patch({'mode_classement': 'pourcentage'}).status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_autres_reglages_toujours_modifiables(self):
         self.terminer()

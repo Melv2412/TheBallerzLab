@@ -190,17 +190,20 @@ class TournoiSerializer(serializers.ModelSerializer):
                 )})
 
     def verifier_points_verrouilles(self, attrs):
-        """Le barème et le mode de classement ne changent plus après un résultat : le classement serait recalculé."""
+        """
+        Le mode de classement et le barème se choisissent librement pendant la poule. Ils se figent dès que le
+        tableau des phases finales existe : il a été construit à partir de ce classement.
+        """
         reglement = attrs.get('reglement')
         if reglement is None:
             return
         actuel = {'mode_classement': 'points', **self.instance.reglement}
         if all(reglement[cle] == actuel.get(cle) for cle in ('points_victoire', 'points_defaite', 'mode_classement')):
             return
-        if self.instance.matchs.filter(statut='termine').exists():
+        if self.instance.matchs.exclude(phase='poule').exists():
             raise serializers.ValidationError({'reglement': (
-                "Un match est terminé : le mode de classement et les points de victoire et de défaite "
-                "ne peuvent plus changer."
+                "Le tableau des phases finales est créé : le mode de classement et les points de victoire et de "
+                "défaite ne peuvent plus changer. Réinitialise les playoffs pour les modifier."
             )})
 
     def valider_phases_finales(self, attrs):

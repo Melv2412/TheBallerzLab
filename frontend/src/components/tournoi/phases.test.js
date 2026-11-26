@@ -40,9 +40,10 @@ describe("verrous des résultats", () => {
     expect([...phasesCommencees(matchs)]).toEqual(["demi"]);
   });
 
-  it("verrouille les points dès le premier match terminé", () => {
+  it("verrouille le classement dès que le tableau des phases finales existe", () => {
     expect(pointsVerrouilles(matchs)).toBe(true);
-    expect(pointsVerrouilles(matchs.slice(1))).toBe(false);
+    expect(pointsVerrouilles(matchs.slice(0, 1))).toBe(false);
+    expect(pointsVerrouilles([matchs[2]])).toBe(true);
   });
 
   it("repère une équipe qui a joué, à domicile ou à l'extérieur", () => {

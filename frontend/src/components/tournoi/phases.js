@@ -18,7 +18,8 @@ export const deplacer = (liste, index, decalage) => {
   return copie;
 };
 
-export const pointsVerrouilles = (matchs) => matchs.some((m) => m.statut === "termine");
+// Le classement (mode et points) se fige dès que le tableau des phases finales existe
+export const pointsVerrouilles = (matchs) => matchs.some((m) => m.phase !== "poule");
 
 export const equipeAJoue = (matchs, equipeId) =>
   matchs.some((m) => m.statut !== "a_venir" && (m.equipe_domicile === equipeId || m.equipe_exterieur === equipeId));
