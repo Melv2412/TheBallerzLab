@@ -19,14 +19,14 @@
 |---|---|---|
 | Création et modification | ✅ | Nom unique par organisateur, dates contrôlées, phases finales choisies (8ᵉ, quarts, demis, finale), consécutives |
 | Public ou privé | ✅ | Choix à la création, puis interrupteur sur la carte, visible par l'organisateur du tournoi seulement. Privé : seuls l'organisateur et le staff voient le tournoi, ses équipes, joueurs, matchs et stats ; pour les autres, il n'existe pas (404). Confirmation si le tournoi a déjà des équipes ou des matchs |
-| Règlement | ✅ | Préréglages FIBA, NBA, 3x3 ou personnalisé ; modifiable match par match ; points de victoire et de défaite verrouillés après le premier match terminé |
+| Règlement | ✅ | Préréglages FIBA, NBA, 3x3 ou personnalisé ; modifiable match par match. Mode de classement et points de victoire / défaite modifiables pendant toute la poule, verrouillés dès que le tableau des phases finales existe ; choisir le classement au % met 1 / 0 automatiquement |
 | Équipes et joueurs à la main | ✅ | Logo et photos compressés dans le navigateur ; numéro unique dans l'équipe |
 | Protection des équipes et joueurs | ✅ | Équipe avec un match commencé non supprimable. Joueur avec des stats : ni suppression ni changement d'équipe, mais « Retirer » de l'effectif et « Remettre » |
 | Lien d'inscription des équipes | ✅ 5.4 | Un lien par tournoi ; le capitaine propose, l'organisateur accepte ou refuse ; marche aussi pour un tournoi privé, sans ouvrir sa page |
 | Lien d'invitation des joueurs | ✅ 5.3 | Un lien par équipe ; « C'est toi ? » ou inscription avec numéro ; marche aussi pour un tournoi privé, sans ouvrir sa page |
 | Ouvrir / fermer les inscriptions | ✅ | Ferme les demandes d'équipe et les nouvelles inscriptions de joueurs |
 | Calendrier | ✅ | Matchs de poule, dates à l'heure de Paris |
-| Classement | ✅ | Règles FIBA, matchs nuls interdits ; forfait : points de victoire au gagnant, 0 au fautif |
+| Classement | ✅ | Deux modes au choix dans le règlement. **Aux points (FIBA)**, par défaut : forfait = points de victoire au gagnant, 0 au fautif. **Au % de victoires** (preset NBA, comme la plateforme EBL) : % de victoires, puis différence de points, puis points marqués, sans confrontation directe ; équipe sans match classée après les autres ; forfait = défaite, score compris. Matchs nuls interdits |
 | Égalité parfaite sur une place qualificative | ✅ | Poules finies et aucun critère FIBA ne sépare les équipes : tableau bloqué jusqu'à la décision de l'organisateur. Ordre choisi (modifiable jusqu'à la création du tableau) ou tirage au sort côté serveur (définitif). La décision vaut aussi pour le classement de poule, tant que le même groupe reste à égalité. Égalité sans enjeu de qualification : ordre alphabétique |
 | Phases finales | ✅ | Séries au meilleur de N, tableau généré depuis le classement, tour suivant automatique ; format d'une phase verrouillé dès qu'elle a commencé |
 | MVP | ✅ | Meilleure évaluation moyenne, au moins la moitié des matchs de l'équipe joués ; forfaits exclus du calcul |
@@ -81,6 +81,8 @@ Un forfait compte pour le tournoi (classement, séries, qualification, titre), j
 | Profil public | ✅ 5.2 | Stats de carrière, tournois joués, palmarès, titres de MVP ; jamais l'email. Les stats d'un tournoi privé n'y figurent pas tant qu'il reste privé |
 | Compte relié | ✅ 5.3 | Badge « compte vérifié » ; l'organisateur peut délier |
 | Mon profil | ✅ 6.2 | 👤 à côté du pseudo ; sans fiche reliée, page qui explique comment rejoindre son équipe (aucune fiche créée) |
+| Postes | ✅ | Le joueur relié choisit lui-même un ou plusieurs des 5 postes (meneur, arrière, ailier, ailier fort, pivot), valables dans tous ses tournois ; affichés sur le profil, les effectifs, la fiche et la feuille de match et le live, rien s'il n'en a pas choisi |
+| Numéro par tournoi | ✅ | Le joueur relié change lui-même son numéro dans chaque équipe depuis son profil : 0 à 99, libre dans l'équipe, tournoi pas clôturé, joueur toujours dans l'effectif |
 | Photo de profil | ✅ 6.2 | Ajoutée par le joueur relié, compressée dans le navigateur ; affichée sur le profil et dans les matchs (💳 au-delà de 1 Go de stockage) |
 | Liaison automatique par email | ⏳ | Après la vérification des emails (4.2) |
 

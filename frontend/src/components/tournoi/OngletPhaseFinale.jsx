@@ -145,7 +145,7 @@ export function OngletPhaseFinale({ tournoi, matchs, equipes, isOwner, onCreerMa
                   {phase.series.map((serie) => (
                     <div key={serie.matchs[0]} className="space-y-3">
                       <CarteSerie serie={serie} victoiresRequises={phase.victoires_requises} />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3">
                         {serie.matchs
                           .map((id) => matchParId[id])
                           .filter(Boolean)

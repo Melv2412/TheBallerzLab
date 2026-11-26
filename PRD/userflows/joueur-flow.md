@@ -49,6 +49,8 @@ flowchart TD
 2. Il voit : badge **✓ Compte vérifié**, cumul et moyennes de carrière (matchs réellement joués, hors forfaits et hors tournois privés), titres de MVP, titres, et pour chaque tournoi : équipe, numéro, moyennes, résultat.
 3. Le profil est public, l'email n'y apparaît jamais.
 4. Sur **son** profil : « Ajouter une photo », « Changer », « Retirer ». La photo est compressée dans le navigateur (800 px, WebP) avant l'envoi ; elle apparaît aussi sur les écrans de match quand l'organisateur n'en a pas mis.
+5. Sur **son** profil : « Choisir mes postes » (un ou plusieurs parmi meneur, arrière, ailier, ailier fort, pivot), valables dans tous ses tournois et affichés partout ; rien n'est affiché s'il n'en choisit aucun.
+6. Sur **son** profil, à côté du numéro de chaque tournoi : « Changer ». Le numéro (0 à 99) doit être libre dans l'équipe ; impossible si le tournoi est clôturé ou s'il a été retiré de l'effectif.
 
 ## Prévu
 
