@@ -38,8 +38,8 @@ function Horaire({ date }) {
       <p className="text-lg sm:text-xl font-black italic leading-none tabular-nums">
         {d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
       </p>
-      <p className="mt-1 text-[10px] font-bold text-gray-500 tabular-nums">
-        {d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+      <p className="mt-1 text-xs font-bold text-gray-300 tabular-nums whitespace-nowrap">
+        {d.toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" })}
       </p>
     </>
   );
@@ -53,7 +53,7 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
   const bouton = "inline-flex items-center justify-center min-h-[36px] px-3 rounded-lg font-black italic uppercase text-[10px] tracking-widest transition-colors";
 
   return (
-    <div className="glass-card px-4 py-3 sm:px-5 sm:py-4 grid grid-cols-[1fr_auto] sm:grid-cols-[4.5rem_1fr_auto] items-center gap-x-4 gap-y-3">
+    <div className="glass-card px-4 py-3 sm:px-5 sm:py-4 grid grid-cols-[1fr_auto] sm:grid-cols-[4.5rem_1fr_11rem] lg:grid-cols-[11rem_1fr_11rem] items-center gap-x-4 gap-y-3">
       <div className="order-1">
         <Horaire date={match.date_match} />
       </div>
@@ -77,7 +77,7 @@ export function MatchCard({ match, equipes, onDelete, isOwner }) {
             <p className="text-lg font-black italic text-gray-600 leading-none">VS</p>
           )}
           <span
-            className={`mt-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${match.statut === "en_cours" ? "bg-red-500 text-white animate-pulse" : "text-gray-400"}`}
+            className={`mt-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${match.statut === "en_cours" ? "bg-red-500 text-white animate-pulse" : "text-gray-300"}`}
           >
             {statut}
           </span>
